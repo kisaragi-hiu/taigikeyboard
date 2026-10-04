@@ -108,11 +108,8 @@ public nonisolated struct Taigi_Engine_NextWordRequest: Sendable {
     set {method = .resetAll(newValue)}
   }
 
-  /// Android-only Space-path intent (audit §5 #5). iOS wrappers never
-  /// emit this; Rust engine accepts generically. Mutates
-  /// last_selected_*/lastSelectionTimeMs without bumping
-  /// current_generation, no timer effects; records only a compound's own
-  /// bigrams (no prev→this one).
+  /// Continuous nail / unnail handshake — learns nothing and changes no
+  /// state (see the message below).
   public var updateLastSelectedWord: Taigi_Engine_UpdateLastSelectedWord {
     get {
       if case .updateLastSelectedWord(let v)? = method {return v}
@@ -169,11 +166,8 @@ public nonisolated struct Taigi_Engine_NextWordRequest: Sendable {
     case contextTimeoutFired(Taigi_Engine_ContextTimeoutFired)
     case clearForNewComposing_p(Taigi_Engine_ClearForNewComposing)
     case resetAll(Taigi_Engine_ResetAll)
-    /// Android-only Space-path intent (audit §5 #5). iOS wrappers never
-    /// emit this; Rust engine accepts generically. Mutates
-    /// last_selected_*/lastSelectionTimeMs without bumping
-    /// current_generation, no timer effects; records only a compound's own
-    /// bigrams (no prev→this one).
+    /// Continuous nail / unnail handshake — learns nothing and changes no
+    /// state (see the message below).
     case updateLastSelectedWord(Taigi_Engine_UpdateLastSelectedWord)
     /// Platform-driven UI visibility update. After the platform renders the
     /// result of an async predict() call (or clears it on empty result), it
@@ -218,6 +212,11 @@ public nonisolated struct Taigi_Engine_DecisionInput: Sendable {
 /// preceding: words committed in the same commit before `text`, in document
 /// order (a continuous composition's nailed segments) — learned as one
 /// sequence with it (behavioral-invariants §40). Empty for a single word.
+/// roman: the word's reading, learned verbatim — canonical TL for a Taigi
+/// Latin reading (the sender canonicalizes: composing effects carry the
+/// candidate's canonical TL, platform taps the candidate's canonical-TL
+/// sidechannel; never a POJ rendering, which the engine cannot tell from TL
+/// `eng` / `ek`). A TPS or English reading passes as typed; empty = no reading.
 public nonisolated struct Taigi_Engine_WordSelected: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -249,7 +248,7 @@ public nonisolated struct Taigi_Engine_WordSelected: Sendable {
   fileprivate var _input: Taigi_Engine_DecisionInput? = nil
 }
 
-/// One committed word: display text + its romanization (as `WordSelected`).
+/// One committed word: display text + its reading (as `WordSelected.roman`).
 public nonisolated struct Taigi_Engine_CommittedWord: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for

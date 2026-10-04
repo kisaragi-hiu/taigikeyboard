@@ -115,13 +115,15 @@ extension ActionHandler {
                 wroteRomanization: resolved.wroteRomanization,
             )
 
-            // Fork: `roman` is the commit string (may be POJ/Hanji); the engine
-            // expects raw TL (it calls `pojToTL` on it). Next-word candidates
-            // carry raw TL on the `additionalInfo["tl"]` sidechannel — use it
-            // here to preserve association-recording semantics.
+            // NextWord learns the reading as sent, so it gets the canonical TL,
+            // never the rendered `roman` (POJ in POJ mode; a POJ → TL fold would
+            // misread TL `eng` / `ek`). Next-word candidates carry it on
+            // `additionalInfo["tl"]`, candidates on `canonicalTl`; `roman` only
+            // when that is empty (TPS-OOV, English) — mirrors Android
+            // `CandidateClickHandler` `canonicalTl.ifEmpty { roman }`.
             let associationRoman = isNextWordPrediction
                 ? (suggestion.additionalInfo["tl"] ?? "")
-                : roman
+                : (canonicalTl.isEmpty ? roman : canonicalTl)
             nextWordController.process(text: displayText, roman: associationRoman)
         } else {
             hostText.insert(suggestion.text)

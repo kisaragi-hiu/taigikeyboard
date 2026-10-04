@@ -179,3 +179,63 @@ fn an_unreadable_file_or_version_zero_is_refused_before_any_write() {
         .unwrap()
         .is_empty());
 }
+
+/// One bigram 蔣經國 → 德國簫 in a backup of `version`.
+// trace: dictionary.csv rows 蔣經國/tsiúnn-keng-kok, 德國簫/tek-kok-siau —
+// TL special finals `eng` / `ek` (taigi-phonetics-reference §3.2.6).
+fn special_finals_backup(version: i64) -> String {
+    format!(
+        r#"{{ "version": {version}, "userAssociation": [{{ "prevWord": "蔣經國", "prevTl": "tsiúnn-keng-kok", "nextWord": "德國簫", "nextTl": "tek-kok-siau", "count": 2 }}] }}"#
+    )
+}
+
+#[test]
+fn a_version_3_backup_restores_canonical_readings_as_written() {
+    let directory = scratch();
+    let stores = stores(&directory);
+
+    import_backup(&stores, special_finals_backup(3).as_bytes()).unwrap();
+
+    assert_eq!(
+        stores.association.all_rows().unwrap()[0].pair,
+        pair("蔣經國", "tsiúnn-keng-kok", "德國簫", "tek-kok-siau")
+    );
+}
+
+// Versions 1 and 2 may carry POJ, so their readings still fold; the fold
+// cannot tell TL `eng` / `ek` from POJ, so it reads them as POJ `ing` / `ik`.
+// trace: poj_display_to_tl_display — eng→ing, ek→ik.
+#[test]
+fn a_version_2_backup_still_folds_its_readings() {
+    let directory = scratch();
+    let stores = stores(&directory);
+
+    import_backup(&stores, special_finals_backup(2).as_bytes()).unwrap();
+
+    assert_eq!(
+        stores.association.all_rows().unwrap()[0].pair,
+        pair("蔣經國", "tsiúnn-king-kok", "德國簫", "tik-kok-siau")
+    );
+}
+
+#[test]
+fn what_the_engine_writes_keeps_tl_special_finals_through_a_restore() {
+    let source_directory = scratch();
+    let source = stores(&source_directory);
+    source
+        .association
+        .record(&[pair("蔣經國", "tsiúnn-keng-kok", "德國簫", "tek-kok-siau")]);
+
+    let bytes = export_backup(&source, "ios", "3.6.11", 1_800_000_000).unwrap();
+    assert!(String::from_utf8(bytes.clone())
+        .unwrap()
+        .contains("\"version\": 3"));
+
+    let target_directory = scratch();
+    let target = stores(&target_directory);
+    import_backup(&target, &bytes).unwrap();
+    assert_eq!(
+        target.association.all_rows().unwrap()[0].pair,
+        pair("蔣經國", "tsiúnn-keng-kok", "德國簫", "tek-kok-siau")
+    );
+}

@@ -22,7 +22,9 @@ use crate::api::{
     CommitScript, EngineState, Intent, NailedSegment, Phase, Usage,
 };
 use crate::commit_text::{commit_resolution, resolve_commit_text};
-use crate::derived::{derived_display, display_caret_utf16, strip_tps_separator_markers};
+use crate::derived::{
+    buffer_input_mode, derived_display, display_caret_utf16, strip_tps_separator_markers,
+};
 use lexicon::LearnedEntry;
 use protos::engine::composing_response::Preedit;
 use protos::engine::effect;
@@ -548,8 +550,14 @@ fn commit_raw_continuous(
         // romanization key on both platforms. Learning `ㄍㄠ␣ㄉㄞ` where the
         // committed word is `ㄍㄠㄉㄞ` would key the row on a form no later
         // lookup reconstructs (Codex post-impl BLOCK 2026-08-21).
+        // NextWord learns `roman` as sent, so the tail is put in canonical
+        // TL form here: POJ folds to TL, TL keeps its `eng` / `ek` finals,
+        // TPS and English pass through.
         let tail_display = derived_display(&raw, config);
-        let tail_roman = strip_tps_separator_markers(&raw);
+        let tail_roman = phonetics::api::canonical_tl_form(
+            &strip_tps_separator_markers(&raw),
+            buffer_input_mode(&raw, config),
+        );
         next_word_word_selected(tail_display, tail_roman, true, &nailed)
     } else {
         // raw empty → all input is nailed; the last nailed segment is the

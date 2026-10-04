@@ -15,7 +15,7 @@ use composing::{Engine, Intent, NailedSegment, Phase};
 use protos::engine::effect::Kind;
 use protos::engine::Effect;
 
-use crate::common::{config_tl, effect_kinds, engine_in_continuous};
+use crate::common::{config, config_tl, effect_kinds, engine_in_continuous};
 
 fn assert_kinds<'a, K>(effects: &'a [Effect], expected: K)
 where
@@ -735,7 +735,8 @@ fn start_under_continuous_aborts_then_begins_fresh_composition() {
 #[test]
 fn commit_raw_under_continuous_commits_derived_display_and_fires_nextword() {
     // Pending = "li2" → derived display = "lí". Enter commits "lí" (display)
-    // with roman = "li2" (raw) and trigger_prediction = true.
+    // with roman = canonical TL of the raw tail and trigger_prediction = true.
+    // trace: canonical_tl_form("li2", Tl) — tone digit 2 → TL acute → "lí".
     let mut e = engine_in_continuous("li2");
     let resp = e.apply(Intent::CommitRaw, &config_tl());
     assert_kinds(
@@ -755,9 +756,49 @@ fn commit_raw_under_continuous_commits_derived_display_and_fires_nextword() {
         unreachable!();
     };
     assert_eq!(nw.text, "lí");
-    assert_eq!(nw.roman, "li2");
+    assert_eq!(nw.roman, "lí");
     assert!(nw.trigger_prediction);
     assert_eq!(e.snapshot_state().phase, Phase::Idle);
+}
+
+// The Enter tail is the one NextWord reading the engine itself derives from
+// typed text, so it is put in canonical TL form before NextWord learns it
+// verbatim: TL keeps its special finals `eng` / `ek` (§3.2.6), POJ folds to
+// TL (POJ `eng` IS TL `ing`), TPS and English pass through.
+#[test]
+fn commit_raw_tail_reading_is_canonical_tl() {
+    // trace: canonical_tl_form(tail, mode) —
+    //   tl  "keng"    keep_tl_finals, tone 1 → "keng" (a full fold gave "king")
+    //   tl  "tek"     keep_tl_finals, stop → tone 4 unmarked → "tek"
+    //   poj "cheng"   ch→ts, eng→ing, tone 1 → "tsing"
+    //   poj "chiah"   ch→ts, stop → tone 4 unmarked → "tsiah"
+    //   english "chat" identity (a full fold gave "tsat")
+    for (mode, raw, reading) in [
+        ("tl", "keng", "keng"),
+        ("tl", "tek", "tek"),
+        ("poj", "cheng", "tsing"),
+        ("poj", "chiah", "tsiah"),
+        ("english", "chat", "chat"),
+    ] {
+        let mode_config = config(mode);
+        let mut e = Engine::new();
+        e.apply(
+            Intent::Start {
+                text: raw.to_string(),
+            },
+            &mode_config,
+        );
+        let resp = e.apply(Intent::CommitRaw, &mode_config);
+        let nw = resp
+            .effect
+            .iter()
+            .find_map(|effect| match effect.kind.as_ref() {
+                Some(Kind::NextWordWordSelected(nw)) => Some(nw),
+                _ => None,
+            })
+            .unwrap_or_else(|| panic!("{mode} {raw:?}: no NextWordWordSelected"));
+        assert_eq!(nw.roman, reading, "{mode} {raw:?}");
+    }
 }
 
 #[test]
@@ -806,7 +847,7 @@ fn commit_raw_under_continuous_after_mid_commit_commits_whole_composition() {
         unreachable!();
     };
     assert_eq!(nw.text, "lí");
-    assert_eq!(nw.roman, "li2");
+    assert_eq!(nw.roman, "lí");
     let preceding: Vec<(&str, &str)> = nw
         .preceding
         .iter()

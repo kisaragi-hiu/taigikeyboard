@@ -7,7 +7,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * One committed word: display text + its romanization (as `WordSelected`).
+ * One committed word: display text + its reading (as `WordSelected.roman`).
  * </pre>
  *
  * Protobuf type {@code taigi.engine.CommittedWord}
@@ -201,7 +201,7 @@ public  final class CommittedWord extends
 
   /**
    * <pre>
-   * One committed word: display text + its romanization (as `WordSelected`).
+   * One committed word: display text + its reading (as `WordSelected.roman`).
    * </pre>
    *
    * Protobuf type {@code taigi.engine.CommittedWord}

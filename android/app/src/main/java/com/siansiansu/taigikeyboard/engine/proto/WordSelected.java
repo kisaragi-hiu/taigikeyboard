@@ -13,6 +13,11 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * preceding: words committed in the same commit before `text`, in document
  * order (a continuous composition's nailed segments) — learned as one
  * sequence with it (behavioral-invariants §40). Empty for a single word.
+ * roman: the word's reading, learned verbatim — canonical TL for a Taigi
+ * Latin reading (the sender canonicalizes: composing effects carry the
+ * candidate's canonical TL, platform taps the candidate's canonical-TL
+ * sidechannel; never a POJ rendering, which the engine cannot tell from TL
+ * `eng` / `ek`). A TPS or English reading passes as typed; empty = no reading.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.WordSelected}
@@ -407,6 +412,11 @@ public  final class WordSelected extends
    * preceding: words committed in the same commit before `text`, in document
    * order (a continuous composition's nailed segments) — learned as one
    * sequence with it (behavioral-invariants §40). Empty for a single word.
+   * roman: the word's reading, learned verbatim — canonical TL for a Taigi
+   * Latin reading (the sender canonicalizes: composing effects carry the
+   * candidate's canonical TL, platform taps the candidate's canonical-TL
+   * sidechannel; never a POJ rendering, which the engine cannot tell from TL
+   * `eng` / `ek`). A TPS or English reading passes as typed; empty = no reading.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.WordSelected}

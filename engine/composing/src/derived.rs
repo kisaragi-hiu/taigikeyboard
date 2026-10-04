@@ -25,6 +25,17 @@ pub(crate) fn derived_display(raw: &str, config: &AppConfig) -> String {
     phonetics::api::normalize_tone(raw, config)
 }
 
+/// The mode `raw` composes under: TPS once the buffer carries a Bopomofo
+/// glyph, whatever `input_mode` says (v3.5.9 C-3b mode upgrade), else
+/// `composing_mode`, which reads the TPS layout as TL until that glyph.
+pub(crate) fn buffer_input_mode(raw: &str, config: &AppConfig) -> phonetics::InputMode {
+    if phonetics::api::contains_tps(raw) {
+        phonetics::InputMode::Tps
+    } else {
+        phonetics::api::composing_mode(config)
+    }
+}
+
 /// §41 — drop the TPS separator markers from `raw`.
 ///
 /// The keyboard's ASCII space in a TPS buffer is the tone-1 /
