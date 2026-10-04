@@ -142,7 +142,16 @@ def restart_ibus() -> None:
 def swap_ibus(prefix: Path) -> None:
     """Every other system component stays listed, so GNOME's other engines
     keep working; the registry cache goes to a private XDG_CACHE_HOME so the
-    user's own cache is never rebuilt or deleted."""
+    user's own cache is never rebuilt or deleted.
+
+    The private cache does not make the daemon read IBUS_COMPONENT_PATH: the
+    session unit starts it with the default `--cache auto`, which takes a
+    fresh system registry cache before the user one (ibus
+    bus/ibusimpl.c:2301-2308) and then never looks at that path (#392,
+    driver.py's `--cache none`). Both dogfood VMs run Ubuntu 24.04, which
+    writes no /var/cache/ibus (checked 2026-10-04); a Fedora VM does (its
+    rpm runs `ibus write-cache --system`), so there the test engine would go
+    unlisted until the unit's daemon also runs with `--cache none`."""
     manager_environment = parse_assignments(systemctl("show-environment").stdout.splitlines())
     write_marker({
         "framework": "ibus",

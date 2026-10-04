@@ -153,8 +153,13 @@ jobs:
           xvfb-run -a dbus-run-session -- bash -c '
             set -euxo pipefail
             # No config module on a runner (no dconf / memconf): `--config disable`
-            # keeps the daemon up; `--panel disable` likewise.
-            ibus-daemon --verbose --panel disable --config disable > "$RUNNER_TEMP/ibus-daemon.log" 2>&1 &
+            # keeps the daemon up; `--panel disable` likewise. `--cache none`:
+            # read only IBUS_COMPONENT_PATH. The default `auto` takes a fresh
+            # system registry cache first and never looks at that path (ibus
+            # bus/ibusimpl.c:2290-2310) — the Fedora rpm writes one
+            # (/var/cache/ibus/bus/registry), so on a Fedora runner the engine
+            # would go unlisted (#392, e2e/drivers/linux/driver.py).
+            ibus-daemon --verbose --panel disable --config disable --cache none > "$RUNNER_TEMP/ibus-daemon.log" 2>&1 &
             DAEMON=$!
             # The daemon writes its socket file once its bus is up.
             for i in $(seq 1 40); do ibus list-engine > /dev/null 2>&1 && break; sleep 0.5; done
