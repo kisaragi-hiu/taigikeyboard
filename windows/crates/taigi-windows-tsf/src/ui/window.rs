@@ -28,7 +28,7 @@ use windows::Win32::Graphics::Gdi::{
     HBRUSH, HMONITOR, MONITORINFO, MONITOR_DEFAULTTONEAREST, PAINTSTRUCT,
 };
 use windows::Win32::UI::HiDpi::{
-    GetDpiForMonitor, GetDpiForWindow, SetThreadDpiAwarenessContext,
+    GetDpiForMonitor, GetDpiForWindow, SetThreadDpiAwarenessContext, DPI_AWARENESS_CONTEXT,
     DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2, MDT_EFFECTIVE_DPI,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
@@ -226,11 +226,11 @@ impl PopupWindow {
         // A BORROWED pointer: the box stays owned by the `PopupWindow`
         // returned below (or dropped on failure), never by the HWND.
         let param = &*handler as *const Handler;
-        // SAFETY: per-monitor-v2 for the duration of the create call only;
-        // the previous context is restored whatever happens.
-        let created = unsafe {
-            let previous = SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
-            let outcome = CreateWindowExW(
+        // SAFETY: the class is registered above and `param` outlives the
+        // HWND (see `_handler`); the window takes the scope's per-monitor-v2
+        // awareness, fixed at creation.
+        let created = with_per_monitor_dpi(|| unsafe {
+            CreateWindowExW(
                 WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
                 PCWSTR(class.as_ptr()),
                 PCWSTR::null(),
@@ -243,10 +243,8 @@ impl PopupWindow {
                 None,
                 Some(instance()),
                 Some(param as *const c_void),
-            );
-            SetThreadDpiAwarenessContext(previous);
-            outcome
-        };
+            )
+        });
         // On failure the HWND is gone (WM_NCDESTROY cleared its pointer, or
         // WM_NCCREATE never ran) and `handler` is dropped here, once.
         let hwnd = created?;
@@ -270,19 +268,37 @@ pub struct MonitorArea {
     pub dpi: f32,
 }
 
-/// Runs `body` under the per-monitor-v2 thread DPI context, restoring the
-/// host's afterwards. `GetDpiForMonitor` answers according to the CALLING
-/// thread's awareness (a DPI-unaware host would get 96 for every monitor),
-/// so every monitor query goes through here, as the window's placement
-/// (`show_at`) does; its creation sets the same context by hand.
+/// Runs `body` under the per-monitor-v2 thread DPI context and puts the
+/// host's context back afterwards. In-proc, every call runs on the host's
+/// thread, and a DPI-unaware host's context reads screen coordinates, work
+/// areas and monitor DPI in its virtualised 96-DPI space and creates
+/// bitmap-stretched windows — so monitor queries, the popup's creation and
+/// placement (`show_at`) and the tray menu (`lang_bar::show_popup`) all go
+/// through here.
 pub fn with_per_monitor_dpi<T>(body: impl FnOnce() -> T) -> T {
-    // SAFETY: the context is thread-local and restored before returning.
-    let previous =
-        unsafe { SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2) };
-    let outcome = body();
-    // SAFETY: as above.
-    unsafe { SetThreadDpiAwarenessContext(previous) };
-    outcome
+    // SAFETY: the context is thread-local; the scope restores it.
+    let _scope = ThreadDpiScope(unsafe {
+        SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2)
+    });
+    body()
+}
+
+/// The thread DPI context [`with_per_monitor_dpi`] replaced, restored on
+/// drop — on an unwind too: a panic in the body is caught at the COM
+/// boundary, and the host's thread must not stay per-monitor-v2 after it.
+/// The raw handle keeps it `!Send`, so it drops on the thread it changed.
+struct ThreadDpiScope(DPI_AWARENESS_CONTEXT);
+
+impl Drop for ThreadDpiScope {
+    fn drop(&mut self) {
+        // NULL = the switch failed and nothing changed. Not `is_invalid()`:
+        // it also rejects -1, which is `DPI_AWARENESS_CONTEXT_UNAWARE`.
+        if self.0 .0.is_null() {
+            return;
+        }
+        // SAFETY: restores the context this thread had before the scope.
+        unsafe { SetThreadDpiAwarenessContext(self.0) };
+    }
 }
 
 pub fn monitor_at(point: POINT) -> Option<MonitorArea> {
@@ -302,6 +318,15 @@ pub fn monitor_of_window(hwnd: HWND) -> Option<MonitorArea> {
 }
 
 /// `monitor`'s work area and DPI; call under [`with_per_monitor_dpi`].
+///
+/// `GetDpiForMonitor` follows the calling THREAD's context: measured
+/// 2026-10-05 on Windows 11 at 120 DPI, an unaware process under the scope
+/// gets 120 and a per-monitor-v2 process on an unaware thread gets 96. Its
+/// Microsoft Learn reference (read 2026-10-05) still describes the answer
+/// by process awareness and advises against calling it from a
+/// per-monitor-aware thread, pointing to `GetDpiForWindow`; that cannot
+/// stand in here — placement asks about the target monitor before the
+/// window is on it.
 fn monitor_area(monitor: HMONITOR) -> Option<MonitorArea> {
     let mut info = MONITORINFO {
         cbSize: std::mem::size_of::<MONITORINFO>() as u32,
