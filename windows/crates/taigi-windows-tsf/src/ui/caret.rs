@@ -1,11 +1,12 @@
 //! Where the caret is, in PHYSICAL screen pixels: `ITfContextView::GetTextExt`
 //! on the composition's end (rakukan `on_compose.rs:29-43`), then its start,
 //! then the selection (khiin `composition_utils.rs:31-69`). A rectangle the
-//! host reports clipped, empty or not at all is "no anchor" (roadmap W4):
-//! the window is not shown, as on the Mac — a bar parked in a corner of the
-//! host window is worse than none. A host that is not per-monitor DPI aware
-//! answers in its own virtualised coordinates; they are mapped to physical
-//! pixels through the host window's awareness before use.
+//! host reports empty or not at all is "no anchor" (roadmap W4): the window
+//! is not shown, as on the Mac — a bar parked in a corner of the host window
+//! is worse than none. A rectangle reported clipped is still an anchor:
+//! PowerPoint flags every slide text box clipped. A host that is not
+//! per-monitor DPI aware answers in its own virtualised coordinates; they are
+//! mapped to physical pixels through the host window's awareness before use.
 
 use crate::com_out_buffer;
 use crate::edit_session::EditCookie;
@@ -16,18 +17,18 @@ use windows::Win32::UI::TextServices::{
     ITfComposition, ITfContext, ITfContextView, ITfRange, TfAnchor, TF_ANCHOR_END, TF_ANCHOR_START,
 };
 
-fn is_empty(rect: &RECT) -> bool {
-    rect.right <= rect.left && rect.bottom <= rect.top
-}
-
-/// The extent of `range` when the host reports it whole: a clipped
-/// rectangle (the text is scrolled partly out of view, or the host cannot
-/// really say) is refused rather than trusted.
+/// The extent of `range`, or `None` when the host gives no usable rectangle:
+/// a failed call, or a zero-height one (text not visible answers `{0,0,0,0}`;
+/// an Office dialog answers a zero-height rect in a screen corner). A
+/// zero-width caret line is kept. The clipped flag only says the box does
+/// not cover the whole range — it is ignored, as mozc, khiin and rakukan do:
+/// 64-bit PowerPoint reports every slide text box clipped, and refusing it
+/// dropped the candidate list there.
 unsafe fn text_extent(view: &ITfContextView, ec: EditCookie, range: &ITfRange) -> Option<RECT> {
     let mut rect = RECT::default();
     let mut clipped = BOOL(0);
     view.GetTextExt(ec, range, &mut rect, &mut clipped).ok()?;
-    if clipped.as_bool() || is_empty(&rect) || rect.bottom <= rect.top {
+    if rect.bottom <= rect.top {
         return None;
     }
     Some(rect)
