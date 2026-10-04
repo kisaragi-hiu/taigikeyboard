@@ -8,7 +8,7 @@ option java_multiple_files = true;
 // Phonetics module — POJ ↔ TL ↔ TPS spelling conversion, tone representation,
 // syllable structure, Unicode normalization, phonological auto-correct.
 //
-// 9 ops live in PhoneticsRequest.method oneof; each op returns its natural
+// 8 ops live in PhoneticsRequest.method oneof; each op returns its natural
 // shape via PhoneticsResponse.result oneof. Pattern mirrors iOS Composing
 // `oneof method` design + khiin-rs single-entry-point dispatch.
 //
@@ -26,13 +26,15 @@ message PhoneticsRequest {
   reserved "normalize_tone", "normalize_to_tl", "restore_tone", "contains_tps";
   reserved "poj_to_tl", "normalize_input", "derive_notone", "derive_abbrev",
       "derive_custom_search_keys", "derive_custom_query_key";
+  // The external-lookup URL builders' two steps, folded into
+  // `external_lookup_digit_form` (removed 2026-10-04).
+  reserved 11, 19;
+  reserved "strip_tone", "nfd_preprocess_for_lookup";
 
   oneof method {
-    // --- Phonetics core (4 ops) ---
-    StripTone strip_tone = 11;
+    // --- Phonetics core (2 ops) ---
     TlToPoj tl_to_poj = 13;
     GetToneVariations get_tone_variations = 18;
-    NfdPreprocessForLookup nfd_preprocess_for_lookup = 19;
 
     // --- TPS (4 ops) ---
     TlNumericToTps tl_numeric_to_tps = 32;
@@ -42,6 +44,7 @@ message PhoneticsRequest {
 
     // --- Platform text helpers (40s) ---
     IsAttachingPunctuation is_attaching_punctuation = 40;
+    ExternalLookupDigitForm external_lookup_digit_form = 41;
   }
 }
 
@@ -49,27 +52,12 @@ message PhoneticsRequest {
 // Phonetics core request payloads
 // =========================================================================
 
-message StripTone { string input = 1; }
 message TlToPoj { string input = 1; }
 
 // `GetToneVariations` is the init-bulk-pull op for callout tone variation
 // tables. Returns POJ + TL maps in one response. Caller caches once at
 // engine init (lazy / idempotent on platform side).
 message GetToneVariations {}
-
-// `NfdPreprocessForLookup` runs Taigi-specific Unicode preprocessing for
-// external dictionary URL lookup: replace POJ nasal markers (ⁿ U+207F /
-// ᴺ U+1D3A) with `nn`, NFD-decompose, then collapse standalone `\u{0358}`
-// (POJ `o͘` combining mark) to `o`. Output preserves the input's letters
-// and combining tone marks so the URL builder can run `strip_tone` on the
-// result. Replaces both platforms' `TaigiUnicode.nfdPreprocessed` call
-// inside `ExternalLookupURLBuilder`.
-//
-// Distinct from the in-process `normalization::normalize_input` (which
-// lowercases + extracts tone digits + adds default tones + splits syllables) — see
-// `engine/phonetics/src/normalization.rs::taigi_unicode_base_form` doc
-// for the algorithm contrast against `trie_key_unicode_form`.
-message NfdPreprocessForLookup { string input = 1; }
 
 // =========================================================================
 // Derivation request payloads
@@ -124,6 +112,12 @@ message TpsInputAdjust {
 // Answers `BoolResult`; false for empty or multi-character text.
 message IsAttachingPunctuation { string text = 1; }
 
+// `ExternalLookupDigitForm` — the digit-tone spelling of a TL reading that
+// the MOE dictionary and ChhoeTaigi search by: lowercased, split on `-`
+// only, per syllable the nasal marks as `nn`, POJ `o͘` as `oo`, the tone as
+// a trailing ASCII digit with tones 1 and 4 omitted, NFC (`tāi-tsì` →
+// `tai7-tsi3`). Answers `StringResult`; the URL itself is the platform's.
+message ExternalLookupDigitForm { string reading = 1; }
 
 // =========================================================================
 // Response envelope
@@ -135,10 +129,13 @@ message PhoneticsResponse {
   // `TpsAdjustResult.replace_last` field type.
   reserved 12, 16;
   reserved "optional_string_result", "custom_search_keys_result";
+  // Tag 11 was `strip_tone_result`, the answer of the retired `StripTone`
+  // op (removed 2026-10-04).
+  reserved 11;
+  reserved "strip_tone_result";
 
   oneof result {
     StringResult string_result = 10;
-    StripToneResult strip_tone_result = 11;
     BoolResult bool_result = 13;
     ToneVariationsResult tone_variations_result = 14;
     TpsAdjustResult tps_adjust_result = 15;
@@ -150,13 +147,6 @@ message PhoneticsResponse {
 // =========================================================================
 
 message StringResult { string output = 1; }
-
-// `StripToneResult` returns the bare syllable + extracted tone digit.
-// `tone` is "" when no tone mark was present.
-message StripToneResult {
-  string bare = 1;
-  string tone = 2;
-}
 
 // `OptionalStringResult` is a String? equivalent. `present` indicates
 // whether `output` is meaningful (proto3 has no native optional for

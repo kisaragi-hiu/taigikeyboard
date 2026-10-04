@@ -14,7 +14,7 @@
 
 use prost::Message;
 use protos::engine::phonetics_request::Method;
-use protos::engine::{request, ErrorCode, PhoneticsRequest, Request, Response, StripTone};
+use protos::engine::{request, ErrorCode, PhoneticsRequest, Request, Response, TlToPoj};
 
 #[test]
 fn over_1mb_input_completes_without_panic() {
@@ -25,7 +25,7 @@ fn over_1mb_input_completes_without_panic() {
         config_snapshot: None,
         generation: 0,
         payload: Some(request::Payload::Phonetics(PhoneticsRequest {
-            method: Some(Method::StripTone(StripTone { input: huge })),
+            method: Some(Method::TlToPoj(TlToPoj { input: huge })),
         })),
     };
     let mut buf = Vec::with_capacity(req.encoded_len());

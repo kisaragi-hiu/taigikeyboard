@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger
  * - `CaseTransformBridge.kt` — per-char/per-word case operations
  * - `UserDataBridge.kt` — the engine-owned user data (open, picks, dictionary pages, backup)
  * Callers outside this package import each extension by name
- * (`import com.siansiansu.taigikeyboard.engine.stripTone`).
+ * (`import com.siansiansu.taigikeyboard.engine.tlToPoj`).
  *
  * Every slice sends through [dispatch] — one request-id allocator, one
  * JNI hop, one `try/Throwable` boundary (a JNI throw or a parse failure
@@ -770,12 +770,6 @@ object RustEngineBridge {
 // =========================================================================
 // Public DTOs (Kotlin doesn't allow named-tuple returns; using data classes)
 // =========================================================================
-
-/** Result of `Method::StripTone`. */
-data class StripToneOutcome(
-    val bare: String,
-    val tone: String,
-)
 
 /** Result of `Method::TpsInputAdjust`. */
 data class TpsAdjustOutcome(

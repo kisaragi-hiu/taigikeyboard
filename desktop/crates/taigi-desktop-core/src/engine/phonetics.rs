@@ -4,9 +4,8 @@
 //! ops). Twin of iOS `RustEngineBridge+Phonetics.swift`.
 
 use protos::engine::{
-    phonetics_request, phonetics_response, request, response, IsAttachingPunctuation,
-    NfdPreprocessForLookup, PhoneticsRequest, PhoneticsResponse, StripTone, TlDisplayToTps,
-    TlToPoj,
+    phonetics_request, phonetics_response, request, response, ExternalLookupDigitForm,
+    IsAttachingPunctuation, PhoneticsRequest, PhoneticsResponse, TlDisplayToTps, TlToPoj,
 };
 
 use super::bridge::{record_failure, roundtrip};
@@ -41,34 +40,15 @@ pub fn tl_display_to_tps(text: &str, or_maps_to_er: bool) -> Option<String> {
     )
 }
 
-/// The syllable without its tone, and the tone digit that was on it.
-pub fn strip_tone(input: &str) -> Option<(String, String)> {
-    let op = "stripTone";
-    let response = phonetics_response(
-        phonetics_request::Method::StripTone(StripTone {
-            input: input.to_owned(),
-        }),
-        op,
-    )?;
-    match response.result {
-        Some(phonetics_response::Result::StripToneResult(result)) => {
-            Some((result.bare, result.tone))
-        }
-        _ => {
-            record_failure(op, "response carried no strip-tone result");
-            None
-        }
-    }
-}
-
-/// Taigi-specific Unicode preprocessing before a lookup: the nasal marker
-/// and `o͘` folded to the ASCII spellings the external dictionaries index by.
-pub fn nfd_preprocess_for_lookup(input: &str) -> Option<String> {
+/// The digit-tone spelling of a TL reading that the web dictionaries search
+/// by (`tāi-tsì` → `tai7-tsi3`) — the engine's fold, the one every platform
+/// asks.
+pub fn external_lookup_digit_form(reading: &str) -> Option<String> {
     string_result(
-        phonetics_request::Method::NfdPreprocessForLookup(NfdPreprocessForLookup {
-            input: input.to_owned(),
+        phonetics_request::Method::ExternalLookupDigitForm(ExternalLookupDigitForm {
+            reading: reading.to_owned(),
         }),
-        "nfdPreprocessForLookup",
+        "externalLookupDigitForm",
     )
 }
 

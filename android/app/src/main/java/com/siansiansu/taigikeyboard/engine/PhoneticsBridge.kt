@@ -5,14 +5,12 @@
 package com.siansiansu.taigikeyboard.engine
 
 import com.siansiansu.taigikeyboard.engine.proto.BoolResult
+import com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm
 import com.siansiansu.taigikeyboard.engine.proto.IsAttachingPunctuation
 import com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark
-import com.siansiansu.taigikeyboard.engine.proto.NfdPreprocessForLookup
 import com.siansiansu.taigikeyboard.engine.proto.PhoneticsRequest
 import com.siansiansu.taigikeyboard.engine.proto.PhoneticsResponse
 import com.siansiansu.taigikeyboard.engine.proto.StringResult
-import com.siansiansu.taigikeyboard.engine.proto.StripTone
-import com.siansiansu.taigikeyboard.engine.proto.StripToneResult
 import com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps
 import com.siansiansu.taigikeyboard.engine.proto.TlToPoj
 import com.siansiansu.taigikeyboard.engine.proto.TpsAdjustResult
@@ -20,37 +18,9 @@ import com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust
 
 // region Phonetics core
 
-// Strips the syllable's tone combining mark; tone is "" when the syllable has none.
-fun RustEngineBridge.stripTone(input: String): StripToneOutcome {
-    val payload = StripTone.newBuilder().setInput(input).build()
-    val resp = phoneticsDispatch({ it.stripTone = payload }, "stripTone")
-        ?: return StripToneOutcome(input, "")
-    if (!resp.hasStripToneResult()) {
-        RustEngineBridge.recordFailure("stripTone", "missing StripToneResult")
-        return StripToneOutcome(input, "")
-    }
-    val r: StripToneResult = resp.stripToneResult
-    return StripToneOutcome(r.bare, r.tone)
-}
-
 fun RustEngineBridge.tlToPoj(input: String): String {
     val payload = TlToPoj.newBuilder().setInput(input).build()
     return stringDispatch({ it.tlToPoj = payload }, input, "tlToPoj")
-}
-
-/**
- * Replaces platform `TaigiUnicode.nfdPreprocessed(...)`. Lookup-side
- * NFD prep used by `ExternalLookupURLBuilder` before tone stripping.
- * It preserves tone diacritics; only nasal markers (ⁿ / ᴺ → "nn") and standalone
- * `\u{0358}` → `o` are rewritten.
- */
-fun RustEngineBridge.nfdPreprocessForLookup(input: String): String {
-    val payload = NfdPreprocessForLookup.newBuilder().setInput(input).build()
-    return stringDispatch(
-        { it.nfdPreprocessForLookup = payload },
-        input,
-        "nfdPreprocessForLookup",
-    )
 }
 
 // endregion
@@ -106,6 +76,16 @@ fun RustEngineBridge.tpsInputAdjust(
 fun RustEngineBridge.isAttachingPunctuation(text: String): Boolean {
     val payload = IsAttachingPunctuation.newBuilder().setText(text).build()
     return boolDispatch({ it.isAttachingPunctuation = payload }, "isAttachingPunctuation")
+}
+
+/**
+ * The digit-tone spelling of a TL reading that the web dictionaries search
+ * by (`tāi-tsì` → `tai7-tsi3`) — the engine's fold, the one every platform
+ * asks. The reading as written when the engine fails.
+ */
+fun RustEngineBridge.externalLookupDigitForm(reading: String): String {
+    val payload = ExternalLookupDigitForm.newBuilder().setReading(reading).build()
+    return stringDispatch({ it.externalLookupDigitForm = payload }, reading, "externalLookupDigitForm")
 }
 
 // endregion

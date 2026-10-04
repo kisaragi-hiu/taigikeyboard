@@ -30,12 +30,6 @@ final class RustEngineBridgeTests: XCTestCase {
 
     // MARK: - Phonetics core
 
-    func test_op_stripTone_returnsBareAndToneTuple() {
-        let result = RustEngineBridge.stripTone("guá")
-        XCTAssertEqual(result.bare, "gua")
-        XCTAssertEqual(result.tone, "2")
-    }
-
     func test_op_tlToPoj_canonical() {
         XCTAssertEqual(RustEngineBridge.tlToPoj("guá"), "góa")
     }

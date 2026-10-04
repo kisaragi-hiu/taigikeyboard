@@ -57,7 +57,7 @@ Engine state machine lives in Rust `engine/composing` (since v3.5.4). Platform s
 | **searchKey** | fst lookup key (`tl:` / `poj:` / `hanzi:` prefix + normalized form) | Rust `phonetics::KeyFamily::search_key` (`hanzi:` = `phonetics::HANJI_KEY_PREFIX`) |
 
 ### 3. Tone Engine (`engine/tone.md`)
-All tone logic lives in Rust `engine/phonetics` (since v3.5.1). Bridge surface: `RustEngineBridge+Phonetics.swift` / `PhoneticsBridge.kt` (`stripTone`, `tlToPoj`, …); preedit tone rendering runs inside composing ops.
+All tone logic lives in Rust `engine/phonetics` (since v3.5.1). Bridge surface: `RustEngineBridge+Phonetics.swift` / `PhoneticsBridge.kt` (`tlToPoj`, `externalLookupDigitForm`, …); preedit tone rendering runs inside composing ops.
 
 | Keyword | Definition | Owner |
 |---------|-----------|-------|

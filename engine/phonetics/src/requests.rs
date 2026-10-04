@@ -7,20 +7,20 @@
 //! - This file owns the dispatch + result-shape construction.
 //! - `normalization` owns the InputNormalizer port (NFD / combining-mark
 //!   mechanics).
+//! - `punctuation` and `external_lookup` hold the two platform text helpers.
 //! - `tps_adjust` owns the TPSAdjustmentBundle port (collapsed entry).
 //! - `tone_variations` owns the GetToneVariations init-pull table builder.
 //! - `api`, `syllable`, `tps`, `poj`, `tl`, `tables`, `case_adjust`
 //!   provide the foundational helpers reused here.
 
 use crate::api::{tl_display_to_poj_display, tl_display_to_tps, tl_numeric_to_tps, PhoneticsError};
-use crate::normalization;
 use crate::tone_variations;
 use crate::tps_adjust;
 use protos::engine::phonetics_request::Method;
 use protos::engine::phonetics_response::Result as PhonResult;
 use protos::engine::{
     BoolResult, OptionalStringResult, PhoneticsRequest, PhoneticsResponse, StringResult,
-    StripToneResult, TpsAdjustResult,
+    TpsAdjustResult,
 };
 
 /// Dispatch a decoded `PhoneticsRequest`. Every remaining op is a pure
@@ -38,17 +38,10 @@ pub fn handle(req: &PhoneticsRequest) -> Result<PhoneticsResponse, PhoneticsErro
 
     let result = match method {
         // --- Phonetics core ---
-        Method::StripTone(payload) => {
-            let (bare, tone) = crate::syllable::strip_tone_mark(&payload.input);
-            PhonResult::StripToneResult(StripToneResult { bare, tone })
-        }
         Method::TlToPoj(payload) => PhonResult::StringResult(StringResult {
             output: tl_display_to_poj_display(&payload.input),
         }),
         Method::GetToneVariations(_) => PhonResult::ToneVariationsResult(tone_variations::build()),
-        Method::NfdPreprocessForLookup(payload) => PhonResult::StringResult(StringResult {
-            output: normalization::taigi_unicode_base_form(&payload.input),
-        }),
 
         // --- TPS ---
         Method::TlNumericToTps(payload) => PhonResult::StringResult(StringResult {
@@ -82,6 +75,9 @@ pub fn handle(req: &PhoneticsRequest) -> Result<PhoneticsResponse, PhoneticsErro
         // --- Platform text helpers ---
         Method::IsAttachingPunctuation(payload) => PhonResult::BoolResult(BoolResult {
             value: crate::punctuation::is_attaching_punctuation(&payload.text),
+        }),
+        Method::ExternalLookupDigitForm(payload) => PhonResult::StringResult(StringResult {
+            output: crate::external_lookup::digit_tone_form(&payload.reading),
         }),
     };
 

@@ -22,17 +22,6 @@ public interface PhoneticsResponseOrBuilder extends
   com.siansiansu.taigikeyboard.engine.proto.StringResult getStringResult();
 
   /**
-   * <code>.taigi.engine.StripToneResult strip_tone_result = 11;</code>
-   * @return Whether the stripToneResult field is set.
-   */
-  boolean hasStripToneResult();
-  /**
-   * <code>.taigi.engine.StripToneResult strip_tone_result = 11;</code>
-   * @return The stripToneResult.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.StripToneResult getStripToneResult();
-
-  /**
    * <code>.taigi.engine.BoolResult bool_result = 13;</code>
    * @return Whether the boolResult field is set.
    */

@@ -38,12 +38,6 @@ class RustEngineBridgeTest {
 
     // region Phonetics core
 
-    @Test fun op_stripTone_returnsBareAndTone() {
-        val outcome = RustEngineBridge.stripTone("guá")
-        assertEquals("gua", outcome.bare)
-        assertEquals("2", outcome.tone)
-    }
-
     @Test fun op_tlToPoj_canonical() {
         assertEquals("góa", RustEngineBridge.tlToPoj("guá"))
     }
@@ -66,6 +60,15 @@ class RustEngineBridgeTest {
         assertTrue(RustEngineBridge.isAttachingPunctuation("」"))
         assertFalse(RustEngineBridge.isAttachingPunctuation("「"))
         assertFalse(RustEngineBridge.isAttachingPunctuation("?!"))
+    }
+
+    // The engine's digit-tone fold (`phonetics::external_lookup`, full table
+    // pinned there) through the bridge `ExternalLookupURLBuilder` reads; the
+    // `o͘` row is the parity-correction (the Kotlin copy left `ho͘2`).
+    @Test fun op_externalLookupDigitForm_foldsTonesAndODot() {
+        assertEquals("tai5-gi2", RustEngineBridge.externalLookupDigitForm("Tâi-gí"))
+        assertEquals("hoo2", RustEngineBridge.externalLookupDigitForm("ho͘" + "2"))
+        assertEquals("sann", RustEngineBridge.externalLookupDigitForm("sann1"))
     }
 
     @Test fun op_tpsInputAdjust_dualForm() {

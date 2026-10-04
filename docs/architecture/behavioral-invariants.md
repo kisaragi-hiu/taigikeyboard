@@ -104,7 +104,7 @@
 
 **Why**: downstream consumers (Rust `phonetics::normalization::normalize_input`, the custom-dictionary search keys `phonetics::custom_search`) depend on the output being identical across platforms. A divergent one-character preprocessing bug silently changes every dedup key, every score calculation, and every fst lookup.
 
-**Scope**: Rust `engine/phonetics::normalization::taigi_unicode_base_form` (canonical, since v3.5.3 PR #192). Bridged via `RustEngineBridge.nfdPreprocessForLookup`. Platform-side `TaigiUnicode.{swift,kt}` helpers were deleted under Path G.
+**Scope**: Rust `engine/phonetics::normalization::taigi_unicode_base_form` (canonical, since v3.5.3 PR #192). The external-lookup URLs reach it inside the `ExternalLookupDigitForm` op (`phonetics::external_lookup`, `RustEngineBridge.externalLookupDigitForm`). Platform-side `TaigiUnicode.{swift,kt}` helpers were deleted under Path G.
 
 **Corner cases**:
 - Combining tone marks remain decomposed after the function returns; caller strips them.

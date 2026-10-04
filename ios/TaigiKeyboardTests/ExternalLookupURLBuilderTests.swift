@@ -1,9 +1,11 @@
 @testable import TaigiKeyboard
 import XCTest
 
-/// The digit-tone reading the external-dictionary URLs query by
-/// (`ExternalLookupURLBuilder.toTLDigit`). Compared scalar by scalar: Swift
-/// `String` equality is canonical, so `==` cannot tell NFC from NFD.
+/// The digit-tone reading the external-dictionary URLs query by, through the
+/// engine (`RustEngineBridge.externalLookupDigitForm`; the full table is
+/// pinned in engine `phonetics/src/external_lookup.rs`). Compared scalar by
+/// scalar: Swift `String` equality is canonical, so `==` cannot tell NFC
+/// from NFD.
 final class ExternalLookupURLBuilderTests: XCTestCase {
     private func assertDigitForm(
         _ reading: String,
@@ -12,7 +14,7 @@ final class ExternalLookupURLBuilderTests: XCTestCase {
         line: UInt = #line,
     ) {
         XCTAssertEqual(
-            Array(ExternalLookupURLBuilder.toTLDigit(reading).unicodeScalars),
+            Array(RustEngineBridge.externalLookupDigitForm(reading).unicodeScalars),
             Array(expected.unicodeScalars),
             "\(reading.unicodeScalars.map { String($0.value, radix: 16) })",
             file: file,
@@ -20,32 +22,34 @@ final class ExternalLookupURLBuilderTests: XCTestCase {
         )
     }
 
-    /// Characterization of the Swift per-syllable fold before it moved to the
-    /// engine — the same table desktop-core `external_lookup.rs` records.
-    func testDigitForm_characterization() {
-        // trace: diacritic path = nfdPreprocessForLookup (ⁿ→nn, NFD,
-        // U+0358→o) then stripTone (first combining tone mark, bare NFC);
-        // tones 1 / 4 / none omitted.
+    func testDigitForm_throughTheEngine() {
+        // trace: engine `digit_tone_form` — base form (ⁿ→nn, NFD, U+0358→o),
+        // first tone mark → digit, tones 1 / 4 / none omitted, NFC.
         assertDigitForm("Tâi-gí", "tai5-gi2")
-        assertDigitForm("tsi\u{030D}t-ê", "tsit8-e5")
-        assertDigitForm("kiaⁿ", "kiann")
-        assertDigitForm("kiânn", "kiann5")
         assertDigitForm("ho\u{0301}\u{0358}", "hoo2")
-        assertDigitForm("ho\u{0358}\u{0301}", "hoo2")
-        assertDigitForm("tâí", "taí5") // only the first tone mark is stripped
-        assertDigitForm("iā sī", "ia sī7") // split on `-` only, never on the space
-        assertDigitForm("--ah", "--ah")
-        assertDigitForm("台語", "台語")
-        assertDigitForm("", "")
-        // trace: digit path = last Character `isNumber`, ⁿ→nn only, 1 / 4
-        // dropped, NO NFD and NO o͘ fold.
-        assertDigitForm("ah4", "ah")
+        assertDigitForm("iā sī", "ia sī7")
         assertDigitForm("sann1", "sann")
-        assertDigitForm("TSIT8", "tsit8")
-        assertDigitForm("ho\u{0358}2", "ho\u{0358}2")
-        assertDigitForm("t\u{E2}i5", "t\u{E2}i5")
-        assertDigitForm("ta\u{0302}i5", "ta\u{0302}i5")
-        assertDigitForm("ho\u{FF12}", "ho\u{FF12}")
-        assertDigitForm("h\u{F3}\u{FF12}", "h\u{F3}\u{FF12}")
+        assertDigitForm("", "")
+    }
+
+    /// Parity-corrections against the Swift copy (characterized before the
+    /// move): the digit path now folds `o͘`, answers NFC, and takes only an
+    /// ASCII digit as a tone.
+    func testDigitForm_parityCorrections() {
+        assertDigitForm("ho\u{0358}2", "hoo2") // was ho͘2
+        assertDigitForm("ta\u{0302}i5", "t\u{E2}i5") // was NFD, passed through
+        assertDigitForm("h\u{F3}\u{FF12}", "ho\u{FF12}2") // was hó２
+    }
+
+    func testURLs_carryTheEncodedDigitForm() {
+        XCTAssertEqual(
+            ExternalLookupURLBuilder.moeURL(forTL: "Tâi-gí")?.absoluteString,
+            "https://sutian.moe.edu.tw/zh-hant/tshiau/?lui=tai_su&tsha=tai5-gi2",
+        )
+        XCTAssertEqual(
+            ExternalLookupURLBuilder.chhoeURL(forTL: "tsia\u{030D}h")?.absoluteString,
+            "https://chhoe.taigi.info/s?s=su&f=e&lmjf=ki&lmj=tsiah8",
+        )
+        XCTAssertNil(ExternalLookupURLBuilder.moeURL(forTL: ""))
     }
 }

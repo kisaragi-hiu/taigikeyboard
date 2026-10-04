@@ -4,7 +4,7 @@
 
 use prost::Message;
 use protos::engine::phonetics_request::Method;
-use protos::engine::{request, PhoneticsRequest, Request, StripTone};
+use protos::engine::{request, PhoneticsRequest, Request, TlToPoj};
 
 #[test]
 fn process_request_writes_header_and_request_event() {
@@ -12,13 +12,13 @@ fn process_request_writes_header_and_request_event() {
     let _ = std::fs::remove_file(&path);
     assert!(dispatch::trace::open(path.to_str().unwrap()));
 
-    // trace: payload = phonetics (Request field 10), method = strip_tone
-    // (PhoneticsRequest field 11, phonetics.proto) → domain "phonetics", tag 11.
+    // trace: payload = phonetics (Request field 10), method = tl_to_poj
+    // (PhoneticsRequest field 13, phonetics.proto) → domain "phonetics", tag 13.
     let bytes = Request {
         id: 42,
         generation: 9,
         payload: Some(request::Payload::Phonetics(PhoneticsRequest {
-            method: Some(Method::StripTone(StripTone {
+            method: Some(Method::TlToPoj(TlToPoj {
                 input: "ká".into()
             })),
         })),
@@ -46,7 +46,7 @@ fn process_request_writes_header_and_request_event() {
             r#""req_id":42"#,
             r#""generation":9"#,
             r#""domain":"phonetics""#,
-            r#""method_tag":11"#,
+            r#""method_tag":13"#,
             r#""error":0"#,
         ],
     );

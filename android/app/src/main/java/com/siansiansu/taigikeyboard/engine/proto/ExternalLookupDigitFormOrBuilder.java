@@ -6,19 +6,19 @@
 package com.siansiansu.taigikeyboard.engine.proto;
 
 @com.google.protobuf.Generated
-public interface StripToneOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:taigi.engine.StripTone)
+public interface ExternalLookupDigitFormOrBuilder extends
+    // @@protoc_insertion_point(interface_extends:taigi.engine.ExternalLookupDigitForm)
     com.google.protobuf.MessageLiteOrBuilder {
 
   /**
-   * <code>string input = 1;</code>
-   * @return The input.
+   * <code>string reading = 1;</code>
+   * @return The reading.
    */
-  java.lang.String getInput();
+  java.lang.String getReading();
   /**
-   * <code>string input = 1;</code>
-   * @return The bytes for input.
+   * <code>string reading = 1;</code>
+   * @return The bytes for reading.
    */
   com.google.protobuf.ByteString
-      getInputBytes();
+      getReadingBytes();
 }
