@@ -169,7 +169,8 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   `CandidateMetrics.swift`, `CandidatePanelPositioning.swift`) with their test
   oracles as Rust tests. Sequoia geometry (6 pt corners, full-cell highlight). Caret
   rect from `ITfContextView::GetTextExt` on the collapsed selection (rakukan
-  `on_compose.rs:29-43`), treating clipped / empty / failed rects as "no anchor" —
+  `on_compose.rs:29-43`), treating zero-height / failed rects as "no anchor" (a
+  clipped rect still anchors — PowerPoint flags every slide text box clipped) —
   composition end → composition start → selection (khiin `composition_utils.rs:31-69`),
   then NO window (the Mac's `presentCandidates` rule; a host-window-corner fallback was
   refused by the PR6 Codex review). Mouse click selects, never commits
