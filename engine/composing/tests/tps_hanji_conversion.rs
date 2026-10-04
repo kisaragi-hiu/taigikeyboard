@@ -150,7 +150,8 @@ fn a_tone_mark_closes_the_reading_and_the_key_answers_converted() {
 
 // INVARIANT_TPS_SPACE_PINS_UNMARKED_TONE (§41) holds for the conversion.
 // trace: "ㄒㄧ" + Space → raw "ㄒㄧ " (7 bytes); the shadow "ㄒㄧ" ends on the
-// separator barrier → closed_end 6, extended over the separator to 7. The
+// separator barrier, whose raw end already holds the trailing separator
+// (`shadow_to_raw_end`'s full-span end, §41) → closed_end 7. The
 // closed part is walked with its Space, so the tail pins the unmarked tone:
 // 詩 (si1), not the higher-frequency 是 (si7) / 死 (si2).
 #[test]
