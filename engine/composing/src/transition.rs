@@ -110,14 +110,8 @@ pub(crate) fn apply(
             Phase::Idle => noop(state, config),
         },
         Intent::CommitPreeditThenInsertExternal { text } => match &state.phase {
-            Phase::Continuous { raw, nailed, .. } => {
-                commit_preedit_then_insert_external_under_continuous(
-                    state,
-                    raw.clone(),
-                    nailed.clone(),
-                    text,
-                    config,
-                )
+            Phase::Continuous { .. } => {
+                commit_preedit_then_insert_external_under_continuous(state, text, config)
             }
             Phase::Idle => insert_external_when_idle(state, text, config),
         },
@@ -907,22 +901,22 @@ fn select_candidate_under_continuous(
 }
 
 /// `Intent::CommitPreeditThenInsertExternal { text }` under Continuous.
-/// Codex post-impl finding #3. **Model B**: the whole composition
-/// (`Σ nailed[i].display_text` + pending derived display) plus the external
-/// text are committed in one `CommitTextReplacingPreedit` — nailed segments
-/// were never in the document, so they must ride the commit here too. Then
-/// exits Continuous. Empty `text` collapses to `noop`.
+/// Codex post-impl finding #3. **Model B**: the whole composition as the
+/// preedit shows it ([`phase_preedit`]: `Σ nailed[i].display_text` + the
+/// pending tail — its Hanji conversion when the request asks for one, else
+/// its derived display) plus the external text are committed in one
+/// `CommitTextReplacingPreedit` — nailed segments were never in the
+/// document, so they must ride the commit here too. Then exits Continuous.
+/// Empty `text` collapses to `noop`.
 fn commit_preedit_then_insert_external_under_continuous(
     state: &mut EngineState,
-    raw: String,
-    nailed: Vec<NailedSegment>,
     external: String,
     config: &AppConfig,
 ) -> ComposingResponse {
     if external.is_empty() {
         return noop(state, config);
     }
-    let mut combined = combined_display(&nailed, &raw, config);
+    let mut combined = phase_preedit(&state.phase, config).display_text;
     combined.push_str(&external);
     let mut effects = finalize_effects(combined);
     effects.push(next_word_clear_for_new_composing());

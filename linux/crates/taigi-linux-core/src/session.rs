@@ -389,7 +389,8 @@ pub(crate) fn is_composing(runtime: &Runtime, token: ContextToken) -> bool {
 }
 
 /// The commit the picker chord runs before it opens: what is highlighted
-/// when a list shows, the composition as typed otherwise.
+/// when a list shows, the composition as rendered otherwise
+/// (`ComposingKeyIntent::commit_first`).
 pub(crate) fn commit_for_picker(
     runtime: &Runtime,
     token: ContextToken,
@@ -397,11 +398,10 @@ pub(crate) fn commit_for_picker(
     settings: &SettingsDocument,
     bindings: &ComposingKeyBindings,
 ) -> KeyReply {
-    let intent = if state.candidates.is_empty() {
-        ComposingKeyIntent::Commit
-    } else {
-        ComposingKeyIntent::CommitHighlightedCandidate
-    };
+    let intent = ComposingKeyIntent::commit_first(
+        !state.candidates.is_empty(),
+        settings.choice(&keys::INPUT_MODE),
+    );
     runtime.prepare_for_first_key();
     let mut coordinator = runtime.lock_coordinator();
     run_key(

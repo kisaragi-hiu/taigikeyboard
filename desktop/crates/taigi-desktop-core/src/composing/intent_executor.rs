@@ -76,13 +76,15 @@ pub fn perform_intent(
         ComposingKeyIntent::TpsKey(key) => {
             match manager.tps_key(key, surface) {
                 // Typing TPS fetches nothing: the window opens on demand
-                // (roadmap § D7), and a key typed over it takes it down.
+                // (roadmap § D7), and a key typed over it takes it down. The
+                // engine's answer already carries the converted preedit.
                 TpsKeyOutcome::Taken => close_open_list(list, surface),
                 // A Space after the closed last syllable (O1, revised by D7):
-                // it opens the window, as Zhuyin input methods do — a window
-                // already up took the Space as its confirm in the classifier.
-                // With the window switched off it commits the glyphs as
-                // typed — no space after, TPS takes none.
+                // it opens the window for the last word, as Zhuyin input
+                // methods do — a window already up took the Space as its
+                // confirm in the classifier. With the window switched off it
+                // commits the composition as shown — no space after, TPS
+                // takes none.
                 TpsKeyOutcome::Refused {
                     is_caret_at_end: true,
                 } if key == " " => {
@@ -109,14 +111,21 @@ pub fn perform_intent(
             true
         }
         ComposingKeyIntent::Commit => {
-            // The preedit AS TYPED, whichever script the candidate list led
-            // with: romanization under TL and POJ, glyphs under TPS.
+            // The preedit as rendered, whichever script the candidate list
+            // led with: the romanization as typed under TL and POJ, the
+            // Hanji conversion as shown under TPS.
             let committed = manager.commit_composition(surface);
             close_list(list, surface);
             let earns_auto_space = committed.is_some_and(|text| {
                 raw_preedit_wrote_romanization(settings) && policies::should_append_space(&text)
             });
             append_auto_space(earns_auto_space, settings, surface);
+            true
+        }
+        ComposingKeyIntent::CommitAsTyped => {
+            // TPS only: glyphs, which earn no space.
+            manager.commit_composition_as_typed(surface);
+            close_list(list, surface);
             true
         }
         ComposingKeyIntent::Cancel => {
@@ -131,7 +140,8 @@ pub fn perform_intent(
             // romanization under TL and POJ, whichever script the list led
             // with — while the full-width map still answers to the output
             // MODE, so Hanji-first gets `taigi？ ` (macOS pins the same pair).
-            // Under TPS the preedit is glyphs and earns no space.
+            // Under TPS the composition is written as shown and earns no
+            // space.
             let is_width_flip = ComposingKeyIntent::width_flip_character(snapshot).is_some();
             let document_text =
                 document_punctuation(settings, text, is_width_flip).unwrap_or_else(|| text.clone());
@@ -211,7 +221,8 @@ pub fn perform_intent(
         ComposingKeyIntent::MoveCaret(direction) => {
             // No refetch: the text did not change, so the candidates, the
             // highlight and the page still describe it. Under TPS the window
-            // goes: it is opened for a place to pick, and the caret left it.
+            // goes: it is opened for the word before the caret, and the
+            // caret left it.
             manager.move_caret(*direction, surface);
             if is_tps(settings) {
                 close_open_list(list, surface);
@@ -308,14 +319,19 @@ pub fn refresh_list(
 /// switch that changed them: refetched when the change alters which
 /// candidates exist (`refetch`), otherwise the same list re-rendered in
 /// place. An empty list stays empty — a switch never opens one — and a
-/// refetch obeys the Show Candidate Window setting like any other. Answers
-/// whether a list is left to show.
+/// refetch obeys the Show Candidate Window setting like any other. Under
+/// TPS the list closes: it was opened for one word of a conversion the new
+/// settings may walk differently (Hanji conversion H8). Answers whether a
+/// list is left to show.
 pub fn represent_list(
     settings: &SettingsDocument,
     manager: &mut ComposingManager,
     list: &mut CandidateSource,
     refetch: bool,
 ) -> bool {
+    if manager.is_tps_composition() {
+        list.clear();
+    }
     if list.is_empty() {
         return false;
     }
@@ -359,6 +375,8 @@ fn is_tps(settings: &SettingsDocument) -> bool {
 /// whether it earns the auto space. No cell (no list, an index past it)
 /// commits nothing. Under TPS there is no other script to flip to — the
 /// engine's `Other` would write raw TL — so a flip commits the cell's own.
+/// A nail refetches the list when the engine asks for it; a pick under a TPS
+/// Hanji conversion does not, and the window closes (H4).
 fn commit_candidate(
     cell: Option<usize>,
     flip: bool,
@@ -367,7 +385,7 @@ fn commit_candidate(
     list: &mut CandidateSource,
     surface: &mut impl IntentSurface,
 ) {
-    let flip = flip && settings.choice(&keys::INPUT_MODE) != InputMode::Tps;
+    let flip = flip && !is_tps(settings);
     let Some((candidate, script)) = cell.and_then(|index| list.resolve(index, flip)) else {
         return;
     };
@@ -378,7 +396,8 @@ fn commit_candidate(
             close_list(list, surface);
             append_auto_space(earns_auto_space, settings, surface);
         }
-        CandidateCommitOutcome::Nailed
+        CandidateCommitOutcome::Nailed { refetch: false } => close_list(list, surface),
+        CandidateCommitOutcome::Nailed { refetch: true }
         | CandidateCommitOutcome::Ignored
         | CandidateCommitOutcome::Unavailable => refresh(settings, manager, list, surface),
     }

@@ -161,26 +161,28 @@ impl Session {
     }
 
     /// The commit the symbol-picker chord runs before the picker opens: the
-    /// highlighted cell while the window shows one, the composition as typed
-    /// with its auto space otherwise. Chosen by the highlight the window
-    /// reports (the Linux shell asks its list instead, `commit_for_picker`).
+    /// highlighted cell while the window shows one, the composition as
+    /// rendered with its auto space otherwise; under TPS always the
+    /// composition (`ComposingKeyIntent::commit_first`). Chosen by the
+    /// highlight the window reports (the Linux shell asks its list instead,
+    /// `commit_for_picker`).
     pub(crate) fn commit_for_symbol_picker(
         &mut self,
         runtime: &DesktopRuntime,
         request: &CommitForSymbolPickerRequest,
     ) -> Result<SessionReply, Refusal> {
         let panel = required(&request.panel, "commit_for_symbol_picker.panel")?;
-        let intent = if panel.selected_index.is_some() {
-            ComposingKeyIntent::CommitHighlightedCandidate
-        } else {
-            ComposingKeyIntent::Commit
-        };
+        let has_highlight = panel.selected_index.is_some();
         self.run_owned(
             runtime,
             request.token,
             panel,
             |manager, candidates, surface| {
                 let settings = runtime.settings.current();
+                let intent = ComposingKeyIntent::commit_first(
+                    has_highlight,
+                    settings.choice(&keys::INPUT_MODE),
+                );
                 // No key: neither commit reads one.
                 let key = KeyEventSnapshot::default();
                 perform_intent(&intent, &key, &settings, manager, candidates, surface);
@@ -1090,6 +1092,23 @@ mod tests {
         assert_eq!(effects(&reply), vec![insert(&cells[0].text), closed()]);
     }
 
+    /// Under TPS the picker commits the composition as shown even over a
+    /// highlight: a pick would only nail a word and keep composing (Hanji
+    /// conversion H6). trace, read by running: ㄍㄚˋ → 假, no space.
+    #[test]
+    fn under_tps_the_picker_commits_the_composition_as_shown() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, vec![text("inputMode", "tps")]);
+        for key in ["e", "8", "4"] {
+            typist.key(typed(key), no_list());
+        }
+        let down = chord("\u{F701}", FUNCTION | NUMERIC_PAD, Some(0xF701));
+        assert!(!shown_list(&typist.key(down, no_list())).cells.is_empty());
+        let reply = typist.commit_for_symbol_picker(list(Some(0)));
+        assert!(!reply.handled && !reply.is_composing);
+        assert_eq!(effects(&reply), vec![insert("假"), closed()]);
+    }
+
     /// No highlight: the composition as typed, spaced under TL
     /// (`commitAsTyped`) — what the picker writes after it.
     #[test]
@@ -1326,7 +1345,9 @@ mod tests {
     }
 
     /// Desktop TPS D7: typing opens no list; ↓ opens it; the number-row `2`
-    /// (`kVK_ANSI_2`) then picks — over a list the window reports up.
+    /// (`kVK_ANSI_2`) then picks — over a list the window reports up. The
+    /// pick nails the word and closes the list, the composition stays marked;
+    /// Return writes it (Hanji conversion H4, B2).
     #[test]
     fn under_tps_the_list_opens_on_demand_and_the_number_row_picks() {
         let (_engine, shell) = engine_shell();
@@ -1353,8 +1374,31 @@ mod tests {
             ..typed("2")
         };
         let picked = typist.key(two, list(Some(0)));
-        assert!(picked.handled && !picked.is_composing);
-        assert_eq!(effects(&picked).first(), Some(&insert(&second)));
+        assert!(picked.handled && picked.is_composing);
+        assert_eq!(effects(&picked), vec![marked(&second, 1), closed()]);
+        let enter = typist.key(chord("\r", 0, Some(CARRIAGE_RETURN)), no_list());
+        assert!(enter.handled && !enter.is_composing);
+        assert_eq!(effects(&enter).first(), Some(&insert(&second)));
+    }
+
+    /// Hanji conversion on macOS: `e` `8` `4` (ㄍㄚˋ) is marked converted; a
+    /// plain ← steps the caret over the word; ⇧Return writes the glyphs.
+    /// trace, read by running: ㄍㄚˋ → 假.
+    #[test]
+    fn under_tps_a_closed_reading_is_marked_converted_and_shift_return_writes_the_glyphs() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, vec![text("inputMode", "tps")]);
+        typist.key(typed("e"), no_list());
+        typist.key(typed("8"), no_list());
+        let reply = typist.key(typed("4"), no_list());
+        assert_eq!(effects(&reply), vec![marked("假", 1)]);
+        let left = chord("\u{F702}", FUNCTION | NUMERIC_PAD, Some(LEFT_ARROW));
+        let stepped = typist.key(left, no_list());
+        assert!(stepped.handled && stepped.is_composing);
+        assert_eq!(effects(&stepped), vec![marked("假", 0)]);
+        let shift_enter = typist.key(chord("\r", SHIFT, Some(CARRIAGE_RETURN)), no_list());
+        assert!(shift_enter.handled && !shift_enter.is_composing);
+        assert_eq!(effects(&shift_enter).first(), Some(&insert("ㄍㄚˋ")));
     }
 
     /// A slot key after a switch across TPS picks nothing from the old
@@ -1414,13 +1458,11 @@ mod tests {
         typist.tps_keyboard_press("ㄚ", no_list());
         let down = chord("\u{F701}", FUNCTION | NUMERIC_PAD, Some(0xF701));
         assert!(!shown_list(&typist.key(down, no_list())).cells.is_empty());
-        // trace: KEYS `4` = ˋ (U+02CB, tone 2); after ㄚ the adjuster keeps it.
+        // trace: KEYS `4` = ˋ (U+02CB, tone 2); after ㄚ the adjuster keeps it,
+        // and the closed reading shows converted (read by running: 假).
         let over_list = typist.tps_keyboard_press("\u{02cb}", list(Some(0)));
         assert!(over_list.handled && over_list.is_composing);
-        assert_eq!(
-            effects(&over_list),
-            vec![marked("ㄍㄚ\u{02cb}", 3), closed()]
-        );
+        assert_eq!(effects(&over_list), vec![marked("假", 1), closed()]);
     }
 
     /// A press is not handled outside TPS — a click that raced a switch —

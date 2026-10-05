@@ -120,8 +120,10 @@ fn tps_settings() -> EngineSettings {
 #[test]
 fn tps_key_composes_glyphs_and_space_is_taken_once() {
     // trace: engine `TpsKey` — ㄍ ㄚ ㄉ: the adjuster folds ㄉ after ㄚ to ㆵ
-    // (`kat` is a valid final); Space after the stop coda is the separator and
-    // is hidden from the preedit; a second Space is refused with no effects.
+    // (`kat` is a valid final); Space after the stop coda is the separator,
+    // hidden from the preedit, and closes the reading, which TPS settings ask
+    // to see converted (`app_config` → Hanji conversion; read by running:
+    // 結); a second Space is refused with no effects.
     let _engine = engine();
     let settings = tps_settings();
     let generation = fresh_generation();
@@ -130,7 +132,7 @@ fn tps_key_composes_glyphs_and_space_is_taken_once() {
     }
     let separated = engine::tps_key(" ", &settings, PLATFORM, generation).expect("tps round trip");
     assert_eq!(separated.raw_input, "ㄍㄚㆵ ");
-    assert_eq!(separated.display_text, "ㄍㄚㆵ");
+    assert_eq!(separated.display_text, "結");
     assert!(!separated.effects.is_empty(), "the separator is taken");
     let refused = engine::tps_key(" ", &settings, PLATFORM, generation).expect("tps round trip");
     assert!(

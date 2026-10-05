@@ -437,6 +437,34 @@ fn commit_as_typed_writes_the_glyphs_of_the_whole_composition() {
     assert_eq!(engine.snapshot_state().phase, Phase::Idle);
 }
 
+// A key that commits the composition before itself (punctuation, Shift+Space)
+// writes it as shown, then the key, in one write; it teaches nothing, as
+// without the conversion. trace: pick 絲 at the end → 死 (not picked) 絲, then
+// `ㄒㄧˋ` shows 死絲死 → "死絲死？".
+#[test]
+fn commit_then_insert_writes_the_composition_as_shown() {
+    let _lock = engine_install_lock();
+    install_fixture_with(EXTRA_ROWS);
+    let config = config_converting("tps");
+    let (mut engine, _) = composing_engine("ㄒㄧˋㄒㄧ ", &config);
+    engine.apply(pick("絲", "si", 15), &config);
+    for key in ["ㄒ", "ㄧ", "ˋ"] {
+        tps_key(&mut engine, key, &config);
+    }
+    let response = engine.apply(
+        Intent::CommitPreeditThenInsertExternal {
+            text: "？".to_string(),
+        },
+        &config,
+    );
+    assert_eq!(commit_text(&response).as_deref(), Some("死絲死？"));
+    assert_eq!(
+        effect_kinds(&response.effect).last(),
+        Some(&"NextWordClearForNewComposing")
+    );
+    assert_eq!(engine.snapshot_state().phase, Phase::Idle);
+}
+
 // A word nailed as shown is never one end of a next-word pair: the final
 // legacy-shaped terminal of an all-nailed composition with an unpicked
 // segment answers Clear. trace: pick 絲 at the end → 死 (not picked) 絲;

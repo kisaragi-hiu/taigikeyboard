@@ -414,7 +414,7 @@ fn a_switch_re_presents_an_open_list_and_never_opens_one() {
     assert!(rig.list.is_empty());
 }
 
-// MARK: - TPS (desktop-tps-roadmap.md § D3, O1)
+// MARK: - TPS (desktop-tps-roadmap.md § D3, O1; Hanji conversion arm B)
 
 fn new_tps_rig() -> Rig {
     let engine = engine_lock();
@@ -452,6 +452,15 @@ impl Rig {
     fn open_window(&mut self) {
         assert!(self.run(ComposingKeyIntent::OpenCandidates, &no_key()));
         assert!(!self.list.is_empty(), "a window to pick from");
+        self.surface.calls.clear();
+    }
+
+    /// Opens the window and picks its first cell — a pick that nails the
+    /// word and keeps composing (Hanji conversion H4).
+    fn pick_first(&mut self) {
+        self.open_window();
+        self.surface.selected = Some(0);
+        assert!(self.run(ComposingKeyIntent::CommitHighlightedCandidate, &no_key()));
         self.surface.calls.clear();
     }
 }
@@ -522,9 +531,11 @@ fn tps_space_on_a_closed_syllable_opens_the_window() {
     assert_eq!(rig.manager.raw_input(), "ㄏㄛˋ");
 }
 
+/// The classifier reads Space over the window as the confirm (D7). The pick
+/// nails the word and closes the window; nothing reaches the document until
+/// a commit (Hanji conversion H4), which writes it as shown with no space.
 #[test]
-fn tps_with_the_window_up_space_confirms_the_highlighted_candidate() {
-    // The classifier reads Space over the window as the confirm (D7).
+fn tps_with_the_window_up_space_picks_the_highlighted_word_and_keeps_composing() {
     let mut rig = new_tps_rig();
     rig.type_tps("ㄏㄛˋ");
     rig.open_window();
@@ -535,9 +546,15 @@ fn tps_with_the_window_up_space_confirms_the_highlighted_candidate() {
         .expect("a first cell")
         .0
         .hanji
-        .clone();
+        .clone()
+        .expect("the first candidate carries Hanji");
     assert!(rig.run(ComposingKeyIntent::CommitHighlightedCandidate, &no_key()));
-    let expected = expected.expect("the first candidate carries Hanji");
+    assert_eq!(rig.calls(), ["list closed"]);
+    assert!(rig.list.is_empty());
+    assert!(rig.manager.is_composing());
+    assert_eq!(rig.manager.display_text(), expected);
+    rig.surface.calls.clear();
+    assert!(rig.run(ComposingKeyIntent::Commit, &no_key()));
     assert_eq!(
         rig.calls(),
         [format!("commit {expected}"), "list closed".to_owned()]
@@ -563,10 +580,8 @@ fn tps_a_flipped_slot_commits_the_cells_own_hanji_never_the_tl() {
     };
     assert!(rig.run(intent, &no_key()));
     let expected = expected.expect("the second candidate carries Hanji");
-    assert_eq!(
-        rig.calls(),
-        [format!("commit {expected}"), "list closed".to_owned()]
-    );
+    assert_eq!(rig.calls(), ["list closed"]);
+    assert_eq!(rig.manager.display_text(), expected);
 }
 
 #[test]
@@ -581,16 +596,88 @@ fn tps_ctrl_comma_writes_the_full_width_mark() {
 }
 
 #[test]
-fn tps_space_on_a_closed_syllable_with_the_window_off_commits_the_glyphs_unspaced() {
+fn tps_space_on_a_closed_syllable_with_the_window_off_commits_as_shown_unspaced() {
     // trace: with Show Candidate Window off `refresh_list` keeps the list
-    // empty, so no cell is highlighted and O1 takes the raw arm.
+    // empty, so no cell is highlighted and O1 commits; read by running:
+    // `ㄏㄛˋ` shows 好, which the commit writes (Hanji conversion B2).
     let mut rig = new_tps_rig();
     rig.settings
         .set_bool(&keys::IS_CANDIDATE_WINDOW_ENABLED, false);
     rig.type_tps("ㄏㄛˋ");
     assert!(rig.list.is_empty());
     assert!(rig.run(ComposingKeyIntent::TpsKey(" ".to_owned()), &no_key()));
-    assert_eq!(rig.calls(), ["commit ㄏㄛˋ", "list closed"]);
+    assert_eq!(rig.calls(), ["commit 好", "list closed"]);
+}
+
+/// Hanji conversion H1 + B2: a closed reading shows converted; Enter
+/// commits the Hanji as shown, with no auto space even with Auto-Space on.
+#[test]
+fn tps_a_closed_reading_shows_converted_and_enter_commits_it_as_shown() {
+    let mut rig = new_tps_rig();
+    rig.type_tps("ㄏㄛˋ");
+    // trace, read by running: `ㄏㄛˋ` → 好.
+    assert_eq!(rig.manager.display_text(), "好");
+    assert!(rig.list.is_empty(), "typing opens no window (D7)");
+    assert!(rig.run(ComposingKeyIntent::Commit, &no_key()));
+    assert_eq!(rig.calls(), ["commit 好", "list closed"]);
+}
+
+/// B2: Shift+Enter commits the glyphs of the whole composition — the pick
+/// as typed too, separators dropped.
+#[test]
+fn tps_commit_as_typed_writes_the_glyphs_of_the_whole_composition() {
+    let mut rig = new_tps_rig();
+    rig.type_tps("ㄏㄛˋ");
+    rig.pick_first();
+    rig.type_tps("ㄏㄛ ");
+    assert!(rig.run(ComposingKeyIntent::CommitAsTyped, &no_key()));
+    assert_eq!(rig.calls(), ["commit ㄏㄛˋㄏㄛ", "list closed"]);
+}
+
+/// H6: a key that commits first writes the composition as shown, then
+/// itself, in one write. trace: `?` is full width under TPS → `？`.
+#[test]
+fn tps_punctuation_commits_the_composition_as_shown_then_itself() {
+    let mut rig = new_tps_rig();
+    rig.type_tps("ㄏㄛˋ");
+    let question = KeyEventSnapshot::text("?", KeyModifiers::SHIFT);
+    assert!(rig.run(
+        ComposingKeyIntent::CommitThenInsert("?".to_owned()),
+        &question
+    ));
+    assert_eq!(rig.calls(), ["commit 好？", "list closed"]);
+}
+
+/// H3: Backspace on an empty tail un-nails the pick and the reading is
+/// converted again; no window comes up.
+#[test]
+fn tps_backspace_after_a_pick_reopens_the_word_converted() {
+    let mut rig = new_tps_rig();
+    rig.type_tps("ㄏㄛˋ");
+    rig.pick_first();
+    assert!(rig.run(ComposingKeyIntent::DeleteBackward, &no_key()));
+    assert_eq!(rig.manager.raw_input(), "ㄏㄛˋ");
+    assert_eq!(rig.manager.display_text(), "好");
+    assert!(rig.calls().is_empty(), "{:?}", rig.calls());
+}
+
+/// H8: a settings change closes an open TPS list instead of re-presenting
+/// it; under TL the same change keeps it (see the represent tests above).
+#[test]
+fn tps_a_settings_change_closes_the_open_list() {
+    let mut rig = new_tps_rig();
+    rig.type_tps("ㄏㄛˋ");
+    rig.open_window();
+    for refetch in [false, true] {
+        assert!(!represent_list(
+            &rig.settings,
+            &mut rig.manager,
+            &mut rig.list,
+            refetch
+        ));
+        assert!(rig.list.is_empty());
+        rig.open_window();
+    }
 }
 
 #[test]

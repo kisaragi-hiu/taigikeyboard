@@ -421,7 +421,9 @@ fn switch_into_tps_commits_the_romanization_on_the_next_key() {
 
 /// Desktop TPS D7 on Linux: typing puts no table up; ↓ opens it; the
 /// number-row `2` (X keycode 11) then picks the second cell; Escape over it
-/// closes it and keeps the glyphs.
+/// closes it and keeps the glyphs. The pick nails the word and closes the
+/// table, the composition stays up; Enter writes it (Hanji conversion H4,
+/// B2).
 #[test]
 fn tps_opens_the_table_on_demand_and_the_number_row_picks() {
     const DOWN: u32 = 0xff54;
@@ -451,7 +453,49 @@ fn tps_opens_the_table_on_demand_and_the_number_row_picks() {
     assert!(is_handled);
     assert_eq!(
         emits,
-        [Emit::ClearPreedit, commit(&second), Emit::HideLookupTable],
+        [
+            Emit::Preedit {
+                text: second.clone(),
+                caret: 1
+            },
+            Emit::HideLookupTable
+        ],
         "the number row picks the second cell"
     );
+    assert_eq!(session.press(RETURN), [Emit::ClearPreedit, commit(&second)]);
+}
+
+/// Hanji conversion on Linux: `e` `8` `4` (ㄍㄚˋ) shows converted; plain ←
+/// steps the caret over the word; Shift+Enter writes the glyphs, Enter the
+/// Hanji. trace, read by running: ㄍㄚˋ → 假.
+#[test]
+fn tps_converts_a_closed_reading_and_the_commit_keys_part_ways() {
+    const LEFT: u32 = 0xff51;
+    let _serial = serial();
+    let mut session = Session::new(false, false);
+    session.press_with('p' as u32, CTRL_ALT);
+    session.press('e' as u32);
+    session.press('8' as u32);
+    let typed = session.press('4' as u32);
+    assert_eq!(
+        typed,
+        [Emit::Preedit {
+            text: "假".to_owned(),
+            caret: 1
+        }]
+    );
+    assert_eq!(
+        session.press(LEFT),
+        [Emit::Preedit {
+            text: "假".to_owned(),
+            caret: 0
+        }]
+    );
+    let (is_handled, emits) = session.press_with(RETURN, state::SHIFT);
+    assert!(is_handled);
+    assert_eq!(emits, [Emit::ClearPreedit, commit("ㄍㄚˋ")]);
+    session.press('e' as u32);
+    session.press('8' as u32);
+    session.press('4' as u32);
+    assert_eq!(session.press(RETURN), [Emit::ClearPreedit, commit("假")]);
 }

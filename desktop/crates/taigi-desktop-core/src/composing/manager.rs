@@ -52,6 +52,11 @@ pub struct ComposingManager {
     /// composition it leaves behind cannot take the new mode's keys
     /// (`is_left_by_mode_change`).
     composition_input_mode: Option<InputMode>,
+    /// The settings the preedit on screen was last written under; `None`
+    /// while idle. A TPS composition is listed, picked from and committed
+    /// under them (`composition_settings`): the Hanji the preedit shows is
+    /// the conversion those settings asked for.
+    preedit_settings: Option<EngineSettings>,
     settings: Arc<dyn SettingsProvider>,
     /// Where the next-word handshakes go, stamped with `clock`.
     next_word: Box<dyn NextWordPort>,
@@ -79,6 +84,7 @@ impl ComposingManager {
             raw_input: String::new(),
             display_text: String::new(),
             composition_input_mode: None,
+            preedit_settings: None,
             settings,
             next_word,
             clock,
@@ -233,47 +239,109 @@ impl ComposingManager {
         self.apply(transition, &settings, executor);
     }
 
-    /// Commits the composition as rendered (`CommitRaw`). Answers the text
-    /// the commit wrote, or `None` for a commit that never reached the engine
-    /// or wrote nothing — what auto-space earns its trailing space from.
+    /// Commits the composition as rendered: `CommitRaw` for TL and POJ, and
+    /// for a TPS composition `CommitAsShown` — the Hanji conversion on screen
+    /// (`desktop-tps-hanji-conversion-roadmap.md` B2). Answers the text the
+    /// commit wrote, or `None` for a commit that never reached the engine or
+    /// wrote nothing — what auto-space earns its trailing space from.
     pub fn commit_composition(
         &mut self,
         executor: &mut dyn ComposingEffectExecutor,
     ) -> Option<String> {
         log::debug!("commitComposition");
-        let settings = self.current_settings();
-        let transition = engine::commit_raw(&settings, self.platform, self.current_generation);
-        let committed = Self::committed_text(transition.as_ref());
-        self.apply(transition, &settings, executor);
-        committed
+        let settings = self.composition_settings();
+        let commit = if self.is_tps_composition() {
+            engine::commit_as_shown
+        } else {
+            engine::commit_raw
+        };
+        let transition = commit(&settings, self.platform, self.current_generation);
+        self.finish_commit(transition, &settings, executor)
+    }
+
+    /// Commits a TPS composition as typed (`CommitAsTyped`): the glyphs of
+    /// the whole composition, picks included. Teaches nothing.
+    pub fn commit_composition_as_typed(
+        &mut self,
+        executor: &mut dyn ComposingEffectExecutor,
+    ) -> Option<String> {
+        log::debug!("commitCompositionAsTyped");
+        let settings = self.composition_settings();
+        let transition = engine::commit_as_typed(&settings, self.platform, self.current_generation);
+        self.finish_commit(transition, &settings, executor)
     }
 
     /// Commits the composition and appends `text` after it in the same engine
-    /// step, so one keystroke reaches the host as one document mutation.
+    /// step, so one keystroke reaches the host as one document mutation. A
+    /// TPS composition is written as shown, as `commit_composition` writes it.
     pub fn commit_composition_then_insert(
         &mut self,
         text: &str,
         executor: &mut dyn ComposingEffectExecutor,
     ) -> Option<String> {
         log::debug!("commitCompositionThenInsert");
-        let settings = self.current_settings();
+        let settings = self.composition_settings();
         let transition = engine::commit_preedit_then_insert_external(
             text,
             &settings,
             self.platform,
             self.current_generation,
         );
+        self.finish_commit(transition, &settings, executor)
+    }
+
+    /// Applies a commit's answer and returns the text it wrote. A commit that
+    /// teaches next word nothing — `NextWordClearForNewComposing` with no
+    /// `NextWordWordSelected`: commit-then-insert always, a TPS composition
+    /// holding a word the user did not pick (H7), commit as typed — leaves the
+    /// context of the commit BEFORE it, which the next commit would pair
+    /// itself with; the context is forgotten, under-learning one pair rather
+    /// than learning a wrong one. TL and POJ's `CommitRaw` always teaches.
+    fn finish_commit(
+        &mut self,
+        transition: Option<ComposingTransition>,
+        settings: &EngineSettings,
+        executor: &mut dyn ComposingEffectExecutor,
+    ) -> Option<String> {
         let committed = Self::committed_text(transition.as_ref());
-        self.apply(transition, &settings, executor);
-        // The one commit path the engine does not describe to next word: it
-        // emits `NextWordClearForNewComposing` and no `NextWordWordSelected`
-        // (`transition.rs:769-780`). If the context were left alone, the NEXT
-        // commit would pair itself with whatever was committed BEFORE this one.
-        // Dropping the context under-learns one pair rather than learning a
-        // wrong one.
-        self.next_word
-            .forget_context(self.clock.now_ms(), &settings, self.current_generation);
+        let teaches_nothing = transition.as_ref().is_some_and(|transition| {
+            transition
+                .effects
+                .contains(&Effect::NextWordClearForNewComposing)
+                && !transition
+                    .effects
+                    .iter()
+                    .any(|effect| matches!(effect, Effect::NextWordWordSelected { .. }))
+        });
+        self.apply(transition, settings, executor);
+        if teaches_nothing {
+            self.next_word
+                .forget_context(self.clock.now_ms(), settings, self.current_generation);
+        }
         committed
+    }
+
+    /// Whether the composition in flight was begun under TPS — the one
+    /// answer to "is this a TPS composition", whatever mode is in force now.
+    pub fn is_tps_composition(&self) -> bool {
+        self.composition_input_mode == Some(InputMode::Tps)
+    }
+
+    /// The settings a request that reads or ends the composition on screen
+    /// goes out under — a fetch, a pick, a commit. A TPS composition takes
+    /// the settings its preedit was last written under: a conversion is
+    /// shown only to the config it was walked for, and the engine resolves a
+    /// list's start from it, so after a switch left the composition behind
+    /// (`is_left_by_mode_change`) or the dictionary switches changed, the
+    /// list, the pick and the commit still describe the Hanji on screen (a
+    /// pick under other settings could be resolved against another start and
+    /// swallow the words before it). The next key redraws under the settings
+    /// in force. Any other composition takes the settings in force.
+    fn composition_settings(&self) -> EngineSettings {
+        match &self.preedit_settings {
+            Some(drawn) if self.is_tps_composition() => drawn.clone(),
+            _ => self.current_settings(),
+        }
     }
 
     /// Abandons the composition. Nothing reaches the document.
@@ -290,7 +358,7 @@ impl ComposingManager {
     /// user's own data — frequency, custom dictionary, learned phrases —
     /// and ranks with it itself (user-data-engine-roadmap P3b / P5).
     pub fn fetch_candidates(&mut self) -> CandidateFetchOutcome {
-        let settings = self.current_settings();
+        let settings = self.composition_settings();
         let Some(fetched) = engine::fetch_at_pos(
             &settings,
             self.platform,
@@ -337,7 +405,7 @@ impl ComposingManager {
         script: CandidateScript,
         executor: &mut dyn ComposingEffectExecutor,
     ) -> CandidateCommitOutcome {
-        let settings = self.current_settings();
+        let settings = self.composition_settings();
         log::debug!(
             "commitCandidate consumedBytes={}",
             candidate.consumed_span_end
@@ -361,7 +429,11 @@ impl ComposingManager {
         ) else {
             return CandidateCommitOutcome::Unavailable;
         };
-        let outcome = CandidateCommitOutcome::from_resolution(&committed.commit);
+        let asks_refetch = committed
+            .transition
+            .effects
+            .contains(&Effect::RefreshCandidates);
+        let outcome = CandidateCommitOutcome::from_resolution(&committed.commit, asks_refetch);
         self.apply(Some(committed.transition), &settings, executor);
         outcome
     }
@@ -393,6 +465,13 @@ impl ComposingManager {
     ) {
         let Some(transition) = transition else { return };
         self.mirror(&transition, settings.input_mode);
+        let writes_preedit = transition
+            .effects
+            .iter()
+            .any(|effect| matches!(effect, Effect::UpdatePreedit { .. }));
+        if transition.is_composing && writes_preedit && settings.input_mode == InputMode::Tps {
+            self.preedit_settings = Some(settings.clone());
+        }
         for effect in &transition.effects {
             match effect {
                 // Learning handshakes are not document effects; routed here so
@@ -445,11 +524,12 @@ impl ComposingManager {
         self.is_composing = transition.is_composing;
         self.raw_input = transition.raw_input.clone();
         self.display_text = transition.display_text.clone();
-        self.composition_input_mode = if transition.is_composing {
-            self.composition_input_mode.or(Some(input_mode))
+        if transition.is_composing {
+            self.composition_input_mode = self.composition_input_mode.or(Some(input_mode));
         } else {
-            None
-        };
+            self.composition_input_mode = None;
+            self.preedit_settings = None;
+        }
     }
 
     fn clear_mirror(&mut self) {
@@ -457,5 +537,6 @@ impl ComposingManager {
         self.raw_input.clear();
         self.display_text.clear();
         self.composition_input_mode = None;
+        self.preedit_settings = None;
     }
 }

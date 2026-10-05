@@ -280,7 +280,34 @@ impl Rig {
     fn advance_clock(&self, ms: i64) {
         *self.memory.now_ms.lock().unwrap() += ms;
     }
+
+    /// Switches to TPS and types `keys` through `TpsKey`.
+    fn type_tps(&mut self, keys: &[&str]) {
+        self.settings
+            .edit(|document| document.set_choice(&keys::INPUT_MODE, InputMode::Tps));
+        for key in keys {
+            self.manager.tps_key(key, &mut self.recorder);
+        }
+    }
+
+    /// Turns the default dictionary sources off — a change of the switches a
+    /// held conversion was walked for.
+    fn switch_dictionaries_off(&self) {
+        self.settings.edit(|document| {
+            for key in [
+                &keys::IS_KAUTIAN_ENABLED,
+                &keys::IS_TAIGITV_ENABLED,
+                &keys::IS_ITAIGI_ENABLED,
+                &keys::IS_KHIIN_ENABLED,
+            ] {
+                document.set_bool(key, false);
+            }
+        });
+    }
 }
+
+/// `ㄍㄚ ㄅㄚ˫` — two closed readings; the preedit shows 家罷 (read by running).
+const GA_BA: [&str; 6] = ["ㄍ", "ㄚ", " ", "ㄅ", "ㄚ", "˫"];
 
 // MARK: - ComposingManagerTests
 
@@ -296,7 +323,9 @@ fn append_shows_the_preedit_and_mirrors_the_engine() {
 }
 
 /// `ㄍㄚ` then Space: the separator is taken and mirrored, hidden from the
-/// preedit; a second Space is not taken and changes nothing on screen.
+/// preedit, and closes the reading, which the preedit shows converted
+/// (Hanji conversion H1); a second Space is not taken and changes nothing on
+/// screen. The refusal's caret reads the converted display.
 #[test]
 fn tps_key_reports_what_the_engine_did_with_it() {
     let _lock = engine_lock();
@@ -308,7 +337,8 @@ fn tps_key_reports_what_the_engine_did_with_it() {
     assert_eq!(rig.manager.tps_key("ㄚ", &mut rig.recorder), taken);
     assert_eq!(rig.manager.tps_key(" ", &mut rig.recorder), taken);
     assert_eq!(rig.manager.raw_input(), "ㄍㄚ ");
-    assert_eq!(rig.manager.display_text(), "ㄍㄚ");
+    // trace, read by running (production dictionaries): `ㄍㄚ ` → 家.
+    assert_eq!(rig.manager.display_text(), "家");
     let effects_before = rig.recorder.effects.len();
     assert_eq!(
         rig.manager.tps_key(" ", &mut rig.recorder),
@@ -318,13 +348,9 @@ fn tps_key_reports_what_the_engine_did_with_it() {
     );
     assert_eq!(rig.recorder.effects.len(), effects_before);
     assert_eq!(rig.manager.raw_input(), "ㄍㄚ ");
-    // trace: three steps left walk the raw caret over ` `, ㄚ, ㄍ to the
-    // start; nothing precedes it, so Space is refused there, and the display
-    // caret (0) is not at the end of `ㄍㄚ` (2).
-    rig.manager
-        .move_caret(CaretDirection::Left, &mut rig.recorder);
-    rig.manager
-        .move_caret(CaretDirection::Left, &mut rig.recorder);
+    // trace: one step left goes over the word 家 to the start (H3);
+    // nothing precedes it, so Space is refused there, and the display caret
+    // (0) is not at the end of `家` (1).
     rig.manager
         .move_caret(CaretDirection::Left, &mut rig.recorder);
     assert_eq!(
@@ -333,6 +359,91 @@ fn tps_key_reports_what_the_engine_did_with_it() {
             is_caret_at_end: false
         }
     );
+}
+
+/// Hanji conversion B2: a TPS commit writes the Hanji its preedit shows, under
+/// the settings that preedit was written with — not under dictionary switches
+/// changed since, to which the engine no longer shows that conversion.
+#[test]
+fn a_tps_commit_writes_the_shown_hanji_after_the_dictionaries_change() {
+    let _lock = engine_lock();
+    let mut rig = rig();
+    rig.type_tps(&GA_BA);
+    // trace, read by running: `ㄍㄚ ㄅㄚ˫` shows 家罷.
+    assert_eq!(rig.recorder.preedits().last(), Some(&"家罷"));
+    rig.switch_dictionaries_off();
+    // trace, read by running: committed under the switches in force the
+    // engine is not shown the held conversion and writes `ㄍㄚㄅㄚ˫`.
+    assert_eq!(
+        rig.manager.commit_composition(&mut rig.recorder).as_deref(),
+        Some("家罷")
+    );
+}
+
+/// A list opened before the dictionary switches changed — a settings reload
+/// that never closed it — is picked from under the settings the preedit was
+/// written with, so the engine resolves the same start: the pick replaces the
+/// last word and keeps the one before it. trace (Codex post-impl P1): under
+/// the new switches the held conversion is not shown, the start would read
+/// `0`, and the pick of 罷 would nail the whole tail, 家 lost.
+#[test]
+fn a_tps_pick_after_the_dictionaries_change_keeps_the_words_before_it() {
+    let _lock = engine_lock();
+    let mut rig = rig();
+    rig.type_tps(&GA_BA);
+    let last_word = rig.candidate("罷");
+    rig.switch_dictionaries_off();
+    let (outcome, written) = rig.commit(&last_word, CandidateScript::Primary);
+    assert_eq!(
+        (outcome, written),
+        (CandidateCommitOutcome::Nailed { refetch: false }, None)
+    );
+    assert_eq!(rig.manager.display_text(), "家罷");
+    assert_eq!(
+        rig.manager.commit_composition(&mut rig.recorder).as_deref(),
+        Some("家罷")
+    );
+}
+
+/// Hanji conversion H7 / H8: a TPS commit holding a word the user did not
+/// pick teaches nothing, and the context it leaves is forgotten so the next
+/// commit is not paired across it; commit as typed teaches nothing either.
+/// A composition of picks teaches as a final pick does.
+#[test]
+fn a_tps_commit_forgets_the_context_unless_every_word_was_picked() {
+    let _lock = engine_lock();
+    let mut rig = rig();
+    rig.type_tps(&GA_BA);
+    assert_eq!(
+        rig.manager.commit_composition(&mut rig.recorder).as_deref(),
+        Some("家罷")
+    );
+    assert_eq!(rig.memory.reported(), ["∅"]);
+
+    rig.type_tps(&["ㄏ", "ㄛ", "ˋ"]);
+    assert_eq!(
+        rig.manager
+            .commit_composition_as_typed(&mut rig.recorder)
+            .as_deref(),
+        Some("ㄏㄛˋ")
+    );
+    assert_eq!(rig.memory.reported(), ["∅", "∅"]);
+
+    // trace: the pick nails 好 and keeps composing (H4); commit as shown of
+    // a composition of picks reports the word, and forgets nothing.
+    rig.type_tps(&["ㄏ", "ㄛ", "ˋ"]);
+    let good = rig.candidate("好");
+    let (outcome, written) = rig.commit(&good, CandidateScript::Primary);
+    assert_eq!(
+        (outcome, written),
+        (CandidateCommitOutcome::Nailed { refetch: false }, None)
+    );
+    assert!(rig.manager.is_composing());
+    assert_eq!(
+        rig.manager.commit_composition(&mut rig.recorder).as_deref(),
+        Some("好")
+    );
+    assert_eq!(rig.memory.reported(), ["∅", "∅", "好", "好"]);
 }
 
 /// USER's example (2026-09-09): `ka2`, Ctrl+← Ctrl+←, `h` → `kha2`, shown as
@@ -657,7 +768,7 @@ fn commit_candidate_consuming_part_of_the_buffer_nails_it_and_keeps_composing() 
         .cloned()
         .expect("台 over `tai`");
     let (outcome, committed) = rig.commit(&tai, CandidateScript::Primary);
-    assert_eq!(outcome, CandidateCommitOutcome::Nailed);
+    assert_eq!(outcome, CandidateCommitOutcome::Nailed { refetch: true });
     assert_eq!(
         committed, None,
         "Model B writes nothing until the final commit"
@@ -931,7 +1042,7 @@ fn the_mac_commits_a_nailed_composition_once() {
         .expect("台 over `tai`");
     assert_eq!(
         rig.commit(&tai, CandidateScript::Primary).0,
-        CandidateCommitOutcome::Nailed
+        CandidateCommitOutcome::Nailed { refetch: true }
     );
     let shown = rig.manager.display_text().to_owned();
     rig.manager.commit_composition(&mut rig.recorder);
@@ -1117,19 +1228,19 @@ fn only_the_claiming_context_can_drive_the_engine_and_handover_starts_idle() {
 }
 
 /// A switch across TPS leaves the composition marked as left behind, and the
-/// commit writes it as shown (trace, 2026-10-03 probe: `commit_raw` writes
-/// the preedit — `ㄍㄚㄅㄚ˫` under TL as under TPS, `tsia̍h-pn̄g` under TPS
-/// as under TL). TL ↔ POJ does not cross TPS: nothing is left behind.
+/// commit writes it as shown: the TPS one as the Hanji its preedit was
+/// written with (`CommitAsShown` under the settings that drew it, Hanji
+/// conversion B2), the romanization one as typed (`commit_raw`,
+/// `tsia̍h-pn̄g` under TPS as under TL). TL ↔ POJ does not cross TPS:
+/// nothing is left behind.
 #[test]
 fn a_switch_across_tps_leaves_the_composition_behind() {
     let _lock = engine_lock();
     let mut rig = rig();
-    rig.settings
-        .edit(|document| document.set_choice(&keys::INPUT_MODE, InputMode::Tps));
-    for key in ["ㄍ", "ㄚ", " ", "ㄅ", "ㄚ", "˫"] {
-        rig.manager.tps_key(key, &mut rig.recorder);
-    }
+    rig.type_tps(&GA_BA);
     assert!(!rig.manager.is_left_by_mode_change(InputMode::Tps));
+    // trace, read by running: `ㄍㄚ ㄅㄚ˫` shows 家罷.
+    assert_eq!(rig.recorder.preedits().last(), Some(&"家罷"));
     rig.settings
         .edit(|document| document.set_choice(&keys::INPUT_MODE, InputMode::Tl));
     // A fetch after the switch mirrors the same composition: it keeps the
@@ -1138,7 +1249,7 @@ fn a_switch_across_tps_leaves_the_composition_behind() {
     assert!(rig.manager.is_left_by_mode_change(InputMode::Tl));
     assert_eq!(
         rig.manager.commit_composition(&mut rig.recorder).as_deref(),
-        Some("ㄍㄚㄅㄚ˫")
+        Some("家罷")
     );
     assert!(!rig.manager.is_left_by_mode_change(InputMode::Tl));
 

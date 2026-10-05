@@ -16,8 +16,9 @@
 pub use protos::engine::CommitScript;
 use protos::engine::{
     composing_request, request, response, Append, CaretDirection as WireCaretDirection,
-    CommitContinuous, CommitPreeditThenInsertExternal, CommitRaw, ComposingRequest,
-    ComposingResponse, DeleteBackward, FetchAtPos, MoveCaret, Reset, TelexKey, TpsKey,
+    CommitAsShown, CommitAsTyped, CommitContinuous, CommitPreeditThenInsertExternal, CommitRaw,
+    ComposingRequest, ComposingResponse, DeleteBackward, FetchAtPos, MoveCaret, Reset, TelexKey,
+    TpsKey,
 };
 
 use crate::keys::CaretDirection;
@@ -109,11 +110,13 @@ pub fn delete_backward(
     )
 }
 
-/// Steps the caret one character inside the pending tail (`composing.proto`
-/// `MoveCaret`). The buffer is untouched, so the engine answers with an
+/// Steps the caret one character inside the pending tail — under a TPS
+/// Hanji conversion, one converted word, and left from the start of the tail
+/// it re-opens the last nailed segment (`composing.proto` `MoveCaret`). A
+/// plain step leaves the buffer untouched, so the engine answers with an
 /// `UpdatePreedit` carrying the new caret and nothing else — no fetch is
 /// requested. Same config as `append`: the answer re-renders the
-/// composition the way the last keystroke did, so a move never changes the
+/// composition the way the last keystroke did, so a step never changes the
 /// text on screen.
 pub fn move_caret(
     direction: CaretDirection,
@@ -135,9 +138,10 @@ pub fn move_caret(
     )
 }
 
-/// Commits the whole composition exactly as the preedit renders it —
-/// `Σ nailed.display_text + derived(pending)` under the continuous phase
-/// (`transition.rs:443`). This is the literal-commit key.
+/// Commits the whole composition as `Σ nailed.display_text +
+/// derived(pending)` under the continuous phase — the preedit as rendered
+/// under TL and POJ. This is their literal-commit key; a TPS composition is
+/// committed with `commit_as_shown` / `commit_as_typed` instead.
 pub fn commit_raw(
     settings: &EngineSettings,
     platform: DesktopPlatform,
@@ -146,6 +150,39 @@ pub fn commit_raw(
     dispatch(
         composing_request::Method::CommitRaw(CommitRaw {}),
         "composingCommitRaw",
+        generation,
+        Some(app_config(settings, platform)),
+    )
+}
+
+/// Commits a TPS composition as the preedit shows it — the nailed segments,
+/// the converted words and the glyphs not converted — under the Hanji
+/// conversion the config asks for (`composing.proto` `CommitAsShown`). Teaches
+/// next word only when the user picked every segment; otherwise the answer
+/// carries `NextWordClearForNewComposing` alone.
+pub fn commit_as_shown(
+    settings: &EngineSettings,
+    platform: DesktopPlatform,
+    generation: u64,
+) -> Option<ComposingTransition> {
+    dispatch(
+        composing_request::Method::CommitAsShown(CommitAsShown {}),
+        "composingCommitAsShown",
+        generation,
+        Some(app_config(settings, platform)),
+    )
+}
+
+/// Commits the glyphs of a whole TPS composition as typed, nailed segments
+/// included (`composing.proto` `CommitAsTyped`). Teaches nothing.
+pub fn commit_as_typed(
+    settings: &EngineSettings,
+    platform: DesktopPlatform,
+    generation: u64,
+) -> Option<ComposingTransition> {
+    dispatch(
+        composing_request::Method::CommitAsTyped(CommitAsTyped {}),
+        "composingCommitAsTyped",
         generation,
         Some(app_config(settings, platform)),
     )

@@ -3,10 +3,13 @@
 use std::sync::atomic::{AtomicU32, Ordering};
 
 use prost::Message;
-use protos::engine::{request, response, AppConfig, ErrorCode, Platform, Request, Response};
+use protos::engine::{
+    request, response, AppConfig, ErrorCode, HanjiConversion, Platform, Request, Response,
+};
 
+use super::lexicon::dictionary_toggles;
 use crate::platform::DesktopPlatform;
-use crate::settings::EngineSettings;
+use crate::settings::{EngineSettings, InputMode};
 
 static LAST_REQUEST_ID: AtomicU32 = AtomicU32::new(0);
 
@@ -111,6 +114,11 @@ fn wire_platform(platform: DesktopPlatform) -> Platform {
 /// for raw-romanization commits (`decide.rs:86`). Sent by every composing op
 /// that renders the composition and by every next-word request, matching iOS;
 /// macOS sends this same builder's config.
+///
+/// Under TPS every request asks for the Hanji conversion of the preedit
+/// (`desktop-tps-hanji-conversion-roadmap.md` H2), with the user's dictionary
+/// switches as its source filter: a key carries no fetch. The engine reads it
+/// only for a TPS composition, so TL and POJ requests never carry it.
 pub(super) fn app_config(settings: &EngineSettings, platform: DesktopPlatform) -> AppConfig {
     AppConfig {
         input_mode: settings.input_mode.wire().to_owned(),
@@ -122,6 +130,9 @@ pub(super) fn app_config(settings: &EngineSettings, platform: DesktopPlatform) -
         hyphenless_roman: settings.is_hyphenless_roman_enabled,
         force_lowercase_nasal_marker: !settings.is_nasal_marker_uppercase_enabled,
         tps_or_maps_to_er: super::TPS_OR_MAPS_TO_ER,
+        hanji_conversion: (settings.input_mode == InputMode::Tps).then(|| HanjiConversion {
+            toggles: Some(dictionary_toggles(&settings.dictionary_sources)),
+        }),
         ..Default::default()
     }
 }
@@ -236,6 +247,28 @@ mod tests {
             ..EngineSettings::default()
         };
         assert!(!config(&roman_first).is_hanji_first);
+    }
+
+    #[test]
+    fn only_tps_asks_for_the_hanji_conversion_with_the_dictionary_switches() {
+        for mode in [InputMode::Tl, InputMode::Poj] {
+            let settings = EngineSettings {
+                input_mode: mode,
+                ..EngineSettings::default()
+            };
+            assert_eq!(config(&settings).hanji_conversion, None, "{mode:?}");
+        }
+        let mut settings = EngineSettings {
+            input_mode: InputMode::Tps,
+            ..EngineSettings::default()
+        };
+        settings.dictionary_sources.itaigi = false;
+        let toggles = config(&settings)
+            .hanji_conversion
+            .expect("TPS asks for the conversion")
+            .toggles
+            .expect("with the dictionary switches");
+        assert!(!toggles.itaigi && toggles.kautian);
     }
 
     #[test]
