@@ -236,7 +236,7 @@ fn continuous_resets_the_caret_on_nail_and_never_enters_a_segment() {
     assert!(resp.effect.is_empty());
     assert!(matches!(
         engine.snapshot_state().phase,
-        Phase::Continuous { ref raw, caret: 0, ref nailed } if raw == "a" && nailed.len() == 1
+        Phase::Continuous { ref raw, caret: 0, ref nailed, .. } if raw == "a" && nailed.len() == 1
     ));
 
     // → then backspace empties the pending tail (still Continuous, as

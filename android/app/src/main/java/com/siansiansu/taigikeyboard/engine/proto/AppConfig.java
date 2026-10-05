@@ -59,6 +59,7 @@ public  final class AppConfig extends
   private AppConfig() {
     inputMode_ = "";
   }
+  private int bitField0_;
   public static final int INPUT_MODE_FIELD_NUMBER = 2;
   private java.lang.String inputMode_;
   /**
@@ -428,6 +429,78 @@ public  final class AppConfig extends
   private void clearTpsOrMapsToEr() {
 
     tpsOrMapsToEr_ = false;
+  }
+
+  public static final int HANJI_CONVERSION_FIELD_NUMBER = 13;
+  private com.siansiansu.taigikeyboard.engine.proto.HanjiConversion hanjiConversion_;
+  /**
+   * <pre>
+   * Present = the preedit of a TPS buffer shows the converted Hanji
+   * (`HanjiConversion`). Absent on every platform today.
+   * </pre>
+   *
+   * <code>.taigi.engine.HanjiConversion hanji_conversion = 13;</code>
+   */
+  @java.lang.Override
+  public boolean hasHanjiConversion() {
+    return ((bitField0_ & 0x00000001) != 0);
+  }
+  /**
+   * <pre>
+   * Present = the preedit of a TPS buffer shows the converted Hanji
+   * (`HanjiConversion`). Absent on every platform today.
+   * </pre>
+   *
+   * <code>.taigi.engine.HanjiConversion hanji_conversion = 13;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.HanjiConversion getHanjiConversion() {
+    return hanjiConversion_ == null ? com.siansiansu.taigikeyboard.engine.proto.HanjiConversion.getDefaultInstance() : hanjiConversion_;
+  }
+  /**
+   * <pre>
+   * Present = the preedit of a TPS buffer shows the converted Hanji
+   * (`HanjiConversion`). Absent on every platform today.
+   * </pre>
+   *
+   * <code>.taigi.engine.HanjiConversion hanji_conversion = 13;</code>
+   */
+  private void setHanjiConversion(com.siansiansu.taigikeyboard.engine.proto.HanjiConversion value) {
+    java.util.Objects.requireNonNull(value);
+    hanjiConversion_ = value;
+    bitField0_ |= 0x00000001;
+  }
+  /**
+   * <pre>
+   * Present = the preedit of a TPS buffer shows the converted Hanji
+   * (`HanjiConversion`). Absent on every platform today.
+   * </pre>
+   *
+   * <code>.taigi.engine.HanjiConversion hanji_conversion = 13;</code>
+   */
+  @java.lang.SuppressWarnings("ReferenceEquality")
+  private void mergeHanjiConversion(com.siansiansu.taigikeyboard.engine.proto.HanjiConversion value) {
+    java.util.Objects.requireNonNull(value);
+    if (hanjiConversion_ != null &&
+        hanjiConversion_ != com.siansiansu.taigikeyboard.engine.proto.HanjiConversion.getDefaultInstance()) {
+      hanjiConversion_ =
+        com.siansiansu.taigikeyboard.engine.proto.HanjiConversion.newBuilder(hanjiConversion_).mergeFrom(value).buildPartial();
+    } else {
+      hanjiConversion_ = value;
+    }
+    bitField0_ |= 0x00000001;
+  }
+  /**
+   * <pre>
+   * Present = the preedit of a TPS buffer shows the converted Hanji
+   * (`HanjiConversion`). Absent on every platform today.
+   * </pre>
+   *
+   * <code>.taigi.engine.HanjiConversion hanji_conversion = 13;</code>
+   */
+  private void clearHanjiConversion() {
+    hanjiConversion_ = null;
+    bitField0_ = (bitField0_ & ~0x00000001);
   }
 
   public static com.siansiansu.taigikeyboard.engine.proto.AppConfig parseFrom(
@@ -964,6 +1037,83 @@ public  final class AppConfig extends
       return this;
     }
 
+    /**
+     * <pre>
+     * Present = the preedit of a TPS buffer shows the converted Hanji
+     * (`HanjiConversion`). Absent on every platform today.
+     * </pre>
+     *
+     * <code>.taigi.engine.HanjiConversion hanji_conversion = 13;</code>
+     */
+    @java.lang.Override
+    public boolean hasHanjiConversion() {
+      return instance.hasHanjiConversion();
+    }
+    /**
+     * <pre>
+     * Present = the preedit of a TPS buffer shows the converted Hanji
+     * (`HanjiConversion`). Absent on every platform today.
+     * </pre>
+     *
+     * <code>.taigi.engine.HanjiConversion hanji_conversion = 13;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.HanjiConversion getHanjiConversion() {
+      return instance.getHanjiConversion();
+    }
+    /**
+     * <pre>
+     * Present = the preedit of a TPS buffer shows the converted Hanji
+     * (`HanjiConversion`). Absent on every platform today.
+     * </pre>
+     *
+     * <code>.taigi.engine.HanjiConversion hanji_conversion = 13;</code>
+     */
+    public Builder setHanjiConversion(com.siansiansu.taigikeyboard.engine.proto.HanjiConversion value) {
+      copyOnWrite();
+      instance.setHanjiConversion(value);
+      return this;
+      }
+    /**
+     * <pre>
+     * Present = the preedit of a TPS buffer shows the converted Hanji
+     * (`HanjiConversion`). Absent on every platform today.
+     * </pre>
+     *
+     * <code>.taigi.engine.HanjiConversion hanji_conversion = 13;</code>
+     */
+    public Builder setHanjiConversion(
+        com.siansiansu.taigikeyboard.engine.proto.HanjiConversion.Builder builderForValue) {
+      copyOnWrite();
+      instance.setHanjiConversion(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * Present = the preedit of a TPS buffer shows the converted Hanji
+     * (`HanjiConversion`). Absent on every platform today.
+     * </pre>
+     *
+     * <code>.taigi.engine.HanjiConversion hanji_conversion = 13;</code>
+     */
+    public Builder mergeHanjiConversion(com.siansiansu.taigikeyboard.engine.proto.HanjiConversion value) {
+      copyOnWrite();
+      instance.mergeHanjiConversion(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Present = the preedit of a TPS buffer shows the converted Hanji
+     * (`HanjiConversion`). Absent on every platform today.
+     * </pre>
+     *
+     * <code>.taigi.engine.HanjiConversion hanji_conversion = 13;</code>
+     */
+    public Builder clearHanjiConversion() {  copyOnWrite();
+      instance.clearHanjiConversion();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.AppConfig)
   }
   @java.lang.Override
@@ -980,6 +1130,7 @@ public  final class AppConfig extends
       }
       case BUILD_MESSAGE_INFO: {
           java.lang.Object[] objects = new java.lang.Object[] {
+            "bitField0_",
             "inputMode_",
             "ooDoubletapEnabled_",
             "nnDoubletapEnabled_",
@@ -990,10 +1141,12 @@ public  final class AppConfig extends
             "hyphenlessRoman_",
             "forceLowercaseNasalMarker_",
             "tpsOrMapsToEr_",
+            "hanjiConversion_",
           };
           java.lang.String info =
-              "\u0000\n\u0000\u0000\u0002\f\n\u0000\u0000\u0000\u0002\u0208\u0003\u0007\u0004\u0007" +
-              "\u0005\u0007\u0007\f\b\u0007\t\f\n\u0007\u000b\u0007\f\u0007";
+              "\u0000\u000b\u0000\u0001\u0002\r\u000b\u0000\u0000\u0000\u0002\u0208\u0003\u0007" +
+              "\u0004\u0007\u0005\u0007\u0007\f\b\u0007\t\f\n\u0007\u000b\u0007\f\u0007\r\u1009" +
+              "\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

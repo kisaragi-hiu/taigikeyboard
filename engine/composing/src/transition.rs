@@ -1,6 +1,10 @@
-//! Pure transition function: `(state, intent, config) → ComposingResponse`.
-//! Pure — no logging, no FFI, no platform types. The dispatcher in
-//! `requests.rs` runs this and returns the response to callers.
+//! Transition function: `(state, intent, config) → ComposingResponse`.
+//! No logging, no FFI, no platform types. The dispatcher in `requests.rs`
+//! runs this and returns the response to callers. It reads the installed
+//! lexicon in two places — the compound oracle of the nailed join
+//! (`api::nailed_prefix`) and, when the request asks for it, the Hanji
+//! conversion of a TPS tail (`crate::conversion`) — so the preedit depends on
+//! the lexicon as well as on `(state, intent, config)`.
 //!
 //! Effect ordering matters; iOS/Android downstream wrappers consume effects
 //! in proto-list order. `prost` preserves order on `repeated Effect` fields.
@@ -15,10 +19,12 @@
 //! document in one `CommitTextReplacingPreedit`. A candidate tap *nails* a
 //! segment inside the composition (no document write). `ComposingResponse.
 //! preedit` therefore carries the **whole composition** during Continuous;
-//! tests inspect `nailed` via `Engine::snapshot_state`.
+//! tests inspect `nailed` via `Engine::snapshot_state`. Under a Hanji
+//! conversion the preedit shows the tail converted ([`phase_preedit`]); what
+//! a commit writes is unchanged.
 
 use crate::api::{
-    combined_display, combined_display_with_tail, nailed_prefix, Applied, CaretDirection,
+    combined_display, join_nailed_prefix_and_tail, nailed_prefix, Applied, CaretDirection,
     CommitScript, EngineState, Intent, NailedSegment, Phase, Usage,
 };
 use crate::commit_text::{commit_resolution, resolve_commit_text};
@@ -54,9 +60,9 @@ pub(crate) fn apply(state: &mut EngineState, intent: Intent, config: &AppConfig)
         },
         Intent::Append { ch } => match &state.phase {
             Phase::Idle => begin_composition_or_insert_leading_hyphens(state, ch, config),
-            Phase::Continuous { raw, caret, nailed } => {
-                append_continuous(state, raw.clone(), *caret, nailed.clone(), &ch, config)
-            }
+            Phase::Continuous {
+                raw, caret, nailed, ..
+            } => append_continuous(state, raw.clone(), *caret, nailed.clone(), &ch, config),
         },
         Intent::AppendHyphen => {
             return apply(
@@ -134,12 +140,12 @@ fn telex_key(state: &mut EngineState, key: &str, config: &AppConfig) -> Composin
             Some(text) => begin_composition(state, text, config),
             None => noop(state, config),
         },
-        Phase::Continuous { raw, caret, nailed } => {
-            match telex_before_caret(raw, *caret, key, mode) {
-                Some((next, caret)) => step_continuous(state, next, caret, nailed.clone(), config),
-                None => noop(state, config),
-            }
-        }
+        Phase::Continuous {
+            raw, caret, nailed, ..
+        } => match telex_before_caret(raw, *caret, key, mode) {
+            Some((next, caret)) => step_continuous(state, next, caret, nailed.clone(), config),
+            None => noop(state, config),
+        },
     }
 }
 
@@ -148,19 +154,27 @@ fn telex_key(state: &mut EngineState, key: &str, config: &AppConfig) -> Composin
 /// `UpdatePreedit` carrying the new caret and nothing else: no
 /// `RefreshCandidates`, so candidates, highlight and page stay. At an
 /// edge (the caret never enters a nailed segment) it is a plain snapshot.
+/// A Hanji conversion exists only with the caret at the end of the tail, so
+/// a step away from the end drops it and the step back walks again.
 fn move_caret(
     state: &mut EngineState,
     direction: Option<CaretDirection>,
     config: &AppConfig,
 ) -> ComposingResponse {
-    let moved = match &mut state.phase {
+    let moved = match &state.phase {
         Phase::Idle => None,
-        Phase::Continuous { raw, caret, .. } => direction
+        Phase::Continuous {
+            raw, caret, nailed, ..
+        } => direction
             .and_then(|direction| step_caret(raw, *caret, direction))
-            .map(|next| *caret = next),
+            .map(|next| (raw.clone(), next, nailed.clone())),
     };
+    let has_moved = moved.is_some();
+    if let Some((raw, caret, nailed)) = moved {
+        set_continuous(state, raw, caret, nailed, config);
+    }
     let mut resp = snapshot(state, config);
-    if moved.is_some() {
+    if has_moved {
         if let Some(preedit) = &resp.preedit {
             resp.effect.push(update_preedit(preedit));
         }
@@ -257,9 +271,8 @@ fn step_caret(raw: &str, caret: usize, direction: CaretDirection) -> Option<usiz
 
 /// Build a mid-composition step response (typing / replace-last /
 /// delete-backward non-empty branches): update the preedit + request a fresh
-/// autocomplete query against the new buffer. `display` is the **whole
-/// composition** (`Σ nailed.display_text` + pending-tail derived form —
-/// callers build it via [`combined_display`], Model B) while `raw` stays the
+/// autocomplete query against the new buffer. `preedit` is the **whole
+/// composition** ([`phase_preedit`], Model B); its `raw_input` stays the
 /// still-editable pending tail.
 fn step_response(preedit: Preedit) -> ComposingResponse {
     let effects = vec![update_preedit(&preedit), refresh_candidates()];
@@ -272,19 +285,68 @@ fn step_response(preedit: Preedit) -> ComposingResponse {
     }
 }
 
-/// The wire form of a live composition: the pending `raw`, the whole
-/// `display` (nailed prefix + pending tail under Continuous, whose derived
-/// form starts at byte `tail_start`) and the caret projected into it — the
-/// prefix's UTF-16 length plus the caret's offset inside the tail
+/// The wire form of `phase`'s composition: the pending `raw`, the whole
+/// display — the nailed prefix, then the pending tail: its Hanji conversion
+/// when the phase holds one this request asks for, else its derived form —
+/// and the caret projected into it. A conversion exists only with the caret
+/// at the end of the tail, which is the end of the display; otherwise the
+/// caret is the prefix's UTF-16 length plus its offset inside the tail
 /// ([`display_caret_utf16`]).
-fn composition_preedit(raw: String, caret: usize, display: String, tail_start: usize) -> Preedit {
-    let (prefix, tail) = display.split_at(tail_start);
-    let caret_utf16 = prefix.encode_utf16().count() + display_caret_utf16(&raw, tail, caret);
+fn phase_preedit(phase: &Phase, config: &AppConfig) -> Preedit {
+    let Phase::Continuous {
+        raw,
+        caret,
+        nailed,
+        conversion,
+    } = phase
+    else {
+        return Preedit::default();
+    };
+    let converted_tail = conversion
+        .as_ref()
+        .and_then(|conversion| conversion.tail_display(raw, config));
+    let is_converted = converted_tail.is_some();
+    let tail = converted_tail.unwrap_or_else(|| derived_display(raw, config));
+    let (display, tail_start) = join_nailed_prefix_and_tail(nailed, &tail, config);
+    let caret_utf16 = if is_converted {
+        display.encode_utf16().count()
+    } else {
+        let (prefix, tail) = display.split_at(tail_start);
+        prefix.encode_utf16().count() + display_caret_utf16(raw, tail, *caret)
+    };
     Preedit {
-        raw_input: raw,
+        raw_input: raw.clone(),
         display_text: display,
         caret_utf16: caret_utf16 as u32,
     }
+}
+
+/// Replace the phase with a Continuous one over `raw`, converting its tail
+/// when `config` asks for it. The phase being replaced lends its conversion
+/// (`crate::conversion::convert`). The one place a Continuous phase is built,
+/// so no path leaves a conversion of another buffer behind.
+fn set_continuous(
+    state: &mut EngineState,
+    raw: String,
+    caret: usize,
+    nailed: Vec<NailedSegment>,
+    config: &AppConfig,
+) {
+    let previous = match &state.phase {
+        Phase::Continuous {
+            raw,
+            conversion: Some(conversion),
+            ..
+        } => Some((raw.as_str(), conversion)),
+        _ => None,
+    };
+    let conversion = crate::conversion::convert(previous, &raw, caret, config);
+    state.phase = Phase::Continuous {
+        raw,
+        caret,
+        nailed,
+        conversion,
+    };
 }
 
 /// Begin a composition from Idle: the buffer becomes `raw` with nothing
@@ -311,13 +373,8 @@ fn step_continuous(
     nailed: Vec<NailedSegment>,
     config: &AppConfig,
 ) -> ComposingResponse {
-    let (combined, tail_start) = combined_display_with_tail(&nailed, &pending, config);
-    state.phase = Phase::Continuous {
-        raw: pending.clone(),
-        caret,
-        nailed,
-    };
-    step_response(composition_preedit(pending, caret, combined, tail_start))
+    set_continuous(state, pending, caret, nailed, config);
+    step_response(phase_preedit(&state.phase, config))
 }
 
 /// §21 INVARIANT_KHINSIANN_LEADING_MARKER_LITERAL — a leading ASCII-hyphen run
@@ -374,7 +431,9 @@ fn tps_key(state: &mut EngineState, key: &str, config: &AppConfig) -> ComposingR
             Some((text, _)) => begin_composition_or_insert_leading_hyphens(state, text, config),
             None => noop(state, config),
         },
-        Phase::Continuous { raw, caret, nailed } => match tps_key_before_caret(raw, *caret, key) {
+        Phase::Continuous {
+            raw, caret, nailed, ..
+        } => match tps_key_before_caret(raw, *caret, key) {
             Some((next, caret)) => step_continuous(state, next, caret, nailed.clone(), config),
             None => noop(state, config),
         },
@@ -390,7 +449,9 @@ fn replace_last(
     config: &AppConfig,
 ) -> ComposingResponse {
     match &state.phase {
-        Phase::Continuous { raw, caret, nailed } => {
+        Phase::Continuous {
+            raw, caret, nailed, ..
+        } => {
             let Some((new_pending, caret)) = replace_before_caret(raw, *caret, &replacement) else {
                 return noop(state, config);
             };
@@ -407,9 +468,9 @@ fn replace_last(
 
 fn delete_backward(state: &mut EngineState, config: &AppConfig) -> ComposingResponse {
     match &state.phase {
-        Phase::Continuous { raw, caret, nailed } => {
-            delete_backward_continuous(state, raw.clone(), *caret, nailed.clone(), config)
-        }
+        Phase::Continuous {
+            raw, caret, nailed, ..
+        } => delete_backward_continuous(state, raw.clone(), *caret, nailed.clone(), config),
         Phase::Idle => noop(state, config),
     }
 }
@@ -478,15 +539,10 @@ fn delete_backward_continuous(
         ),
         None => next_word_clear_for_new_composing(),
     };
-    let (combined, tail_start) = combined_display_with_tail(&new_nailed, &new_pending, config);
     let caret = new_pending.len();
-    state.phase = Phase::Continuous {
-        raw: new_pending.clone(),
-        caret,
-        nailed: new_nailed,
-    };
+    set_continuous(state, new_pending, caret, new_nailed, config);
 
-    let preedit = composition_preedit(new_pending, caret, combined, tail_start);
+    let preedit = phase_preedit(&state.phase, config);
     let effects = vec![
         nextword_correction,
         update_preedit(&preedit),
@@ -608,23 +664,13 @@ fn reset(state: &mut EngineState, config: &AppConfig) -> ComposingResponse {
 }
 
 pub(crate) fn snapshot(state: &EngineState, config: &AppConfig) -> ComposingResponse {
-    let (preedit, is_composing) = match &state.phase {
-        Phase::Idle => (Preedit::default(), false),
-        // Model B: the composing-buffer surface is the whole composition
-        // (Σ nailed.display_text + pending-tail derived form), not the
-        // pending tail alone. `raw_input` stays the still-editable tail.
-        Phase::Continuous { raw, caret, nailed } => {
-            let (combined, tail_start) = combined_display_with_tail(nailed, raw, config);
-            (
-                composition_preedit(raw.clone(), *caret, combined, tail_start),
-                true,
-            )
-        }
-    };
+    // Model B: the composing-buffer surface is the whole composition
+    // (Σ nailed.display_text + the pending tail as displayed), not the
+    // pending tail alone. `raw_input` stays the still-editable tail.
     ComposingResponse {
-        preedit: Some(preedit),
+        preedit: Some(phase_preedit(&state.phase, config)),
         effect: Vec::new(),
-        is_composing,
+        is_composing: matches!(state.phase, Phase::Continuous { .. }),
         continuous: None,
         commit: None,
     }
@@ -807,14 +853,9 @@ fn nail_segment(
     // re-render the combined marked region (nailed prefix + new pending).
     // Accepting a candidate is a flush of what was typed, so the caret goes
     // to the end of the tail that is left.
-    let (combined, tail_start) = combined_display_with_tail(&new_nailed, &new_pending, config);
     let caret = new_pending.len();
-    state.phase = Phase::Continuous {
-        raw: new_pending.clone(),
-        caret,
-        nailed: new_nailed,
-    };
-    let preedit = composition_preedit(new_pending, caret, combined, tail_start);
+    set_continuous(state, new_pending, caret, new_nailed, config);
+    let preedit = phase_preedit(&state.phase, config);
     let effects = vec![
         update_preedit(&preedit),
         next_word_update_last_selected_word(canonical, next_word_roman),

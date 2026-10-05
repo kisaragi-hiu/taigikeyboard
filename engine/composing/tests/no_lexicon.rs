@@ -7,3 +7,4 @@ mod common;
 mod continuous_commit_resolution;
 mod dispatch_continuous;
 mod lifecycle;
+mod tps_hanji_conversion_no_lexicon;

@@ -41,7 +41,9 @@ fn start_lands_in_continuous_with_nothing_nailed() {
     assert_kinds(&resp.effect, ["UpdatePreedit", "RefreshCandidates"]);
     assert!(resp.is_composing);
     match e.snapshot_state().phase {
-        Phase::Continuous { raw, caret, nailed } => {
+        Phase::Continuous {
+            raw, caret, nailed, ..
+        } => {
             assert_eq!(raw, "tsua");
             assert_eq!(caret, 4);
             assert!(nailed.is_empty());

@@ -105,4 +105,25 @@ public interface AppConfigOrBuilder extends
    * @return The tpsOrMapsToEr.
    */
   boolean getTpsOrMapsToEr();
+
+  /**
+   * <pre>
+   * Present = the preedit of a TPS buffer shows the converted Hanji
+   * (`HanjiConversion`). Absent on every platform today.
+   * </pre>
+   *
+   * <code>.taigi.engine.HanjiConversion hanji_conversion = 13;</code>
+   * @return Whether the hanjiConversion field is set.
+   */
+  boolean hasHanjiConversion();
+  /**
+   * <pre>
+   * Present = the preedit of a TPS buffer shows the converted Hanji
+   * (`HanjiConversion`). Absent on every platform today.
+   * </pre>
+   *
+   * <code>.taigi.engine.HanjiConversion hanji_conversion = 13;</code>
+   * @return The hanjiConversion.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.HanjiConversion getHanjiConversion();
 }

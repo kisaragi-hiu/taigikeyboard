@@ -2,7 +2,7 @@
 
 Under TPS (方音符號, the i18n `en` label "Phonetic Symbols") on macOS, Windows and Linux, the preedit shows the predicted Hanji while the user types, and ↓ opens the candidates of the word at the caret — the way the Zhuyin input methods work. This is arm B of U8 in [`desktop-tps-roadmap.md`](desktop-tps-roadmap.md); arm A (the preedit stays glyphs, D7) is what P1–P6 of that roadmap built.
 
-Status: design only. No phase has started; implementation waits for the maintainer's word. No release is assigned; scope and timing are the maintainer's call.
+Status: H-P1 (engine, typing forward) is in review; the later phases have not started. No shell asks for the conversion until H-P4, so nothing a user types changes yet. No release is assigned; scope and timing are the maintainer's call.
 
 Not next-word prediction. The desktops never suggest a word after a commit (maintainer, 2026-10-03), and nothing here changes that: this converts the glyphs being composed, before any commit. TL and POJ are untouched (U8).
 
@@ -79,6 +79,16 @@ A request that changes the buffer answers with one `UpdatePreedit`, already conv
 
 It is on only when the request's `AppConfig` asks for it; the desktop asks under TPS. Mobile, TL and POJ send nothing new and keep the state they have.
 
+As built in H-P1 (`engine/composing/src/conversion.rs`):
+
+- The walk runs inside the mutation, under the composing mutex, in one read of the lexicon for the boundary and the path. `Phase::Continuous` holds the result beside `raw` and `caret`, so replacing the phase replaces it.
+- The closed part is walked as a buffer of its own, with its trailing separator, so the §41 pin holds and a tail the whole-buffer walk cannot span still converts what is closed. The boundary comes from the whole tail's lattice: a boundary that what follows makes invalid (a tone mark typed after a separator) is not closed.
+- A conversion is shown and re-used only for the source filter it was walked with; a request that asks for another filter, or for none, gets the glyphs, and the next mutation walks again.
+- A conversion exists only while the caret is at the end of the tail. With the caret inside the tail the preedit is the glyphs, one displayed character per raw character, so the caret the host draws is where the next key edits. H-P2 replaces this with the caret by word (H3).
+- The walk is neutral — no user frequency, no previous-word context. H-P3 adds the user's rows with the frequency lookup of H5.
+- A segment keeps its raw span and its displayed text. The Hanji and the canonical TL of H2 arrive in H-P3 with the pick that reads them.
+- `CommitRaw` and `CommitContinuous` keep their behaviour: the conversion changes what the preedit shows, not what a commit writes, until H-P3.
+
 Why state rather than a fetch answer the caller hands back: a fetch runs on a clone of the engine (`C/handle.rs:13-22`), so a conversion returned by one would have to be carried back by every commit and checked against a revision the engine does not have — the caret, the nails or the context can change under equal raw text. Held in the engine, there is nothing to go stale, the commits need no payload, and the open reading is spliced into a conversion the engine still has.
 
 ### H3 — The caret
@@ -101,7 +111,7 @@ Names and wire shapes are settled in each phase's pre-implementation review; the
 
 | Piece | Contract |
 |---|---|
-| Switch | An `AppConfig` field turns H2 on for the request |
+| Switch | `AppConfig.hanji_conversion` turns H2 on for the request by being present. It carries the dictionary source toggles (`FetchAtPos.toggles`' message): a key carries no fetch, so the walk's source filter rides the config |
 | The word's list | `FetchAtPos` gains a field (a new tag — field 1 is reserved) asking for the list of the word before the caret; the engine resolves the anchor from its own segments. Frequency rows are looked up for the walker's edge alternatives too, not only for the rows listed |
 | Pick | `CommitContinuous`, under H2, nails the words before the anchor itself (not picked), then the pick, and keeps the composition |
 | Commit as shown | A new intent: writes nailed text + conversion + open reading and goes idle. Enter, a printable that commits first, a mode switch and a host's Finalize use it |
@@ -166,7 +176,7 @@ A glyph of an open reading costs less than a TL key does today — no walk. A ke
 ### Baseline
 
 - The cites here are `a758ee2d`. The work other sessions had in flight when this was written has merged (#395, #397, 2026-10-05) and touched no file this plan cites; no other session is working in the repository.
-- H-P1 opens on a rebase and re-reads every Today row and H6's "D7 today" column against the code then; a row that moved is corrected in the phase's PR.
+- H-P1 opens on a rebase and re-reads every Today row and H6's "D7 today" column against the code then; a row that moved is corrected in the phase's PR. Done at `0fdbd6e3`: nothing under `engine/composing`, `engine/dispatch` or the desktop key path changed since `a758ee2d`, so every row stands. Two rows move with H-P1 itself: a mutation now answers with a converted `UpdatePreedit` when the request asks for the conversion, and the walker's path is kept as segments (`C/conversion.rs`) beside being flattened into slot 0.
 - D7 and U8 in `desktop-tps-roadmap.md` are marked as revised only in H-P5, after arm B is on main.
 
 ## Phases
@@ -175,8 +185,8 @@ Sizes are estimates. The engine phases are unreachable until H-P4 sets the switc
 
 | Phase | Type | Scope | Builds / tests | Size | Status |
 |---|---|---|---|---|---|
-| H-P0 | docs | This roadmap, the `roadmap.md` row | — | — | In progress |
-| H-P1 | feat (engine) | H1, H2 for typing forward: the switch, the conversion in the state, the closed-part boundary, the walk on closing, the derived preedit and caret, Backspace; tests from production syllables (fixture rule: every strict-prefix syllable asserted) | engine; `make build` for the mobile artifacts (additive) | ~450 | Pending |
+| H-P0 | docs | This roadmap, the `roadmap.md` row | — | — | Merged |
+| H-P1 | feat (engine) | H1, H2 for typing forward: the switch, the conversion in the state, the closed-part boundary, the walk on closing, the derived preedit and caret, Backspace; tests from production syllables (fixture rule: every strict-prefix syllable asserted) | engine; `make build` for the mobile artifacts (additive) | ~450 | In review |
 | H-P2 | feat (engine) | H3: the caret by word, the open reading inside the tail, re-opening a nailed segment | engine; `make build` | ~400 | Pending |
 | H-P3 | feat (engine) | H4, H5, H7: the word's list and its frequency lookup, the pick that keeps composing, commit as shown, commit as typed, the picked mark and what it withholds | engine, dispatch, nextword; `make build` | ~500 | Pending |
 | H-P4 | feat (desktop-core, all three shells) | H6, H8: the switch on under TPS, the classifier and executor rows, every shell's tests | desktop-core, Windows, Linux, macOS | ~500 | Pending |
@@ -227,8 +237,9 @@ Deliberately not adopted:
 ## Reviews
 
 - H-P0 pre-implementation, 2026-10-05: Codex (`codex-cli 0.160.0`, `gpt-6.1-sol`) GO-WITH-CHANGES on a first draft in which a fetch after each key returned the conversion and the commits carried its segments back. Applied: the closed-part boundary comes from the syllabifier and the shadow's barriers, with the unclosable cases named (H1); re-segmentation on completion is stated, not denied (H1); an open reading inside the tail keeps the conversion on both sides and re-walks on closing (H3); field 1 of `FetchAtPos` is reserved, so a new tag (H5); a pick that reaches the end keeps the composition (H4); one preedit write per key (H2); the picked mark also cuts next-word adjacency, compound pairs included (H5, H7); re-opening puts the raw text back in front of a kept tail, and Commit as Typed rebuilds glyphs from every segment (H3, H5); the undefined key states are named (H6); frequency lookup covers the walker's edges (H5); all three desktops flip in one phase and the engine phases stay unreachable before it (Phases).
-- Where this plan goes further than the review: Codex kept the caller-carried conversion and asked for a revision the engine would check under its mutex. The plan moves the conversion into the engine's state instead (H2), which removes the race rather than validating it and is how McBopomofo and vChewing hold their walk. This shape has not been reviewed; H-P1's pre-implementation review is where it is.
+- Where this plan goes further than the review: Codex kept the caller-carried conversion and asked for a revision the engine would check under its mutex. The plan moves the conversion into the engine's state instead (H2), which removes the race rather than validating it and is how McBopomofo and vChewing hold their walk. H-P1's pre-implementation review, below, is where this shape was reviewed.
+- H-P1 pre-implementation, 2026-10-05: Codex (`codex-cli 0.160.0`, `gpt-6.1-sol`) AGREE on the conversion as engine state held in `Phase::Continuous` and computed inside the mutation — the shape the H-P0 review had not seen — and GO-WITH-CHANGES on the phase's plan. Applied: no conversion while the caret is inside the tail, instead of a display caret snapped to a word while the raw caret steps by glyph; a conversion is valid only for the source filter it was walked with, and a request without the switch ignores one the state holds; the separator barriers are read from the shadow pipeline, not derived from the merged barrier set, and the boundary is the furthest closing end among the lattice's edges; one lexicon read for the boundary and the walk, the render outside it; the walker is split by extraction only, slot 0 keeping its guard, flattening and order; a segment holds nothing H-P1 does not read.
 
 ## Dogfood
 
-One `Sn` per phase is added to `dogfood-checklist.md` when its PR opens, with sentences from `corpus/taigi-typing`. S91 (a) ("typing shows no window") stays true; its glyph-preedit wording is revised in H-P5.
+One `Sn` per phase a shell can reach (H-P4, H-P5) is added to `dogfood-checklist.md` when its PR opens, with sentences from `corpus/taigi-typing`. The engine phases (H-P1 to H-P3) cannot be typed on a device before H-P4; their check is the engine tests (`engine/composing/tests/tps_hanji_conversion.rs`, `tps_hanji_conversion_prod.rs`). S91 (a) ("typing shows no window") stays true; its glyph-preedit wording is revised in H-P5.

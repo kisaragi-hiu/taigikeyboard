@@ -195,6 +195,9 @@ pub(crate) struct ShadowLattice {
     pub lattice: Lattice,
     /// Stripped-separator / hyphen barriers (§35).
     pub barriers: Vec<usize>,
+    /// The TPS separator (Space) barriers among them — where a reading
+    /// without a tone mark was closed (`crate::conversion`).
+    pub space_barriers: Vec<usize>,
     /// The typed `-` runs among them, `(shadow offset, run length)` (§52 kind,
     /// §55 rendering).
     pub hyphen_runs: Vec<(usize, usize)>,
@@ -312,8 +315,8 @@ fn lattice_from_canonical_with_barriers(
         shadow,
         shadow_to_hyphenless,
         barriers,
+        space_barriers,
         hyphen_runs,
-        ..
     } = separator_layers(canonical, mode);
     // Compose the three offset maps: shadow → hyphenless → canonical → raw.
     let shadow_to_raw_end: Vec<usize> = shadow_to_hyphenless
@@ -360,6 +363,7 @@ fn lattice_from_canonical_with_barriers(
         shadow_to_raw_end,
         lattice,
         barriers,
+        space_barriers,
         hyphen_runs,
     }
 }

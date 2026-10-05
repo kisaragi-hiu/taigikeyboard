@@ -273,9 +273,53 @@ public nonisolated struct Taigi_Engine_AppConfig: Sendable {
   /// TPS or→er dialect switch; no engine reader yet.
   public var tpsOrMapsToEr: Bool = false
 
+  /// Present = the preedit of a TPS buffer shows the converted Hanji
+  /// (`HanjiConversion`). Absent on every platform today.
+  public var hanjiConversion: Taigi_Engine_HanjiConversion {
+    get {_hanjiConversion ?? Taigi_Engine_HanjiConversion()}
+    set {_hanjiConversion = newValue}
+  }
+  /// Returns true if `hanjiConversion` has been explicitly set.
+  public var hasHanjiConversion: Bool {self._hanjiConversion != nil}
+  /// Clears the value of `hanjiConversion`. Subsequent reads from it will return its default value.
+  public mutating func clearHanjiConversion() {self._hanjiConversion = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _hanjiConversion: Taigi_Engine_HanjiConversion? = nil
+}
+
+/// Hanji conversion in the preedit
+/// (`docs/architecture/desktop-tps-hanji-conversion-roadmap.md` H1, H2): while
+/// the pending buffer is TPS glyphs and the caret is at its end, the engine
+/// keeps the walker's best path over the closed readings — closed by a tone
+/// mark, or by Space for tones 1 and 4 — and the preedit shows it, followed by
+/// the glyphs of the reading still being typed. `Preedit.raw_input` stays the
+/// glyphs. TL / POJ buffers are never converted.
+public nonisolated struct Taigi_Engine_HanjiConversion: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// The user's dictionary switches, as `FetchAtPos.toggles`: a key carries no
+  /// fetch, so the conversion's source filter rides the config. Absent keeps
+  /// every source on.
+  public var toggles: Taigi_Engine_DictionarySourceToggles {
+    get {_toggles ?? Taigi_Engine_DictionarySourceToggles()}
+    set {_toggles = newValue}
+  }
+  /// Returns true if `toggles` has been explicitly set.
+  public var hasToggles: Bool {self._toggles != nil}
+  /// Clears the value of `toggles`. Subsequent reads from it will return its default value.
+  public mutating func clearToggles() {self._toggles = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _toggles: Taigi_Engine_DictionarySourceToggles? = nil
 }
 
 public nonisolated struct Taigi_Engine_Request: @unchecked Sendable {
@@ -466,7 +510,7 @@ nonisolated extension Taigi_Engine_CandidateDisplayMode: SwiftProtobuf._ProtoNam
 
 nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AppConfig"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{2}input_mode\0\u{3}oo_doubletap_enabled\0\u{3}nn_doubletap_enabled\0\u{3}is_hanji_first\0\u{4}\u{2}platform_id\0\u{3}output_both_scripts\0\u{3}candidate_display_mode\0\u{3}hyphenless_roman\0\u{3}force_lowercase_nasal_marker\0\u{3}tps_or_maps_to_er\0\u{b}tone_mode\0\u{b}is_association_recording_enabled\0\u{c}\u{1}\u{1}\u{c}\u{6}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{2}input_mode\0\u{3}oo_doubletap_enabled\0\u{3}nn_doubletap_enabled\0\u{3}is_hanji_first\0\u{4}\u{2}platform_id\0\u{3}output_both_scripts\0\u{3}candidate_display_mode\0\u{3}hyphenless_roman\0\u{3}force_lowercase_nasal_marker\0\u{3}tps_or_maps_to_er\0\u{3}hanji_conversion\0\u{b}tone_mode\0\u{b}is_association_recording_enabled\0\u{c}\u{1}\u{1}\u{c}\u{6}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -484,12 +528,17 @@ nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtob
       case 10: try { try decoder.decodeSingularBoolField(value: &self.hyphenlessRoman) }()
       case 11: try { try decoder.decodeSingularBoolField(value: &self.forceLowercaseNasalMarker) }()
       case 12: try { try decoder.decodeSingularBoolField(value: &self.tpsOrMapsToEr) }()
+      case 13: try { try decoder.decodeSingularMessageField(value: &self._hanjiConversion) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.inputMode.isEmpty {
       try visitor.visitSingularStringField(value: self.inputMode, fieldNumber: 2)
     }
@@ -520,6 +569,9 @@ nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtob
     if self.tpsOrMapsToEr != false {
       try visitor.visitSingularBoolField(value: self.tpsOrMapsToEr, fieldNumber: 12)
     }
+    try { if let v = self._hanjiConversion {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 13)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -534,6 +586,41 @@ nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtob
     if lhs.hyphenlessRoman != rhs.hyphenlessRoman {return false}
     if lhs.forceLowercaseNasalMarker != rhs.forceLowercaseNasalMarker {return false}
     if lhs.tpsOrMapsToEr != rhs.tpsOrMapsToEr {return false}
+    if lhs._hanjiConversion != rhs._hanjiConversion {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_Engine_HanjiConversion: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".HanjiConversion"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}toggles\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._toggles) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._toggles {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_HanjiConversion, rhs: Taigi_Engine_HanjiConversion) -> Bool {
+    if lhs._toggles != rhs._toggles {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

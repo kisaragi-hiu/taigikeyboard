@@ -102,7 +102,9 @@ proptest! {
             }
             match engine.snapshot_state().phase {
                 Phase::Idle => prop_assert_eq!(preedit.caret_utf16, 0),
-                Phase::Continuous { raw, caret, nailed } => {
+                Phase::Continuous {
+                    raw, caret, nailed, ..
+                } => {
                     prop_assert!(!raw.is_empty() || !nailed.is_empty());
                     prop_assert!(resp.is_composing);
                     prop_assert!(caret <= raw.len());

@@ -337,6 +337,31 @@ pub fn config(input_mode: &str) -> AppConfig {
     config_with_display_mode(input_mode, 0)
 }
 
+/// [`config`] asking for the Hanji conversion of a TPS preedit, every
+/// dictionary source on.
+pub fn config_converting(input_mode: &str) -> AppConfig {
+    AppConfig {
+        hanji_conversion: Some(protos::engine::HanjiConversion { toggles: None }),
+        ..config(input_mode)
+    }
+}
+
+/// The words of the engine's Hanji conversion as `(raw span, display)`;
+/// empty when it holds none.
+pub fn converted_words(engine: &Engine) -> Vec<((usize, usize), String)> {
+    match engine.snapshot_state().phase {
+        composing::Phase::Continuous {
+            conversion: Some(conversion),
+            ..
+        } => conversion
+            .segments
+            .into_iter()
+            .map(|segment| (segment.raw_span, segment.display_text))
+            .collect(),
+        _ => Vec::new(),
+    }
+}
+
 /// A fresh engine already in `Phase::Continuous` over `raw` (TL config).
 pub fn engine_in_continuous(raw: &str) -> Engine {
     let mut e = Engine::new();
