@@ -204,7 +204,8 @@ pub unsafe extern "C" fn taigi_runtime_mode_label(runtime: *const TaigiRuntime) 
     // SAFETY: non-null and, by contract, a live runtime.
     let runtime = unsafe { &*runtime };
     guarded("taigi_runtime_mode_label", ptr::null_mut(), || {
-        c_string(&chrome::mode_label(&runtime.inner)).into_raw()
+        let settings = runtime.inner.settings.current();
+        c_string(&chrome::mode_label(&runtime.inner, &settings)).into_raw()
     })
 }
 
@@ -218,7 +219,23 @@ pub unsafe extern "C" fn taigi_runtime_mode_symbol(runtime: *const TaigiRuntime)
     // SAFETY: non-null and, by contract, a live runtime.
     let runtime = unsafe { &*runtime };
     guarded("taigi_runtime_mode_symbol", ptr::null_mut(), || {
-        c_string(chrome::mode_symbol(&runtime.inner)).into_raw()
+        let settings = runtime.inner.settings.current();
+        c_string(chrome::mode_indicator(&settings).symbol()).into_raw()
+    })
+}
+
+/// # Safety
+/// `runtime` is a live runtime. The string is freed with `taigi_string_free`.
+#[no_mangle]
+pub unsafe extern "C" fn taigi_runtime_mode_icon(runtime: *const TaigiRuntime) -> *mut c_char {
+    if runtime.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: non-null and, by contract, a live runtime.
+    let runtime = unsafe { &*runtime };
+    guarded("taigi_runtime_mode_icon", ptr::null_mut(), || {
+        let settings = runtime.inner.settings.current();
+        c_string(chrome::mode_indicator(&settings).icon_name()).into_raw()
     })
 }
 
@@ -230,7 +247,7 @@ pub extern "C" fn taigi_open_settings() -> bool {
 }
 
 /// # Safety
-/// `text` came from this crate (`taigi_runtime_mode_label` / `_mode_symbol`) and is freed once.
+/// `text` came from this crate (`taigi_runtime_mode_label` / `_mode_symbol` / `_mode_icon`) and is freed once.
 #[no_mangle]
 pub unsafe extern "C" fn taigi_string_free(text: *mut c_char) {
     if text.is_null() {

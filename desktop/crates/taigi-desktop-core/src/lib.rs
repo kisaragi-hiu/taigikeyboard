@@ -20,6 +20,7 @@ pub mod composing;
 pub mod dictionary_artifacts;
 pub mod engine;
 pub mod keys;
+pub mod mode_indicator;
 pub mod platform;
 pub mod policies;
 pub mod runtime;

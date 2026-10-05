@@ -86,6 +86,10 @@ public:
      * off, `subModeLabel()` otherwise). */
     std::string subMode(const InputMethodEntry &entry, InputContext &ic) override;
     std::string subModeLabelImpl(const InputMethodEntry &entry, InputContext &ic) override;
+    /* The tray icon (`Instance::inputMethodIcon`): the tray draws the icon,
+     * not the label, unless the user turned on Prefer Text Icon — per-mode
+     * icon names, as fcitx5-mozc does. */
+    std::string subModeIconImpl(const InputMethodEntry &entry, InputContext &ic) override;
     const Configuration *getConfig() const override { return config_.get(); }
     void setSubConfig(const std::string &path, const RawConfig &config) override;
 

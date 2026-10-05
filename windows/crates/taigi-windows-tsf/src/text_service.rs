@@ -34,6 +34,7 @@ use taigi_desktop_core::composing::ContextToken;
 use taigi_desktop_core::keys::{
     LanguageMode, MenuCommand, ShiftTapTracker, ShortcutAction, VK_SHIFT_CODE,
 };
+use taigi_desktop_core::mode_indicator::ModeIndicator;
 use taigi_desktop_core::settings::keys;
 use windows::core::{Error, IUnknown, Interface, Ref, Result, BOOL, BSTR, GUID};
 use windows::Win32::Foundation::{E_FAIL, E_INVALIDARG, LPARAM, POINT, RECT, WPARAM};
@@ -198,7 +199,7 @@ impl TextService_Impl {
             state.activate_flags = flags;
             // The Chinese/English mode is per ACTIVATION: TSF may deactivate and
             // reactivate the same object, and a mode carried over would leave
-            // the tray letter, the compartment and the classifier disagreeing.
+            // the tray icon, the compartment and the classifier disagreeing.
             // The Shift press goes with it — the one that armed it belonged to
             // the previous activation. The compartment is published at the end
             // of this method, once the thread manager is wired.
@@ -785,7 +786,7 @@ impl TextService_Impl {
 
     /// The ONE way the Chinese/English mode changes. Three things say which mode is on —
     /// the classifier's gate, the TSF conversion-mode compartment and the tray
-    /// letter — and a switch that moved only some of them is a mode the user
+    /// icon — and a switch that moved only some of them is a mode the user
     /// and the system disagree about. They move here, together, or not at all.
     /// The mode flash is the caller's (a restore nobody asked for shows none).
     pub(crate) fn set_language_mode(&self, mode: LanguageMode) {
@@ -800,6 +801,18 @@ impl TextService_Impl {
         self.notify_lang_bar();
     }
 
+    /// What the tray button shows: the settings in force and this
+    /// activation's Shift-tap mode.
+    fn mode_indicator(&self) -> ModeIndicator {
+        let language_mode = self.state.borrow().language_mode;
+        let settings = Runtime::shared().settings.current();
+        ModeIndicator::of(&settings.engine_settings(), language_mode)
+    }
+
+    /// Asks the taskbar to re-read the icon and text — after every change
+    /// of `mode_indicator`'s inputs made from this service, and on thread
+    /// focus for the ones made elsewhere. The sink is moved out first, so a
+    /// synchronous `GetIcon` finds the state unborrowed.
     pub(crate) fn notify_lang_bar(&self) {
         // Moved out, called, moved back: no AddRef under the borrow.
         let sink = self.state.borrow_mut().lang_bar_sink.take();
@@ -946,10 +959,16 @@ impl ITfThreadMgrEventSink_Impl for TextService_Impl {
 }
 
 impl ITfThreadFocusSink_Impl for TextService_Impl {
+    /// Back from another process — the settings app included, whose
+    /// writes this service never saw: the tray icon is re-read here, as
+    /// mozc updates its lang bar from this callback
+    /// (`tip_text_service.cc:730-754` → `tip_ui_handler.cc:51-91`), so it is
+    /// right before the first key.
     fn OnSetThreadFocus(&self) -> Result<()> {
         guarded("ITfThreadFocusSink::OnSetThreadFocus", || {
             self.request_settings_refresh();
             self.note_tps_keyboard_focus(self.has_focused_document());
+            self.notify_lang_bar();
             Ok(())
         })
     }
@@ -1184,7 +1203,6 @@ impl ITfLangBarItemButton_Impl for TextService_Impl {
                         self.perform_global(action, identity);
                     }
                 }
-                self.notify_lang_bar();
             }
             Ok(())
         })
@@ -1206,17 +1224,20 @@ impl ITfLangBarItemButton_Impl for TextService_Impl {
         guarded("ITfLangBarItemButton::OnMenuSelect", || Ok(()))
     }
 
-    /// A caller-owned icon: TSF destroys what it is given.
+    /// A caller-owned icon: TSF destroys what it is given. Re-read after
+    /// every switch and whenever this thread gets the focus back
+    /// (`notify_lang_bar` pushes the update), so it reads the settings file
+    /// as it is now.
     fn GetIcon(&self) -> Result<HICON> {
-        guarded("ITfLangBarItemButton::GetIcon", lang_bar::owned_icon)
+        guarded("ITfLangBarItemButton::GetIcon", || {
+            lang_bar::owned_icon(self.mode_indicator())
+        })
     }
 
-    /// Re-read after every switch (`notify_lang_bar` pushes the update), so
-    /// the taskbar letter names the mode the next key will be typed in.
+    /// The same state as text, for a host that draws text instead.
     fn GetText(&self) -> Result<BSTR> {
         guarded("ITfLangBarItemButton::GetText", || {
-            let mode = self.state.borrow().language_mode;
-            Ok(BSTR::from(lang_bar::tray_text(mode)))
+            Ok(BSTR::from(self.mode_indicator().symbol()))
         })
     }
 }

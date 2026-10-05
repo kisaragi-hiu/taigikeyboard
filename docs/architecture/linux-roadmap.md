@@ -322,10 +322,13 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
 - **L6 Panel menu = status-area actions (Fcitx5) / engine properties (IBus).** On Fcitx5:
   `SimpleAction`s registered with `userInterfaceManager()` and added to the input context's
   `statusArea()` under `StatusGroup::InputMethod` on `activate` (`fcitx5-rime` `refreshStatusArea`),
-  the mode symbol (`chrome::mode_symbol`, what the tray / kimpanel text and the compact
-  notice read) through `subModeLabelImpl`, the full mode label through `subMode`. On IBus: `RegisterProperties` on `Enable` and
-  on every `FocusIn` with a `PROP_TYPE_MENU` root whose `symbol` is the mode label (the
-  panel indicator text — IBus shows an engine's symbol in the top bar) and whose
+  the mode indicator (`chrome::mode_indicator`, invariants §60) as the tray icon through
+  `subModeIconImpl` (a hicolor icon name, as fcitx5-mozc does — the tray draws the icon unless
+  Prefer Text Icon is on) and as the tray / kimpanel text and compact notice through
+  `subModeLabelImpl`, the full mode label through `subMode`. On IBus: `RegisterProperties` on `Enable` and
+  on every `FocusIn` with a `PROP_TYPE_MENU` root whose `symbol` and `icon` are the mode
+  indicator (the panel indicator — GNOME Shell shows the symbol in the top bar; the component
+  file names the root as `<icon_prop_key>` for the other panels) and whose
   sub-properties mirror the Mac's input-source menu row for row
   (`InputSourceMenuRenderer.swift`, `TaigiInputController.swift:372-`): the two switch rows
   under their Shortcuts-pane names with the recorded chord in the tooltip, a separator, TaigiKeyboard Settings
@@ -335,15 +338,16 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
   `taigi-desktop-core::strings` in the display language each time the rows are built
   (PR5, `chrome::menu_items`; one list, both shells — since 2026-09-25 the rows themselves
   are `taigi_desktop_core::keys::MENU`, shared with Windows and held equal to the Mac's by test). **Mode label** (PR5,
-  `chrome::mode_label`) = `<romanization> · <candidate display mode>` (`台羅 · 漢字優先`),
-  the two states the chords switch; a switch emits `Emit::ModeLabel` (the shell re-reads it)
+  `chrome::mode_label`) = `<romanization> · <candidate display mode>` (`台羅 · 漢羅對應`),
+  the two states the chords switch; a switch emits `Emit::ModeChanged` (the shell re-reads the
+  label and the indicator; the swap emits it too, for the indicator, unannounced)
   and `Emit::AnnounceMode` — Fcitx5 `Instance::showInputMethodInformation`, the
   framework's own timed "input method + sub-mode" notice, stands in for the HUD flash;
   IBus has no equivalent and only the symbol changes (named divergence). GNOME Shell reads
   an IBus engine's indicator text from the property whose key is `InputMode`, and only a
   `symbol` of one or two characters (`js/ui/status/keyboard.js`, GNOME 46 — Codex review
   2026-09-23): the menu root's key is therefore `InputMode`, its `symbol`
-  `chrome::mode_symbol` (`台羅` / `白話`), its `label` the full `mode_label`. The same
+  `ModeIndicator::symbol` (`台` / `Ts` / `白` / `Ch` / `方`), its `label` the full `mode_label`. The same
   panel fills an empty label list with `1…9, 0` (`ibusCandidatePopup.js`), so the IBus shell
   sends one space per position for the label-less Telex guide.
 - **L7 Data locations (XDG).** `settings.json` under `$XDG_CONFIG_HOME/taigikeyboard/`

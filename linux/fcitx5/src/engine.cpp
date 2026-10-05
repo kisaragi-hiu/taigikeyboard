@@ -217,8 +217,8 @@ void State::replay(TaigiReply *reply) {
             panelChanged = true;
             break;
         case TAIGI_EMIT_MODE_CHANGED:
-            /* The label is re-read through subModeLabelImpl; the status
-             * area redraws it. */
+            /* The label and the icon are re-read through subModeLabelImpl /
+             * subModeIconImpl; the status area redraws them. */
             ic_.updateUserInterface(UserInterfaceComponent::StatusArea);
             break;
         case TAIGI_EMIT_ANNOUNCE_MODE:
@@ -411,6 +411,11 @@ void Engine::reset(const InputMethodEntry & /*entry*/, InputContextEvent &event)
  * notice: the short symbol the IBus shell shows (roadmap L6). */
 std::string Engine::subModeLabelImpl(const InputMethodEntry & /*entry*/, InputContext & /*ic*/) {
     return takeString(taigi_runtime_mode_symbol(runtime_));
+}
+
+/* The same state as an icon theme name, installed under hicolor. */
+std::string Engine::subModeIconImpl(const InputMethodEntry & /*entry*/, InputContext & /*ic*/) {
+    return takeString(taigi_runtime_mode_icon(runtime_));
 }
 
 /* The full notice: the romanization and the display mode, the text the

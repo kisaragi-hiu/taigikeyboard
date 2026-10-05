@@ -160,7 +160,10 @@ pub struct Property<'a> {
     /// The accelerator column: ibus draws the tooltip on hover, which is
     /// where the recorded chord goes.
     pub tooltip: &'a str,
-    /// The panel's indicator text for a menu root (the mode label).
+    /// An icon theme name or a file path; "" for none. The panel's
+    /// indicator icon for a menu root.
+    pub icon: &'a str,
+    /// The panel's indicator text for a menu root.
     pub symbol: &'a str,
     pub sub_props: Vec<Value<'static>>,
 }
@@ -172,7 +175,7 @@ impl Property<'_> {
                 .add_field(self.key.to_owned())
                 .add_field(self.kind as u32)
                 .append_field(boxed(plain_text(self.label)))
-                .add_field(String::new())
+                .add_field(self.icon.to_owned())
                 .append_field(boxed(plain_text(self.tooltip)))
                 .add_field(true)
                 .add_field(true)
@@ -203,6 +206,7 @@ mod tests {
             kind: PropType::Normal,
             label: "設定",
             tooltip: "Ctrl+Alt+S",
+            icon: "",
             symbol: "",
             sub_props: Vec::new(),
         }
@@ -213,11 +217,17 @@ mod tests {
             kind: PropType::Menu,
             label: "台語齒盤",
             tooltip: "",
+            icon: "taigikeyboard-tl-hanji",
             symbol: "台",
             sub_props: vec![row],
         }
         .to_value();
         assert_eq!(signature_of(&root), "(sa{sv}suvsvbbuvv)");
+        // trace: fields = type name, attachments, key, type, label, icon, …
+        let Value::Structure(structure) = &root else {
+            panic!("a property is a structure")
+        };
+        assert_eq!(structure.fields()[5], Value::from("taigikeyboard-tl-hanji"));
         assert_eq!(signature_of(&prop_list(vec![root])), "(sa{sv}av)");
     }
 

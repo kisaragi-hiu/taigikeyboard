@@ -27,6 +27,10 @@
       <longname>台語齒盤</longname>
       <description>Taiwanese (Tâi-gí) — TL / POJ romanization, Hanji candidates</description>
       <symbol>台</symbol>
+      <!-- The property whose icon / symbol the panel shows while this engine
+           is on: the menu root, which carries the mode indicator
+           (chrome::mode_indicator). -->
+      <icon_prop_key>InputMode</icon_prop_key>
       <rank>0</rank>
       <setup>@PREFIX@/bin/taigikeyboard-settings</setup>
     </engine>

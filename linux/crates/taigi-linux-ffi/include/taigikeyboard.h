@@ -42,7 +42,7 @@ enum {
     TAIGI_EMIT_DELETE_SURROUNDING = 4, /* delete_offset / delete_count, before the caret */
     TAIGI_EMIT_LOOKUP_TABLE = 5,       /* the candidate list (table accessors) */
     TAIGI_EMIT_HIDE_LOOKUP_TABLE = 6,  /* the candidate list goes away */
-    TAIGI_EMIT_MODE_CHANGED = 7,       /* the mode changed: re-read taigi_runtime_mode_label / _symbol */
+    TAIGI_EMIT_MODE_CHANGED = 7,       /* the mode changed: re-read taigi_runtime_mode_label / _symbol / _icon */
     TAIGI_EMIT_ANNOUNCE_MODE = 8       /* show the mode briefly (showInputMethodInformation) */
 };
 
@@ -74,13 +74,16 @@ const char *taigi_version(void);
 
 TaigiRuntime *taigi_runtime_new(void);
 void taigi_runtime_free(TaigiRuntime *runtime);
-/* The mode label beside the icon ("台羅 · 漢字優先"); freed with
+/* The full mode text for a notice ("台羅 · 漢羅對應"); freed with
  * taigi_string_free. Null on a panic. */
 char *taigi_runtime_mode_label(const TaigiRuntime *runtime);
-/* The short form for a tray / panel indicator ("台羅" / "白話") — the
- * symbol the IBus shell shows; freed with taigi_string_free. Null on a
- * panic. */
+/* The tray / panel indicator text: the script and what a commit writes
+ * ("台" / "Ts" / "白" / "Ch" / "方") — the symbol the IBus shell shows;
+ * freed with taigi_string_free. Null on a panic. */
 char *taigi_runtime_mode_symbol(const TaigiRuntime *runtime);
+/* The indicator's icon theme name ("taigikeyboard-tl-hanji"), installed
+ * under hicolor; freed with taigi_string_free. Null on a panic. */
+char *taigi_runtime_mode_icon(const TaigiRuntime *runtime);
 /* Opens the settings window where the user left it (the framework's
  * configure button). false when the binary could not be started. */
 bool taigi_open_settings(void);

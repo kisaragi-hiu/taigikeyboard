@@ -31,10 +31,10 @@ pub enum Emit {
     LookupTable(LookupTableContent),
     /// `UpdateLookupTable(<empty>, visible = false)`.
     HideLookupTable,
-    /// The mode beside the input method's icon changed (`chrome::mode_label`
-    /// / `mode_symbol`): Fcitx5 re-reads `subModeLabelImpl`, IBus gets
-    /// `UpdateProperty` with the new symbol. No payload — each shell asks
-    /// the runtime for the text it draws.
+    /// The indicator changed (`chrome::mode_indicator` / `mode_label`):
+    /// Fcitx5 re-reads `subModeIconImpl` / `subModeLabelImpl`, IBus gets
+    /// `UpdateProperty` with the new symbol and icon. No payload — each
+    /// shell asks the runtime for what it draws.
     ModeChanged,
     /// Show the mode briefly — the macOS / Windows HUD flash after a
     /// switch. Fcitx5 `showInputMethodInformation`; IBus has no equivalent

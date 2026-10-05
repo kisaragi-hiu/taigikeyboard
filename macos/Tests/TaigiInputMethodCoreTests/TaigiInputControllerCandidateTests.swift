@@ -968,6 +968,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
             "a swap must not route through dismissal",
         )
         XCTAssertEqual(session.presenter.selectedIndex, keptIndex)
+        XCTAssertEqual(session.flashes.texts, [], "the list on screen already shows the swap")
         let after = try XCTUnwrap(session.presenter.shownContent).cells
         XCTAssertEqual(after.count, before.count)
         for (befores, afters) in zip(before, after) where befores.annotation != nil {
@@ -992,6 +993,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
                 session.presenter.calls.count, callsBefore,
                 "a hotkey with no bar on screen must not touch the presenter",
             )
+            XCTAssertEqual(session.flashes.texts.count, 1, "with no bar, only the HUD says what a commit writes")
         }
     }
 
@@ -1229,10 +1231,16 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
 
     private static let caretRectAtEndOfComposition = CGRect(x: 120, y: 400, width: 1, height: 18)
 
+    /// What the HUD was asked to say, recorded rather than shown.
+    private final class FlashLog {
+        var texts: [String] = []
+    }
+
     private struct Session: CandidateBarSession {
         let controller: TaigiInputController
         let client: RecordingTextInputClient
         let presenter: RecordingCandidatePresenter
+        let flashes = FlashLog()
 
         @MainActor
         func press(_ key: NavigationKey) {
@@ -1251,7 +1259,9 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         let controller = try TestFixtures.makeInputController()
         controller.candidatePresenter = presenter
         controller.activateServer(client)
-        return Session(controller: controller, client: client, presenter: presenter)
+        let session = Session(controller: controller, client: client, presenter: presenter)
+        controller.modeFlashOverride = { [flashes = session.flashes] text in flashes.texts.append(text) }
+        return session
     }
 
     /// An activated session that has typed `taigi`, so a bar is up.

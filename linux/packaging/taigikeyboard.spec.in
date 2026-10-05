@@ -41,6 +41,7 @@ cp -a @STAGEROOT@/. %{buildroot}/
 %{_datadir}/taigikeyboard/
 %{_datadir}/applications/tw.taigikeyboard.Settings.desktop
 %{_datadir}/icons/hicolor/*/apps/taigikeyboard.png
+%{_datadir}/icons/hicolor/*/apps/taigikeyboard-*.png
 %{_datadir}/fonts/taigikeyboard/
 # Already installed by `make install` (LAYOUT=fedora); %license only marks them.
 %dir %{_defaultlicensedir}/taigikeyboard
