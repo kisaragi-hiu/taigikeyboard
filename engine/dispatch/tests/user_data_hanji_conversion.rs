@@ -69,13 +69,10 @@ fn a_picked_word_ranks_the_walks_after_it() {
 
     let raw = "ㄒㄧˋ";
     let neutral = compose(raw);
-    let listed = composing(composing_request::Method::FetchAtPos(FetchAtPos {
-        word_before_caret: true,
-        ..FetchAtPos::default()
-    }))
-    .continuous
-    .expect("a list")
-    .candidates;
+    let listed = composing(composing_request::Method::FetchAtPos(FetchAtPos::default()))
+        .continuous
+        .expect("a list")
+        .candidates;
     let other = listed
         .into_iter()
         .find(|row| {

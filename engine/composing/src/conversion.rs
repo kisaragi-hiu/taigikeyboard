@@ -219,18 +219,36 @@ pub(crate) fn is_requested(raw: &str, config: &AppConfig) -> bool {
     requested_sources(config).is_some() && buffer_input_mode(raw, config) == InputMode::Tps
 }
 
+/// Whether `config` asks for the conversion of the composition of `nailed`
+/// segments and the pending `raw` — judged on the whole composition, so a
+/// tail a pick left with tone marks only is still a TPS composition's.
+pub(crate) fn is_requested_for_composition(
+    nailed: &[NailedSegment],
+    raw: &str,
+    config: &AppConfig,
+) -> bool {
+    let composition: String = nailed
+        .iter()
+        .map(|segment| segment.raw_text.as_str())
+        .chain([raw])
+        .collect();
+    is_requested(&composition, config)
+}
+
 /// Where the list of the word before the caret starts in the pending `raw`
 /// (H4) — the one rule a fetch, its context and its pick read — or `None`
-/// when `config` asks for no conversion of `raw`: the whole tail's list, a
-/// legacy pick. [`Conversion::anchor`] of the conversion the tail holds for
-/// `config`; `0` when it holds none (a reading open from the start).
+/// when `config` asks for no conversion of the composition: the whole tail's
+/// list, a legacy pick. [`Conversion::anchor`] of the conversion the tail
+/// holds for `config`; `0` when it holds none (a reading open from the start,
+/// or a tail of tone marks).
 pub(crate) fn word_list_start(
+    nailed: &[NailedSegment],
     raw: &str,
     caret: usize,
     conversion: Option<&Conversion>,
     config: &AppConfig,
 ) -> Option<usize> {
-    is_requested(raw, config).then(|| {
+    is_requested_for_composition(nailed, raw, config).then(|| {
         conversion
             .filter(|conversion| conversion.is_for(config))
             .map_or(0, |conversion| conversion.anchor(caret))

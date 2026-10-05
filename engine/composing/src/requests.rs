@@ -99,7 +99,6 @@ pub fn fetch_at_pos_intent(
         literal_roman_candidate_disabled: fetch.literal_roman_candidate_disabled,
         user_rows,
         context,
-        word_before_caret: fetch.word_before_caret,
     }
 }
 
@@ -149,7 +148,6 @@ pub fn query(intent: &Intent, engine: &Engine, config: &AppConfig) -> ComposingR
             literal_roman_candidate_disabled,
             user_rows,
             context,
-            word_before_caret,
         } => handle_fetch_at_pos(
             engine,
             *now_ms,
@@ -157,7 +155,6 @@ pub fn query(intent: &Intent, engine: &Engine, config: &AppConfig) -> ComposingR
             context,
             *enabled_sources_bitmask,
             *literal_roman_candidate_disabled,
-            *word_before_caret,
             config,
         ),
         mutating => unreachable!("query() called with mutating intent {mutating:?}"),
@@ -178,10 +175,9 @@ pub fn query(intent: &Intent, engine: &Engine, config: &AppConfig) -> ComposingR
 /// [`crate::continuous::assemble_candidates`]; this fn does the
 /// phase/hanji guards and the wire encoding around it.
 ///
-/// Under a Hanji conversion the request asks for, `word_before_caret` lists
-/// the word before the caret (H4): the tail from [`Engine::word_list_start`]
-/// as [`ListShape::Word`], spans shifted back into the tail's coordinates.
-#[allow(clippy::too_many_arguments)]
+/// Under a Hanji conversion the request asks for, the list is the word
+/// before the caret's (H4): the tail from [`Engine::word_list_start`] as
+/// [`ListShape::Word`], spans shifted back into the tail's coordinates.
 fn handle_fetch_at_pos(
     engine: &Engine,
     now_ms: i64,
@@ -189,7 +185,6 @@ fn handle_fetch_at_pos(
     context: &ranking::ContextRanks,
     enabled_sources_bitmask: u32,
     literal_roman_candidate_disabled: bool,
-    word_before_caret: bool,
     config: &AppConfig,
 ) -> ComposingResponse {
     let snapshot = engine.snapshot(config);
@@ -197,7 +192,7 @@ fn handle_fetch_at_pos(
     let Phase::Continuous { raw: tail, .. } = &state.phase else {
         return snapshot;
     };
-    let word_list_start = engine.word_list_start(word_before_caret, config);
+    let word_list_start = engine.word_list_start(config);
     let shape = match word_list_start {
         Some(_) => ListShape::Word,
         None => ListShape::Sentence,

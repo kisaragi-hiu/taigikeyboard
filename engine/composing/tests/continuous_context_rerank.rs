@@ -102,7 +102,7 @@ fn pending_context_is_the_last_nailed_segment() {
     }
     let config = config_tl();
     let mut engine = Engine::new();
-    let context = |engine: &Engine| engine.pending_snapshot(false, &config).context;
+    let context = |engine: &Engine| engine.pending_snapshot(&config).context;
     assert_eq!(context(&engine), ListContext::Committed);
     engine.apply(
         Intent::Start {

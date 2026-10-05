@@ -40,13 +40,9 @@ fn list_with(engine: &mut Engine, fetch: Fetch, config: &AppConfig) -> Vec<Candi
         .unwrap_or_default()
 }
 
-/// The list `FetchAtPos` answers, for the word before the caret or not.
-fn list(engine: &mut Engine, word_before_caret: bool, config: &AppConfig) -> Vec<CandidateMessage> {
-    let fetch = Fetch {
-        word_before_caret,
-        ..Fetch::default()
-    };
-    list_with(engine, fetch, config)
+/// The list `FetchAtPos` answers.
+fn list(engine: &mut Engine, config: &AppConfig) -> Vec<CandidateMessage> {
+    list_with(engine, Fetch::default(), config)
 }
 
 fn spans_and_hanji(candidates: &[CandidateMessage]) -> Vec<((u32, u32), Option<String>)> {
@@ -85,28 +81,24 @@ fn the_list_is_the_word_before_the_caret() {
     install_fixture_with(EXTRA_ROWS);
     let config = config_converting("tps");
     let (mut engine, _) = composing_engine("ㄒㄧˋㄒㄧ ", &config);
-    assert_eq!(engine.word_list_start(true, &config), Some(8));
-    assert_eq!(engine.word_list_start(false, &config), None);
-
+    assert_eq!(engine.word_list_start(&config), Some(8));
     assert_eq!(
-        spans_and_hanji(&list(&mut engine, true, &config)),
+        spans_and_hanji(&list(&mut engine, &config)),
         vec![
             ((8, 15), Some("詩".to_string())),
             ((8, 15), Some("絲".to_string())),
         ]
     );
-    let whole = spans_and_hanji(&list(&mut engine, false, &config));
-    assert_eq!(whole[0], ((0, 15), Some("死詩".to_string())));
 
     step(&mut engine, CaretDirection::Left, &config);
-    assert_eq!(engine.word_list_start(true, &config), Some(0));
+    assert_eq!(engine.word_list_start(&config), Some(0));
     assert_eq!(
-        spans_and_hanji(&list(&mut engine, true, &config)),
+        spans_and_hanji(&list(&mut engine, &config)),
         vec![((0, 8), Some("死".to_string()))]
     );
     // At the start of the tail the list is the first word's.
     step(&mut engine, CaretDirection::Left, &config);
-    assert_eq!(engine.word_list_start(true, &config), Some(0));
+    assert_eq!(engine.word_list_start(&config), Some(0));
 }
 
 // trace: "ㄒㄧˋㄒㄧ" — 死 (0, 8), then the open reading "ㄒㄧ" (8, 14) the caret
@@ -118,8 +110,8 @@ fn an_open_reading_before_the_caret_lists_its_own_words() {
     let config = config_converting("tps");
     let (mut engine, response) = composing_engine("ㄒㄧˋㄒㄧ", &config);
     assert_eq!(display(&response), "死ㄒㄧ");
-    assert_eq!(engine.word_list_start(true, &config), Some(8));
-    let listed = list(&mut engine, true, &config);
+    assert_eq!(engine.word_list_start(&config), Some(8));
+    let listed = list(&mut engine, &config);
     assert!(
         listed.iter().all(|c| c.consumed_span_start == 8),
         "{listed:?}"
@@ -130,18 +122,71 @@ fn an_open_reading_before_the_caret_lists_its_own_words() {
     }
 }
 
-// Without the switch the field asks for nothing: the whole tail's list.
+// Without the switch the list is the whole tail's, the walker's phrase 死詩
+// (0, 15) first, as before the conversion.
 #[test]
-fn without_the_conversion_the_field_lists_the_whole_tail() {
+fn without_the_conversion_the_list_is_the_whole_tails() {
     let _lock = engine_install_lock();
     install_fixture_with(EXTRA_ROWS);
     let config = config("tps");
     let (mut engine, _) = composing_engine("ㄒㄧˋㄒㄧ ", &config);
-    assert_eq!(engine.word_list_start(true, &config), None);
-    assert_eq!(
-        spans_and_hanji(&list(&mut engine, true, &config)),
-        spans_and_hanji(&list(&mut engine, false, &config))
+    assert_eq!(engine.word_list_start(&config), None);
+    let whole = spans_and_hanji(&list(&mut engine, &config));
+    assert_eq!(whole[0], ((0, 15), Some("死詩".to_string())));
+}
+
+// A pick that leaves only a tone mark pending still belongs to a TPS
+// composition (cloud review 2026-10-05): the list stays the word's and its
+// pick keeps composing. trace: "ㄒㄧˋˊ" — the second mark after the closed
+// reading stops the lattice, nothing converts, the list starts at 0; picking
+// 死 (0, 8) nails it and leaves "ˊ", a tail with no Bopomofo of its own.
+#[test]
+fn a_tail_of_tone_marks_after_a_pick_keeps_composing() {
+    let _lock = engine_install_lock();
+    install_fixture_with(EXTRA_ROWS);
+    let config = config_converting("tps");
+    let (mut engine, _) = composing_engine("ㄒㄧˋˊ", &config);
+    assert_eq!(engine.word_list_start(&config), Some(0));
+    engine.apply(pick("死", "sí", 8), &config);
+    assert_eq!(raw_input(&engine.snapshot(&config)), "ˊ");
+    assert_eq!(engine.word_list_start(&config), Some(0));
+    let row = list(&mut engine, &config)
+        .into_iter()
+        .next()
+        .expect("the tone mark's own row");
+    let response = engine.apply(
+        Intent::CommitContinuous {
+            canonical_text: row.display_text.clone(),
+            association_tl: row.canonical_tl.clone(),
+            hanji: row.hanji.clone(),
+            consumed_bytes: row.consumed_span_end as usize,
+            syllable_count: row.syllable_count as u8,
+            script: Some(CommitScript::Lead),
+            roman: row.roman.clone(),
+        },
+        &config,
     );
+    assert_eq!(outcome(&response), Some(CommitOutcome::Nailed as i32));
+    assert!(response.is_composing);
+}
+
+// Un-nailing back to a segment nailed as shown names no selected word.
+// trace: pick 絲 at the end → 死 (not picked) 絲, empty tail; Backspace
+// un-nails 絲, leaving 死 last: the handshake is Clear, not
+// UpdateLastSelectedWord.
+#[test]
+fn unnailing_back_to_an_unpicked_segment_names_no_word() {
+    let _lock = engine_install_lock();
+    install_fixture_with(EXTRA_ROWS);
+    let config = config_converting("tps");
+    let (mut engine, _) = composing_engine("ㄒㄧˋㄒㄧ ", &config);
+    engine.apply(pick("絲", "si", 15), &config);
+    let response = engine.apply(Intent::DeleteBackward, &config);
+    assert_eq!(
+        effect_kinds(&response.effect)[0],
+        "NextWordClearForNewComposing"
+    );
+    assert_eq!(nailed(&engine).len(), 1);
 }
 
 // The pick of the last word reaches the end of the tail and keeps composing.
@@ -237,8 +282,8 @@ fn glyphs_before_the_list_start_are_nailed_as_typed() {
     let response = tps_key(&mut engine, "ㄒ", &config);
     assert_eq!(display(&response), "死ㄒ詩");
     step(&mut engine, CaretDirection::Right, &config);
-    assert_eq!(engine.word_list_start(true, &config), Some(11));
-    let snapshot = engine.pending_snapshot(true, &config);
+    assert_eq!(engine.word_list_start(&config), Some(11));
+    let snapshot = engine.pending_snapshot(&config);
     assert_eq!(snapshot.listed_raw, "ㄒㄧ ");
     assert_eq!(snapshot.context, ListContext::Cut);
 
@@ -273,13 +318,13 @@ fn the_list_follows_the_converted_word_before_it() {
     install_fixture_with(EXTRA_ROWS);
     let config = config_converting("tps");
     let (mut engine, _) = composing_engine("ㄒㄧˋㄒㄧ ", &config);
-    let snapshot = engine.pending_snapshot(true, &config);
+    let snapshot = engine.pending_snapshot(&config);
     assert_eq!(
         snapshot.context,
         ListContext::Word("死".to_string(), "sí".to_string())
     );
     step(&mut engine, CaretDirection::Left, &config);
-    let snapshot = engine.pending_snapshot(true, &config);
+    let snapshot = engine.pending_snapshot(&config);
     assert_eq!(snapshot.context, ListContext::Committed);
 }
 
@@ -534,7 +579,7 @@ fn check_session(steps: Vec<Step>, config: &AppConfig) -> Result<(), TestCaseErr
             Step::Caret(direction) => self::step(&mut engine, direction, config),
             Step::DeleteBackward => engine.apply(Intent::DeleteBackward, config),
             Step::Pick(index) => {
-                let listed = list(&mut engine, true, config);
+                let listed = list(&mut engine, config);
                 let Some(row) = listed.get(index) else {
                     continue;
                 };
@@ -629,8 +674,8 @@ fn a_list_after_nailed_glyphs_has_no_context_word() {
     engine.apply(pick("詩", "si", 18), &config);
     step(&mut engine, CaretDirection::Left, &config);
     assert_eq!(nailed(&engine).len(), 2);
-    assert_eq!(engine.word_list_start(true, &config), Some(0));
-    let snapshot = engine.pending_snapshot(true, &config);
+    assert_eq!(engine.word_list_start(&config), Some(0));
+    let snapshot = engine.pending_snapshot(&config);
     assert_eq!(snapshot.context, ListContext::Cut);
 }
 
@@ -647,17 +692,17 @@ fn the_words_list_puts_longer_words_first() {
     let (mut engine, response) = composing_engine("ㄍㄧㄣ ㄚˋㆢㄧㆵ˙ㄒㄧˋ", &config);
     assert_eq!(display(&response), "今仔日死");
     step(&mut engine, CaretDirection::Left, &config);
-    assert_eq!(engine.word_list_start(true, &config), Some(0));
-    let fetch = |word_before_caret| Fetch {
-        word_before_caret,
+    assert_eq!(engine.word_list_start(&config), Some(0));
+    let fetch = || Fetch {
         now_ms: NOW_MS,
         frequency: vec![selected("今", "kin", 20, 1_000)],
         ..Fetch::default()
     };
-    let ranked =
-        |fetch: Fetch, engine: &mut Engine| spans_and_hanji(&list_with(engine, fetch, &config));
-    let whole = ranked(fetch(false), &mut engine);
-    let word = ranked(fetch(true), &mut engine);
+    let word = spans_and_hanji(&list_with(&mut engine, fetch(), &config));
+    // The same tail without the switch: the whole tail's ranking.
+    let unconverted = crate::common::config("tps");
+    let (mut plain, _) = composing_engine("ㄍㄧㄣ ㄚˋㆢㄧㆵ˙ㄒㄧˋ", &unconverted);
+    let whole = spans_and_hanji(&list_with(&mut plain, fetch(), &unconverted));
     let position = |rows: &[((u32, u32), Option<String>)], hanji: &str| {
         rows.iter()
             .position(|(_, h)| h.as_deref() == Some(hanji))

@@ -605,9 +605,6 @@ pub enum Intent {
         /// Empty = no context. The platform sends none; a proto decode
         /// leaves it empty.
         context: ranking::ContextRanks,
-        /// `FetchAtPos.word_before_caret`: under a Hanji conversion, list the
-        /// word before the caret ([`Engine::word_list_start`]).
-        word_before_caret: bool,
     },
     /// Nail a candidate segment in `Phase::Continuous`. The engine takes
     /// `pending[..consumed_bytes]` as the nailed segment's raw text and
@@ -714,7 +711,7 @@ impl Engine {
     /// ([`NailedSegment::context_word`]). With no segment before it, the list
     /// starts the composition and follows the committed context (§56);
     /// anything else before it — glyphs — cuts the context.
-    pub fn pending_snapshot(&self, word_before_caret: bool, config: &AppConfig) -> PendingSnapshot {
+    pub fn pending_snapshot(&self, config: &AppConfig) -> PendingSnapshot {
         let Phase::Continuous {
             raw,
             nailed,
@@ -727,7 +724,7 @@ impl Engine {
                 context: ListContext::Committed,
             };
         };
-        let list_start = self.word_list_start(word_before_caret, config).unwrap_or(0);
+        let list_start = self.word_list_start(config).unwrap_or(0);
         let segment_before = if list_start > 0 {
             conversion
                 .as_ref()
@@ -751,21 +748,20 @@ impl Engine {
     }
 
     /// Byte offset in the pending tail where the list of the word before the
-    /// caret starts, when the request asks for that list under a Hanji
-    /// conversion it asks for (`crate::conversion::word_list_start`); `None`
-    /// for the whole tail's list. A pick of that list resolves the same start
-    /// (`transition::commit_continuous`).
-    pub fn word_list_start(&self, word_before_caret: bool, config: &AppConfig) -> Option<usize> {
+    /// caret starts, under a Hanji conversion the request asks for
+    /// (`crate::conversion::word_list_start`); `None` for the whole tail's
+    /// list. A pick resolves the same start (`transition::commit_continuous`).
+    pub fn word_list_start(&self, config: &AppConfig) -> Option<usize> {
         match &self.state.phase {
             Phase::Continuous {
                 raw,
                 caret,
+                nailed,
                 conversion,
-                ..
-            } if word_before_caret => {
-                crate::conversion::word_list_start(raw, *caret, conversion.as_ref(), config)
+            } => {
+                crate::conversion::word_list_start(nailed, raw, *caret, conversion.as_ref(), config)
             }
-            _ => None,
+            Phase::Idle => None,
         }
     }
 

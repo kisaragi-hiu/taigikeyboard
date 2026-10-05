@@ -117,7 +117,7 @@ pub(crate) struct WalkerSlot0 {
     pub coverage_kind: u8,
     pub is_custom: bool,
     /// How many lattice edges — words — the path takes. A list of one word
-    /// (a Hanji conversion's, `FetchAtPos.word_before_caret`) lists a
+    /// (a Hanji conversion's `FetchAtPos`) lists a
     /// one-edge path only.
     pub edge_count: usize,
 }

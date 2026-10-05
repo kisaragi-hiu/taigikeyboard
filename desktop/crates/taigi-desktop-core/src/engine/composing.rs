@@ -208,9 +208,6 @@ pub fn fetch_at_pos(
         literal_roman_candidate_disabled: !settings.is_literal_roman_candidate_enabled,
         // The engine reads the user's dictionary only with this setting on.
         custom_dictionary_disabled: !settings.is_custom_dict_enabled,
-        // The whole composition's list until the desktop asks for the Hanji
-        // conversion (desktop-tps-hanji-conversion-roadmap H-P4).
-        word_before_caret: false,
     };
     let response = composing_response(
         composing_request::Method::FetchAtPos(fetch),

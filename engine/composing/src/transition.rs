@@ -208,9 +208,8 @@ fn move_caret(
     {
         let reopens = direction == Some(CaretDirection::Left)
             && *caret == 0
-            && nailed.last().is_some_and(|last| {
-                crate::conversion::is_requested(&format!("{}{raw}", last.raw_text), config)
-            });
+            && !nailed.is_empty()
+            && crate::conversion::is_requested_for_composition(nailed, raw, config);
         if reopens {
             let (nailed, tail) = (nailed.clone(), raw.clone());
             return unnail_last(
@@ -708,13 +707,15 @@ fn unnail_last(
     // no longer reach NextWord at all, because only the final commit's
     // `preceding` carries nailed segments. Kept for platforms that read the
     // effect stream; canonical key per v3.5.8 Phase 9 Bug 1 (Option A).
+    // A segment nailed as shown is no word the user selected (B4): the
+    // handshake names only a picked one.
     let nextword_correction = match nailed.last() {
-        Some(prev) => next_word_update_last_selected_word(
+        Some(prev) if prev.is_picked => next_word_update_last_selected_word(
             prev.canonical_text.clone(),
             // R2: canonical TL (raw-slice fallback), as the commit path.
             association_roman(&prev.association_tl, &prev.raw_text),
         ),
-        None => next_word_clear_for_new_composing(),
+        _ => next_word_clear_for_new_composing(),
     };
     set_continuous_walked_afresh(state, new_pending, caret, nailed, config, frequency);
 
@@ -1236,9 +1237,9 @@ fn commit_continuous(
         Phase::Continuous {
             raw,
             caret,
+            nailed,
             conversion,
-            ..
-        } => crate::conversion::word_list_start(raw, *caret, conversion.as_ref(), config),
+        } => crate::conversion::word_list_start(nailed, raw, *caret, conversion.as_ref(), config),
         Phase::Idle => None,
     };
     let (mut applied, outcome) = match word_list_start {

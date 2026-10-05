@@ -150,6 +150,14 @@ message Reset {}
 // `literalRomanCandidateEnabled` Android, `is_literal_roman_candidate_enabled`
 // Windows); the platform sets `disabled = !enabled` — mobile in
 // `ComposingManager`, desktop in the engine bridge.
+//
+// Under a Hanji conversion the request asks for (`AppConfig.hanji_conversion`,
+// a TPS composition) the list is the word before the caret's, never the whole
+// tail's: the engine resolves its start from its own words — the word ending
+// at the caret, else the start of the glyphs the caret is in, `0` at the
+// start of the tail — and lists from there to the end of the tail, longer
+// words first, never a phrase of several words. Spans stay in the pending
+// tail's byte coordinates.
 message FetchAtPos {
   // Was `uint32 position` — always 0, never a partial fetch.
   reserved 1;
@@ -170,16 +178,6 @@ message FetchAtPos {
   // un-wired build keeps the dictionary on.
   bool custom_dictionary_disabled          = 8;
   DictionarySourceToggles toggles          = 9;
-  // Under a Hanji conversion the request asks for
-  // (`AppConfig.hanji_conversion`, a TPS tail): the list of the word before
-  // the caret instead of the whole tail's. The engine resolves the anchor from
-  // its own words — the word ending at the caret, else the start of the
-  // glyphs the caret is in, `0` at the start of the tail — and lists from
-  // there to the end of the tail: longer words first, then the word's
-  // homophones, never a phrase of several words. Spans stay in the pending
-  // tail's byte coordinates. `false`, or no conversion asked for: the whole
-  // tail's list, as without the field.
-  bool word_before_caret                   = 10;
 }
 
 // v3.5.8 Phase 6 — commit a candidate segment in `Phase::Continuous`. The
@@ -191,13 +189,14 @@ message FetchAtPos {
 // `consumed_bytes`, no `script`, empty `canonical_text`) collapse to noop.
 //
 // Under a Hanji conversion the request asks for (`AppConfig.hanji_conversion`,
-// a TPS tail), the pick is the word `FetchAtPos.word_before_caret` listed: the
+// a TPS composition), the pick is of the word `FetchAtPos` listed: the
 // engine resolves the same anchor, nails what precedes it as shown (words and
 // glyphs, not picked), nails the pick, walks the rest again with the caret at
 // its end, and never finalizes — also when the pick reaches the end of the
 // tail. `consumed_bytes` is the span end; a pick that does not end after the
 // anchor is ignored. Effects: `UpdatePreedit`, `NextWordUpdateLastSelectedWord`,
-// `ClearCandidates` (the window closes).
+// `ClearCandidates` (the window closes). The list a conversion answers is
+// always that word's, so a pick can only be of it.
 //
 // **Platform contract**: when committing the user's tap on a candidate
 // returned by `FetchAtPos`, `consumed_bytes` MUST equal the chosen

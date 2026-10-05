@@ -84,7 +84,7 @@ pub(crate) fn handle_composing_without_stores(
     let Some(engine) = composing.engine_at(generation) else {
         return Ok(composing::Engine::idle_snapshot(config));
     };
-    let snapshot = engine.pending_snapshot(sent.word_before_caret, config);
+    let snapshot = engine.pending_snapshot(config);
     let context = bundled_ranks(context_word(&snapshot, sent.now_ms).as_ref());
     Ok(composing::requests::query(
         &fetch_at_pos_intent(sent, UserRows::default(), context),

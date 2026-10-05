@@ -408,7 +408,6 @@ pub struct Fetch {
     pub custom: Vec<CustomEntry>,
     pub learned: Vec<LearnedEntry>,
     pub context: ranking::ContextRanks,
-    pub word_before_caret: bool,
 }
 
 impl Default for Fetch {
@@ -421,7 +420,6 @@ impl Default for Fetch {
             custom: Vec::new(),
             learned: Vec::new(),
             context: ranking::ContextRanks::default(),
-            word_before_caret: false,
         }
     }
 }
@@ -452,7 +450,6 @@ impl Fetch {
                 learned: self.learned,
             },
             context: self.context,
-            word_before_caret: self.word_before_caret,
         }
     }
 }
