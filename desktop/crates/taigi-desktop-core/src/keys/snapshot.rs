@@ -73,6 +73,15 @@ pub enum NavigationKey {
     PageDown,
 }
 
+/// Home or End. Not a [`NavigationKey`]: only the caret tier reads it (start
+/// / end of the composition); every other tier still sees a named special
+/// key, as before.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum LineEdgeKey {
+    Home,
+    End,
+}
+
 /// The parts of a key event a composing decision is made from — a value
 /// rather than the event, so the classification can be tested without one.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -96,6 +105,8 @@ pub struct KeyEventSnapshot {
     pub is_named_special_key: bool,
     /// The navigation key this event is, if it is one of the six.
     pub navigation_key: Option<NavigationKey>,
+    /// Home or End, if this event is one of them.
+    pub line_edge_key: Option<LineEdgeKey>,
 }
 
 impl KeyEventSnapshot {
@@ -131,7 +142,17 @@ impl KeyEventSnapshot {
         }
     }
 
-    /// A key the platform names that is not navigation (F5, Home, …).
+    /// Home or End.
+    pub fn line_edge(key: LineEdgeKey, modifiers: KeyModifiers) -> Self {
+        Self {
+            modifiers,
+            is_named_special_key: true,
+            line_edge_key: Some(key),
+            ..Self::default()
+        }
+    }
+
+    /// A key the platform names that is not navigation (F5, Insert, …).
     pub fn named_special(modifiers: KeyModifiers) -> Self {
         Self {
             modifiers,

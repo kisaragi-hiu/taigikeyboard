@@ -45,7 +45,7 @@ pub use shift_tap::{
 };
 pub use shortcut_actions::{global_rejection, ShortcutAction, ShortcutConflicts};
 pub use slot_key_set::CandidateSlotKeySet;
-pub use snapshot::{KeyEventSnapshot, KeyModifiers, NavigationKey};
+pub use snapshot::{KeyEventSnapshot, KeyModifiers, LineEdgeKey, NavigationKey};
 pub use symbol_picker::SymbolPickerIntent;
 pub use telex_guide_rows::{telex_guide_rows, TelexGuideRow};
 pub use tone_input_scheme::ToneInputScheme;

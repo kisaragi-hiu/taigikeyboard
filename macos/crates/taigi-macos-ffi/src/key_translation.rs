@@ -4,7 +4,9 @@
 //! without an event. The constants are AppKit's and Carbon's, checked with a
 //! `swift` probe against the macOS 27 SDK.
 
-use taigi_desktop_core::keys::{KeyEventSnapshot, KeyModifiers, NavigationKey, RecordedPress};
+use taigi_desktop_core::keys::{
+    KeyEventSnapshot, KeyModifiers, LineEdgeKey, NavigationKey, RecordedPress,
+};
 
 use crate::proto::KeyEvent;
 
@@ -67,6 +69,7 @@ pub(crate) fn snapshot(event: &KeyEvent) -> KeyEventSnapshot {
         modifiers: modifiers(event.modifier_flags),
         is_named_special_key: event.special_key.is_some(),
         navigation_key: event.special_key.and_then(navigation_key),
+        line_edge_key: event.special_key.and_then(line_edge_key),
     }
 }
 
@@ -131,6 +134,15 @@ fn navigation_key(special_key: u32) -> Option<NavigationKey> {
         0xF703 => Some(NavigationKey::RightArrow),
         0xF72C => Some(NavigationKey::PageUp),
         0xF72D => Some(NavigationKey::PageDown),
+        _ => None,
+    }
+}
+
+/// `NSHomeFunctionKey` / `NSEndFunctionKey` (fn+← / fn+→ on a laptop).
+fn line_edge_key(special_key: u32) -> Option<LineEdgeKey> {
+    match special_key {
+        0xF729 => Some(LineEdgeKey::Home),
+        0xF72B => Some(LineEdgeKey::End),
         _ => None,
     }
 }
@@ -260,9 +272,16 @@ mod tests {
             assert_eq!(snapshot.navigation_key, None, "{special_key:#x}");
             assert_eq!(snapshot.characters.as_deref(), Some(characters));
         }
+        // trace: home F729, end F72B — named, not navigation, a line edge.
+        for (special_key, edge) in [(0xF729, LineEdgeKey::Home), (0xF72B, LineEdgeKey::End)] {
+            let mut key = event(&char::from_u32(special_key).unwrap().to_string(), 0);
+            key.special_key = Some(special_key);
+            assert_eq!(snapshot(&key).line_edge_key, Some(edge), "{special_key:#x}");
+        }
         let plain = snapshot(&event("a", 0));
         assert!(!plain.is_named_special_key);
         assert_eq!(plain.navigation_key, None);
+        assert_eq!(plain.line_edge_key, None);
     }
 
     /// A field AppKit leaves nil stays absent: a dead key's first press

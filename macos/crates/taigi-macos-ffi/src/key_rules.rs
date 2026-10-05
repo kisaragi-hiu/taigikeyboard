@@ -469,7 +469,7 @@ mod tests {
         assert_eq!(reply.slot_keys, "qwdfzxvy;");
         assert_eq!(reply.shifted_slot_keys, "⇧QWDFZXVY;");
         assert_eq!(reply.navigation_keys, "←  →  ↑  ↓  ⇞  ⇟");
-        assert_eq!(reply.caret_chords, "⌥←  ⌥→  ⌥↑  ⌥↓");
+        assert_eq!(reply.caret_chords, "⌥←  ⌥→  ⌥↑  ⌥↓  ↖  ↘");
         assert_eq!(reply.width_flip_chords, "⌃,  ⌃.  ⌃;");
         assert_eq!(reply.cancel_key, "⎋");
     }

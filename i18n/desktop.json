@@ -202,7 +202,7 @@
       }
     },
     "shortcutMoveComposingCaret": {
-      "comment": "Read-only row under the composing keys on the Shortcuts pane: the fixed chord that moves the caret inside the romanization being typed (macOS ⌥←/⌥→, Windows and Linux Ctrl+←/→) and jumps it to the start / end (⌥↑/⌥↓, Ctrl+↑/↓). Not recordable (USER 2026-09-09: \"this feature can be shown on Shortcuts, but I don't plan to let users change it\"). Authored whole, like its siblings.",
+      "comment": "Read-only row under the composing keys on the Shortcuts pane: the fixed chord that moves the caret inside the romanization being typed (macOS ⌥←/⌥→, Windows and Linux Ctrl+←/→) and jumps it to the start / end (⌥↑/⌥↓, Ctrl+↑/↓, and bare Home / End on every desktop). Not recordable (USER 2026-09-09: \"this feature can be shown on Shortcuts, but I don't plan to let users change it\"). Authored whole, like its siblings.",
       "scope": {
         "platforms": [
           "macos",

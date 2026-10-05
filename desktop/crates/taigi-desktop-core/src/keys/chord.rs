@@ -39,7 +39,7 @@ pub enum ChordRejection {
     /// other.
     TypesRomanization,
     /// Backspace, Escape, the arrows or the paging keys — reserved whatever
-    /// modifiers are held.
+    /// modifiers are held — and a bare Home / End, the caret's while composing.
     ReservedKey,
     /// An event carrying no character to bind.
     NoKey,
@@ -102,6 +102,12 @@ const MAC_NEVER_BINDABLE: [&str; 9] = [
     EDITING_KEYS[2],
 ];
 
+/// The Mac's Home / End (`NSHomeFunctionKey` / `NSEndFunctionKey`): reserved
+/// bare, because a composition reads them as its start / end
+/// (`ComposingKeyIntent` tier 0); ⌃Home still binds. Windows and Linux
+/// reserve them whole through [`FUNCTION_KEY_RANGE`].
+const MAC_LINE_EDGE_KEYS: [&str; 2] = ["\u{F729}", "\u{F72B}"];
+
 /// Backspace, Delete and Escape — reserved on every desktop.
 const EDITING_KEYS: [&str; 3] = ["\u{8}", "\u{7F}", "\u{1B}"];
 
@@ -122,6 +128,12 @@ impl ComposingKeyChord {
         // Only the four chording modifiers are part of a chord; the snapshot
         // already dropped the rest.
         let modifiers = raw_modifiers;
+        if platform == DesktopPlatform::MacOS
+            && modifiers.is_empty()
+            && MAC_LINE_EDGE_KEYS.contains(&key.as_str())
+        {
+            return Err(ChordRejection::ReservedKey);
+        }
         // Shift alone does not make a chord out of a typing key: Shift+A is
         // still the letter A, and binding it would cost the user their capitals.
         let first = key.chars().next().ok_or(ChordRejection::NoKey)?;
@@ -913,6 +925,16 @@ mod tests {
                     "{key:?}"
                 );
             }
+        }
+        // Bare Home / End are the composition's start / end, so reserved;
+        // Shift+Home still records.
+        for key in MAC_LINE_EDGE_KEYS {
+            assert_eq!(
+                ComposingKeyChord::make(Some(key), KeyModifiers::NONE, MAC),
+                Err(ChordRejection::ReservedKey),
+                "{key:?}"
+            );
+            assert!(ComposingKeyChord::make(Some(key), KeyModifiers::SHIFT, MAC).is_ok());
         }
         // ⌃Home, ⌃End, ⌃Help — the scalars the macOS bridge hands the gate
         // (`CrossTierShortcutConflictTests.swift` `testHomeEndAndHelp_*`).

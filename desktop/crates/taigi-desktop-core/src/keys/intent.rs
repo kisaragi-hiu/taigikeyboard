@@ -3,7 +3,7 @@
 
 use super::action::ComposingAction;
 use super::bindings::ComposingKeyBindings;
-use super::snapshot::{KeyEventSnapshot, KeyModifiers, NavigationKey};
+use super::snapshot::{KeyEventSnapshot, KeyModifiers, LineEdgeKey, NavigationKey};
 use super::tone_input_scheme::ToneInputScheme;
 use super::tps_layout::{is_layout_glyph, tps_glyph_for_event};
 use crate::platform::DesktopPlatform;
@@ -18,6 +18,16 @@ pub enum CaretDirection {
     Right,
     Start,
     End,
+}
+
+impl From<LineEdgeKey> for CaretDirection {
+    /// Home / End: the start / end of the composition.
+    fn from(key: LineEdgeKey) -> Self {
+        match key {
+            LineEdgeKey::Home => Self::Start,
+            LineEdgeKey::End => Self::End,
+        }
+    }
 }
 
 impl CaretDirection {
@@ -192,6 +202,17 @@ impl ComposingKeyIntent {
         if is_composing && modifiers == caret_chord_modifiers(platform) {
             if let Some(direction) = CaretDirection::under_caret_chord(key.navigation_key) {
                 return Self::MoveCaret(direction);
+            }
+        }
+        // Bare Home / End do the same jump (maintainer 2026-10-05): the
+        // convention of Microsoft IME, Kotoeri, McBopomofo and librime
+        // (`references/mozc/src/data/keymap/ms-ime.tsv`, `kotoeri.tsv`,
+        // `McBopomofo/Source/KeyHandler.mm` `isHome`,
+        // `librime/src/rime/gear/navigator.cc`). With a modifier — Shift+Home
+        // selects — and idle, they stay the host's.
+        if is_composing && modifiers.is_empty() {
+            if let Some(edge) = key.line_edge_key {
+                return Self::MoveCaret(edge.into());
             }
         }
 
@@ -791,6 +812,54 @@ mod tests {
                 classify_on(&left, false, false, platform),
                 ComposingKeyIntent::PassThrough
             );
+        }
+    }
+
+    /// Bare Home / End jump to the start / end while composing — window up
+    /// or not, TL or TPS, every desktop — and never drive the window. With a
+    /// modifier (Shift+Home selects) or idle they stay the host's.
+    #[test]
+    fn home_and_end_jump_to_the_start_and_end_while_composing() {
+        for platform in [
+            DesktopPlatform::Windows,
+            DesktopPlatform::Linux,
+            DesktopPlatform::MacOS,
+        ] {
+            for (edge, direction) in [
+                (LineEdgeKey::Home, CaretDirection::Start),
+                (LineEdgeKey::End, CaretDirection::End),
+            ] {
+                let key = KeyEventSnapshot::line_edge(edge, KeyModifiers::NONE);
+                for is_showing_candidates in [true, false] {
+                    assert_eq!(
+                        classify_on(&key, true, is_showing_candidates, platform),
+                        ComposingKeyIntent::MoveCaret(direction),
+                        "{edge:?} on {platform:?}"
+                    );
+                    assert_eq!(
+                        ComposingKeyIntent::intent(
+                            &key,
+                            true,
+                            is_showing_candidates,
+                            &tps_bindings(),
+                            platform
+                        ),
+                        ComposingKeyIntent::MoveCaret(direction),
+                        "TPS {edge:?} on {platform:?}"
+                    );
+                }
+                assert_eq!(
+                    classify_on(&key, false, false, platform),
+                    ComposingKeyIntent::PassThrough,
+                    "idle {edge:?} on {platform:?}"
+                );
+                let shifted = KeyEventSnapshot::line_edge(edge, KeyModifiers::SHIFT);
+                assert_eq!(
+                    classify_on(&shifted, true, true, platform),
+                    ComposingKeyIntent::CommitThenPassThrough,
+                    "Shift+{edge:?} on {platform:?}"
+                );
+            }
         }
     }
 
