@@ -44,4 +44,22 @@ public interface FetchAtPosOrBuilder extends
    * @return The toggles.
    */
   com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles getToggles();
+
+  /**
+   * <pre>
+   * Under a Hanji conversion the request asks for
+   * (`AppConfig.hanji_conversion`, a TPS tail): the list of the word before
+   * the caret instead of the whole tail's. The engine resolves the anchor from
+   * its own words — the word ending at the caret, else the start of the
+   * glyphs the caret is in, `0` at the start of the tail — and lists from
+   * there to the end of the tail: longer words first, then the word's
+   * homophones, never a phrase of several words. Spans stay in the pending
+   * tail's byte coordinates. `false`, or no conversion asked for: the whole
+   * tail's list, as without the field.
+   * </pre>
+   *
+   * <code>bool word_before_caret = 10;</code>
+   * @return The wordBeforeCaret.
+   */
+  boolean getWordBeforeCaret();
 }

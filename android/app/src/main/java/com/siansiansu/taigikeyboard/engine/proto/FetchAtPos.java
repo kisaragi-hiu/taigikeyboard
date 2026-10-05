@@ -210,6 +210,68 @@ public  final class FetchAtPos extends
     bitField0_ = (bitField0_ & ~0x00000001);
   }
 
+  public static final int WORD_BEFORE_CARET_FIELD_NUMBER = 10;
+  private boolean wordBeforeCaret_;
+  /**
+   * <pre>
+   * Under a Hanji conversion the request asks for
+   * (`AppConfig.hanji_conversion`, a TPS tail): the list of the word before
+   * the caret instead of the whole tail's. The engine resolves the anchor from
+   * its own words — the word ending at the caret, else the start of the
+   * glyphs the caret is in, `0` at the start of the tail — and lists from
+   * there to the end of the tail: longer words first, then the word's
+   * homophones, never a phrase of several words. Spans stay in the pending
+   * tail's byte coordinates. `false`, or no conversion asked for: the whole
+   * tail's list, as without the field.
+   * </pre>
+   *
+   * <code>bool word_before_caret = 10;</code>
+   * @return The wordBeforeCaret.
+   */
+  @java.lang.Override
+  public boolean getWordBeforeCaret() {
+    return wordBeforeCaret_;
+  }
+  /**
+   * <pre>
+   * Under a Hanji conversion the request asks for
+   * (`AppConfig.hanji_conversion`, a TPS tail): the list of the word before
+   * the caret instead of the whole tail's. The engine resolves the anchor from
+   * its own words — the word ending at the caret, else the start of the
+   * glyphs the caret is in, `0` at the start of the tail — and lists from
+   * there to the end of the tail: longer words first, then the word's
+   * homophones, never a phrase of several words. Spans stay in the pending
+   * tail's byte coordinates. `false`, or no conversion asked for: the whole
+   * tail's list, as without the field.
+   * </pre>
+   *
+   * <code>bool word_before_caret = 10;</code>
+   * @param value The wordBeforeCaret to set.
+   */
+  private void setWordBeforeCaret(boolean value) {
+
+    wordBeforeCaret_ = value;
+  }
+  /**
+   * <pre>
+   * Under a Hanji conversion the request asks for
+   * (`AppConfig.hanji_conversion`, a TPS tail): the list of the word before
+   * the caret instead of the whole tail's. The engine resolves the anchor from
+   * its own words — the word ending at the caret, else the start of the
+   * glyphs the caret is in, `0` at the start of the tail — and lists from
+   * there to the end of the tail: longer words first, then the word's
+   * homophones, never a phrase of several words. Spans stay in the pending
+   * tail's byte coordinates. `false`, or no conversion asked for: the whole
+   * tail's list, as without the field.
+   * </pre>
+   *
+   * <code>bool word_before_caret = 10;</code>
+   */
+  private void clearWordBeforeCaret() {
+
+    wordBeforeCaret_ = false;
+  }
+
   public static com.siansiansu.taigikeyboard.engine.proto.FetchAtPos parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -506,6 +568,70 @@ public  final class FetchAtPos extends
       return this;
     }
 
+    /**
+     * <pre>
+     * Under a Hanji conversion the request asks for
+     * (`AppConfig.hanji_conversion`, a TPS tail): the list of the word before
+     * the caret instead of the whole tail's. The engine resolves the anchor from
+     * its own words — the word ending at the caret, else the start of the
+     * glyphs the caret is in, `0` at the start of the tail — and lists from
+     * there to the end of the tail: longer words first, then the word's
+     * homophones, never a phrase of several words. Spans stay in the pending
+     * tail's byte coordinates. `false`, or no conversion asked for: the whole
+     * tail's list, as without the field.
+     * </pre>
+     *
+     * <code>bool word_before_caret = 10;</code>
+     * @return The wordBeforeCaret.
+     */
+    @java.lang.Override
+    public boolean getWordBeforeCaret() {
+      return instance.getWordBeforeCaret();
+    }
+    /**
+     * <pre>
+     * Under a Hanji conversion the request asks for
+     * (`AppConfig.hanji_conversion`, a TPS tail): the list of the word before
+     * the caret instead of the whole tail's. The engine resolves the anchor from
+     * its own words — the word ending at the caret, else the start of the
+     * glyphs the caret is in, `0` at the start of the tail — and lists from
+     * there to the end of the tail: longer words first, then the word's
+     * homophones, never a phrase of several words. Spans stay in the pending
+     * tail's byte coordinates. `false`, or no conversion asked for: the whole
+     * tail's list, as without the field.
+     * </pre>
+     *
+     * <code>bool word_before_caret = 10;</code>
+     * @param value The wordBeforeCaret to set.
+     * @return This builder for chaining.
+     */
+    public Builder setWordBeforeCaret(boolean value) {
+      copyOnWrite();
+      instance.setWordBeforeCaret(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Under a Hanji conversion the request asks for
+     * (`AppConfig.hanji_conversion`, a TPS tail): the list of the word before
+     * the caret instead of the whole tail's. The engine resolves the anchor from
+     * its own words — the word ending at the caret, else the start of the
+     * glyphs the caret is in, `0` at the start of the tail — and lists from
+     * there to the end of the tail: longer words first, then the word's
+     * homophones, never a phrase of several words. Spans stay in the pending
+     * tail's byte coordinates. `false`, or no conversion asked for: the whole
+     * tail's list, as without the field.
+     * </pre>
+     *
+     * <code>bool word_before_caret = 10;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearWordBeforeCaret() {
+      copyOnWrite();
+      instance.clearWordBeforeCaret();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.FetchAtPos)
   }
   @java.lang.Override
@@ -527,10 +653,11 @@ public  final class FetchAtPos extends
             "literalRomanCandidateDisabled_",
             "customDictionaryDisabled_",
             "toggles_",
+            "wordBeforeCaret_",
           };
           java.lang.String info =
-              "\u0000\u0004\u0000\u0001\u0003\t\u0004\u0000\u0000\u0000\u0003\u0002\u0006\u0007" +
-              "\b\u0007\t\u1009\u0000";
+              "\u0000\u0005\u0000\u0001\u0003\n\u0005\u0000\u0000\u0000\u0003\u0002\u0006\u0007" +
+              "\b\u0007\t\u1009\u0000\n\u0007";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

@@ -319,7 +319,8 @@ public nonisolated struct Taigi_Engine_ComposingRequest: Sendable {
     set {method = .commitContinuous(newValue)}
   }
 
-  /// --- Desktop editing keys (40s: Telex tone keys, composing caret, TPS keys) ---
+  /// --- Desktop keys (40s: Telex tone keys, composing caret, TPS keys, the
+  /// commits of a Hanji conversion) ---
   public var telexKey: Taigi_Engine_TelexKey {
     get {
       if case .telexKey(let v)? = method {return v}
@@ -344,6 +345,22 @@ public nonisolated struct Taigi_Engine_ComposingRequest: Sendable {
     set {method = .tpsKey(newValue)}
   }
 
+  public var commitAsShown: Taigi_Engine_CommitAsShown {
+    get {
+      if case .commitAsShown(let v)? = method {return v}
+      return Taigi_Engine_CommitAsShown()
+    }
+    set {method = .commitAsShown(newValue)}
+  }
+
+  public var commitAsTyped: Taigi_Engine_CommitAsTyped {
+    get {
+      if case .commitAsTyped(let v)? = method {return v}
+      return Taigi_Engine_CommitAsTyped()
+    }
+    set {method = .commitAsTyped(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public nonisolated enum OneOf_Method: Equatable, Sendable {
@@ -360,10 +377,13 @@ public nonisolated struct Taigi_Engine_ComposingRequest: Sendable {
     /// --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
     case fetchAtPos(Taigi_Engine_FetchAtPos)
     case commitContinuous(Taigi_Engine_CommitContinuous)
-    /// --- Desktop editing keys (40s: Telex tone keys, composing caret, TPS keys) ---
+    /// --- Desktop keys (40s: Telex tone keys, composing caret, TPS keys, the
+    /// commits of a Hanji conversion) ---
     case telexKey(Taigi_Engine_TelexKey)
     case moveCaret(Taigi_Engine_MoveCaret)
     case tpsKey(Taigi_Engine_TpsKey)
+    case commitAsShown(Taigi_Engine_CommitAsShown)
+    case commitAsTyped(Taigi_Engine_CommitAsTyped)
 
   }
 
@@ -560,6 +580,17 @@ public nonisolated struct Taigi_Engine_FetchAtPos: Sendable {
   /// Clears the value of `toggles`. Subsequent reads from it will return its default value.
   public mutating func clearToggles() {self._toggles = nil}
 
+  /// Under a Hanji conversion the request asks for
+  /// (`AppConfig.hanji_conversion`, a TPS tail): the list of the word before
+  /// the caret instead of the whole tail's. The engine resolves the anchor from
+  /// its own words — the word ending at the caret, else the start of the
+  /// glyphs the caret is in, `0` at the start of the tail — and lists from
+  /// there to the end of the tail: longer words first, then the word's
+  /// homophones, never a phrase of several words. Spans stay in the pending
+  /// tail's byte coordinates. `false`, or no conversion asked for: the whole
+  /// tail's list, as without the field.
+  public var wordBeforeCaret: Bool = false
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -574,6 +605,15 @@ public nonisolated struct Taigi_Engine_FetchAtPos: Sendable {
 /// tail. `consumed_bytes >= pending.len()` becomes a final commit (exit
 /// to Idle). Programmer-error inputs (out-of-range / non-char-boundary
 /// `consumed_bytes`, no `script`, empty `canonical_text`) collapse to noop.
+///
+/// Under a Hanji conversion the request asks for (`AppConfig.hanji_conversion`,
+/// a TPS tail), the pick is the word `FetchAtPos.word_before_caret` listed: the
+/// engine resolves the same anchor, nails what precedes it as shown (words and
+/// glyphs, not picked), nails the pick, walks the rest again with the caret at
+/// its end, and never finalizes — also when the pick reaches the end of the
+/// tail. `consumed_bytes` is the span end; a pick that does not end after the
+/// anchor is ignored. Effects: `UpdatePreedit`, `NextWordUpdateLastSelectedWord`,
+/// `ClearCandidates` (the window closes).
 ///
 /// **Platform contract**: when committing the user's tap on a candidate
 /// returned by `FetchAtPos`, `consumed_bytes` MUST equal the chosen
@@ -746,6 +786,40 @@ public nonisolated struct Taigi_Engine_MoveCaret: Sendable {
   // methods supported on all messages.
 
   public var direction: Taigi_Engine_CaretDirection = .unspecified
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// Desktop, under a Hanji conversion (TPS): commit the composition as the
+/// preedit shows it — the nailed segments, the converted words and the glyphs
+/// of what is not converted — and go idle. Nothing is learned unless every
+/// segment was picked from the list and nothing is pending: then the
+/// composition teaches as a final pick does (§50 phrase,
+/// `NextWordWordSelected`). Otherwise the response carries
+/// `NextWordClearForNewComposing` and no `NextWordWordSelected`, and the
+/// platform forgets its next-word context, so the next commit does not pair
+/// across words the user never picked. Records no usage.
+public nonisolated struct Taigi_Engine_CommitAsShown: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// Desktop, under a Hanji conversion (TPS): commit the glyphs of the whole
+/// composition as typed — every nailed segment's raw text and the pending
+/// tail, separators dropped — and go idle. Teaches nothing; the response
+/// carries `NextWordClearForNewComposing`, as `CommitAsShown` does when it
+/// learns nothing.
+public nonisolated struct Taigi_Engine_CommitAsTyped: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1201,7 +1275,7 @@ nonisolated extension Taigi_Engine_CandidateScriptKind: SwiftProtobuf._ProtoName
 
 nonisolated extension Taigi_Engine_ComposingRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ComposingRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\u{a}start\0\u{1}append\0\u{3}append_hyphen\0\u{3}replace_last\0\u{3}delete_backward\0\u{4}\u{2}commit_raw\0\u{3}select_candidate\0\u{3}commit_preedit_then_insert_external\0\u{1}reset\0\u{4}\u{c}fetch_at_pos\0\u{3}commit_continuous\0\u{4}\u{8}telex_key\0\u{3}move_caret\0\u{3}tps_key\0\u{b}set_selected_candidate_index\0\u{b}query_state\0\u{b}commit_derived\0\u{b}enter_continuous\0\u{b}reset_continuous\0\u{c}\u{14}\u{1}\u{c}\u{15}\u{1}\u{c}\u{f}\u{1}\u{c}\u{1e}\u{1}\u{c}!\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\u{a}start\0\u{1}append\0\u{3}append_hyphen\0\u{3}replace_last\0\u{3}delete_backward\0\u{4}\u{2}commit_raw\0\u{3}select_candidate\0\u{3}commit_preedit_then_insert_external\0\u{1}reset\0\u{4}\u{c}fetch_at_pos\0\u{3}commit_continuous\0\u{4}\u{8}telex_key\0\u{3}move_caret\0\u{3}tps_key\0\u{3}commit_as_shown\0\u{3}commit_as_typed\0\u{b}set_selected_candidate_index\0\u{b}query_state\0\u{b}commit_derived\0\u{b}enter_continuous\0\u{b}reset_continuous\0\u{c}\u{14}\u{1}\u{c}\u{15}\u{1}\u{c}\u{f}\u{1}\u{c}\u{1e}\u{1}\u{c}!\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1391,6 +1465,32 @@ nonisolated extension Taigi_Engine_ComposingRequest: SwiftProtobuf.Message, Swif
           self.method = .tpsKey(v)
         }
       }()
+      case 43: try {
+        var v: Taigi_Engine_CommitAsShown?
+        var hadOneofValue = false
+        if let current = self.method {
+          hadOneofValue = true
+          if case .commitAsShown(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.method = .commitAsShown(v)
+        }
+      }()
+      case 44: try {
+        var v: Taigi_Engine_CommitAsTyped?
+        var hadOneofValue = false
+        if let current = self.method {
+          hadOneofValue = true
+          if case .commitAsTyped(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.method = .commitAsTyped(v)
+        }
+      }()
       default: break
       }
     }
@@ -1457,6 +1557,14 @@ nonisolated extension Taigi_Engine_ComposingRequest: SwiftProtobuf.Message, Swif
     case .tpsKey?: try {
       guard case .tpsKey(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 42)
+    }()
+    case .commitAsShown?: try {
+      guard case .commitAsShown(let v)? = self.method else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 43)
+    }()
+    case .commitAsTyped?: try {
+      guard case .commitAsTyped(let v)? = self.method else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 44)
     }()
     case nil: break
     }
@@ -1698,7 +1806,7 @@ nonisolated extension Taigi_Engine_Reset: SwiftProtobuf.Message, SwiftProtobuf._
 
 nonisolated extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".FetchAtPos"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{3}now_ms\0\u{4}\u{3}literal_roman_candidate_disabled\0\u{4}\u{2}custom_dictionary_disabled\0\u{1}toggles\0\u{b}position\0\u{b}frequency_entries\0\u{b}custom_entries\0\u{b}learned_entries\0\u{b}enabled_sources_bitmask\0\u{c}\u{1}\u{1}\u{c}\u{2}\u{1}\u{c}\u{4}\u{1}\u{c}\u{7}\u{1}\u{c}\u{5}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{3}now_ms\0\u{4}\u{3}literal_roman_candidate_disabled\0\u{4}\u{2}custom_dictionary_disabled\0\u{1}toggles\0\u{3}word_before_caret\0\u{b}position\0\u{b}frequency_entries\0\u{b}custom_entries\0\u{b}learned_entries\0\u{b}enabled_sources_bitmask\0\u{c}\u{1}\u{1}\u{c}\u{2}\u{1}\u{c}\u{4}\u{1}\u{c}\u{7}\u{1}\u{c}\u{5}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1710,6 +1818,7 @@ nonisolated extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProto
       case 6: try { try decoder.decodeSingularBoolField(value: &self.literalRomanCandidateDisabled) }()
       case 8: try { try decoder.decodeSingularBoolField(value: &self.customDictionaryDisabled) }()
       case 9: try { try decoder.decodeSingularMessageField(value: &self._toggles) }()
+      case 10: try { try decoder.decodeSingularBoolField(value: &self.wordBeforeCaret) }()
       default: break
       }
     }
@@ -1732,6 +1841,9 @@ nonisolated extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProto
     try { if let v = self._toggles {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
     } }()
+    if self.wordBeforeCaret != false {
+      try visitor.visitSingularBoolField(value: self.wordBeforeCaret, fieldNumber: 10)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1740,6 +1852,7 @@ nonisolated extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProto
     if lhs.literalRomanCandidateDisabled != rhs.literalRomanCandidateDisabled {return false}
     if lhs.customDictionaryDisabled != rhs.customDictionaryDisabled {return false}
     if lhs._toggles != rhs._toggles {return false}
+    if lhs.wordBeforeCaret != rhs.wordBeforeCaret {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1939,6 +2052,44 @@ nonisolated extension Taigi_Engine_MoveCaret: SwiftProtobuf.Message, SwiftProtob
 
   public static func ==(lhs: Taigi_Engine_MoveCaret, rhs: Taigi_Engine_MoveCaret) -> Bool {
     if lhs.direction != rhs.direction {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_Engine_CommitAsShown: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".CommitAsShown"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_CommitAsShown, rhs: Taigi_Engine_CommitAsShown) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_Engine_CommitAsTyped: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".CommitAsTyped"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_CommitAsTyped, rhs: Taigi_Engine_CommitAsTyped) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

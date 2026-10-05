@@ -292,11 +292,15 @@ public nonisolated struct Taigi_Engine_AppConfig: Sendable {
 }
 
 /// Hanji conversion in the preedit
-/// (`docs/architecture/desktop-tps-hanji-conversion-roadmap.md` H1–H3): while
+/// (`docs/architecture/desktop-tps-hanji-conversion-roadmap.md` H1–H7): while
 /// the pending buffer is TPS glyphs, the engine keeps the walker's best path
 /// over the closed readings — closed by a tone mark, or by Space for tones 1
 /// and 4 — and the preedit shows it, with the glyphs of a reading still being
-/// typed where it is typed. `MoveCaret` steps over a converted word.
+/// typed where it is typed. `MoveCaret` steps over a converted word;
+/// `FetchAtPos.word_before_caret` lists the word before the caret, a
+/// `CommitContinuous` of it keeps composing, and `CommitAsShown` /
+/// `CommitAsTyped` write the composition. A walk ranks with the user's learned
+/// counts when the engine holds the user-data stores.
 /// `Preedit.raw_input` stays the glyphs. TL / POJ buffers are never converted.
 public nonisolated struct Taigi_Engine_HanjiConversion: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
