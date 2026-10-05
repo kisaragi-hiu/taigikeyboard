@@ -42,7 +42,7 @@ permalink: /blog/desktop-manual/
 
 上捷用的齒攏收佇一張圖，會當印出來貼佇桌頂：
 
-[![台語齒盤電腦版速查表](/manual/cheatsheet/taigikeyboard-desktop-macos.png)](/manual/#cheatsheet)
+[![台語齒盤電腦版速查表](/manual/cheatsheet/taigikeyboard-desktop-macos.png)](/manual/)
 
 - [macOS 速查表](/manual/cheatsheet/taigikeyboard-desktop-macos.png)
 - [Windows / Linux 速查表](/manual/cheatsheet/taigikeyboard-desktop-windows-linux.png)
