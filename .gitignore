@@ -157,5 +157,3 @@ windows/.build/
 # e2e run output (make e2e): traces + reports, never committed
 /e2e/runs/
 
-# launch film project (HTML → Playwright → ffmpeg); local only, never committed
-/launch-film/
