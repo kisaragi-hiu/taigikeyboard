@@ -376,17 +376,23 @@ impl<'a> RecordingSurface<'a> {
     }
 
     /// The recorded effects, with the list's anchor filled in: a
-    /// `CandidatesChanged` carries the composition's length on screen, which
+    /// `CandidatesChanged` carries where on screen its list belongs, which
     /// the surface cannot read while the executor holds the manager. Every
     /// arm that refreshes the list does so as its last step
-    /// (`intent_executor.rs` `refresh`), so the display text now is the one
-    /// the list was fetched for.
+    /// (`intent_executor.rs` `refresh`), so the composition now is the one
+    /// the list was fetched for. A TPS list is the word before the caret's
+    /// (desktop-tps-hanji-conversion-roadmap H4), so it anchors at the
+    /// caret; any other list covers the composition to its end.
     pub(crate) fn finish(mut self, manager: &ComposingManager) -> Vec<Effect> {
-        let length = utf16_len(manager.display_text());
+        let anchor_end = if manager.is_tps_composition() {
+            manager.display_caret_utf16()
+        } else {
+            utf16_len(manager.display_text())
+        };
         let mut lists = 0;
         for effect in &mut self.effects {
             if let Some(effect::Effect::CandidatesChanged(list)) = &mut effect.effect {
-                list.marked_text_length_utf16 = length;
+                list.anchor_end_utf16 = anchor_end;
                 lists += 1;
             }
         }
@@ -473,7 +479,7 @@ impl IntentSurface for RecordingSurface<'_> {
             cells,
             leads_with_literal_roman: list.leads_with_literal_roman(),
             // Filled in by `finish`.
-            marked_text_length_utf16: 0,
+            anchor_end_utf16: 0,
         }));
     }
 
@@ -865,7 +871,7 @@ mod tests {
                 effect::Effect::CandidatesChanged(list.clone())
             ]
         );
-        assert_eq!(list.marked_text_length_utf16, 3);
+        assert_eq!(list.anchor_end_utf16, 3);
         assert!(!list.cells.is_empty());
     }
 
@@ -886,7 +892,7 @@ mod tests {
                 effect::Effect::CandidatesChanged(list.clone())
             ]
         );
-        assert_eq!(list.marked_text_length_utf16, 1);
+        assert_eq!(list.anchor_end_utf16, 1);
     }
 
     /// trace: Telex keys `vydwxqzf`; `y` after `tai` is the engine's tone 3
@@ -899,7 +905,7 @@ mod tests {
         let reply = typist.key(typed("y"), list(Some(0)));
         assert!(reply.handled && reply.is_composing);
         assert_eq!(effects(&reply)[0], marked("tài", 3));
-        assert_eq!(shown_list(&reply).marked_text_length_utf16, 3);
+        assert_eq!(shown_list(&reply).anchor_end_utf16, 3);
     }
 
     /// Return over a list commits the highlighted cell in its own script —
@@ -1203,7 +1209,7 @@ mod tests {
                 effect::Effect::CandidatesChanged(list.clone())
             ]
         );
-        assert_eq!(list.marked_text_length_utf16, 4);
+        assert_eq!(list.anchor_end_utf16, 4);
         // trace: the refetch is for what is left, `hoo` → 予 (hōo) first.
         assert_eq!(list.cells[0].annotation.as_deref(), Some("hōo"));
     }
@@ -1249,7 +1255,7 @@ mod tests {
                 annotation: Some(before.cells[0].text.clone()),
             }
         );
-        assert_eq!(after.marked_text_length_utf16, 2);
+        assert_eq!(after.anchor_end_utf16, 2);
     }
 
     /// trace (2026-10-02 dictionaries): Candidate Display → Romanization
@@ -1399,6 +1405,57 @@ mod tests {
         let shift_enter = typist.key(chord("\r", SHIFT, Some(CARRIAGE_RETURN)), no_list());
         assert!(shift_enter.handled && !shift_enter.is_composing);
         assert_eq!(effects(&shift_enter).first(), Some(&insert("ㄍㄚˋ")));
+    }
+
+    /// INVARIANT_TPS_PREEDIT_HANJI_CONVERSION (§59): a TPS list is the word
+    /// before the caret's, so the window anchors at the caret; TL anchors at
+    /// the end (`typing_composes_and_anchors_the_list_on_the_marked_text`).
+    /// trace, read by running: `e` `8` → ㄍㄚ (open reading); Space → 家;
+    /// `1` `8` `5` (ㄅㄚ˫) → 家罷, caret 2.
+    #[test]
+    fn under_tps_the_list_anchors_at_the_caret() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, vec![text("inputMode", "tps")]);
+        let down = chord("\u{F701}", FUNCTION | NUMERIC_PAD, Some(0xF701));
+        let left = chord("\u{F702}", FUNCTION | NUMERIC_PAD, Some(LEFT_ARROW));
+        let escape = typed("\u{1b}");
+        typist.key(typed("e"), no_list());
+        typist.key(typed("8"), no_list());
+        // An open reading at the end: the end, as before.
+        let open = shown_list(&typist.key(down.clone(), no_list()));
+        assert_eq!(open.anchor_end_utf16, 2);
+        typist.key(escape.clone(), list(Some(0)));
+        for key in [" ", "1", "8", "5"] {
+            typist.key(typed(key), no_list());
+        }
+        // Caret at the end: 罷's list, under 罷.
+        let last = shown_list(&typist.key(down.clone(), no_list()));
+        assert_eq!(last.cells[0].text, "罷");
+        assert_eq!(last.anchor_end_utf16, 2);
+        typist.key(escape, list(Some(0)));
+        // ← steps over 罷: 家's list, under 家 — not the end.
+        assert_eq!(
+            effects(&typist.key(left.clone(), no_list())),
+            vec![marked("家罷", 1)]
+        );
+        let first = shown_list(&typist.key(down.clone(), no_list()));
+        assert_eq!(first.cells[0].text, "家");
+        assert_eq!(first.anchor_end_utf16, 1);
+        // Pick 家 (the caret goes to the end), ← to the start of the tail:
+        // the list is 罷's, the word after the caret, and the window stays at
+        // the caret — under the nailed 家 (roadmap H8, as built in H-P5).
+        let one = KeyEvent {
+            key_code: Some(0x12),
+            ..typed("1")
+        };
+        assert_eq!(
+            effects(&typist.key(one, list(Some(0)))),
+            vec![marked("家罷", 2), closed()]
+        );
+        typist.key(left, no_list());
+        let tail_start = shown_list(&typist.key(down, no_list()));
+        assert_eq!(tail_start.cells[0].text, "罷");
+        assert_eq!(tail_start.anchor_end_utf16, 1);
     }
 
     /// A slot key after a switch across TPS picks nothing from the old

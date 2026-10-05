@@ -361,6 +361,24 @@ fn tps_key_reports_what_the_engine_did_with_it() {
     );
 }
 
+/// INVARIANT_TPS_PREEDIT_HANJI_CONVERSION (§59): the manager mirrors where the
+/// caret is drawn, which the macOS window anchors a TPS list at; an ended
+/// composition leaves none. trace, read by running: 家罷, caret 2; ← steps
+/// over 罷 to 1.
+#[test]
+fn the_display_caret_follows_the_engine_and_resets_with_the_composition() {
+    let _lock = engine_lock();
+    let mut rig = rig();
+    rig.type_tps(&GA_BA);
+    assert_eq!(rig.manager.display_text(), "家罷");
+    assert_eq!(rig.manager.display_caret_utf16(), 2);
+    rig.manager
+        .move_caret(CaretDirection::Left, &mut rig.recorder);
+    assert_eq!(rig.manager.display_caret_utf16(), 1);
+    rig.manager.cancel_composition(&mut rig.recorder);
+    assert_eq!(rig.manager.display_caret_utf16(), 0);
+}
+
 /// Hanji conversion B2: a TPS commit writes the Hanji its preedit shows, under
 /// the settings that preedit was written with — not under dictionary switches
 /// changed since, to which the engine no longer shows that conversion.

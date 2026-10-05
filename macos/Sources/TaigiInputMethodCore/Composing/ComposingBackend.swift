@@ -370,7 +370,7 @@ final class ComposingBackend {
                     CandidateCellContent(text: $0.text, annotation: $0.annotation)
                 },
                 leadsWithLiteralRoman: list.leadsWithLiteralRoman,
-                markedTextLengthUTF16: Int(list.markedTextLengthUtf16),
+                anchorEndUTF16: Int(list.anchorEndUtf16),
             ))
         case .candidatesClosed:
             .candidatesClosed

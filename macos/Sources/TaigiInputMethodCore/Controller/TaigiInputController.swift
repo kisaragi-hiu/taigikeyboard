@@ -994,7 +994,7 @@ public final class TaigiInputController: IMKInputController {
     /// position would sit on an unrelated word.
     @MainActor
     private func presentCandidates(_ list: CandidateListUpdate, client: IMKTextInput) {
-        guard let caretRect = caretRect(in: client, markedTextLength: list.markedTextLengthUTF16)
+        guard let caretRect = caretRect(in: client, anchorEnd: list.anchorEndUTF16)
         else {
             // A client that cannot say where its caret is cannot host a bar that
             // points at it, and one parked in the corner of the screen is worse
@@ -1128,7 +1128,7 @@ public final class TaigiInputController: IMKInputController {
             ClientWriter(client: client)
                 .setMarkedText(Self.symbolPickerPlaceholder, caretUTF16: markedTextLength)
         }
-        guard let caretRect = caretRect(in: client, markedTextLength: markedTextLength) else {
+        guard let caretRect = caretRect(in: client, anchorEnd: markedTextLength) else {
             dismissSymbolPicker()
             return
         }
@@ -1289,10 +1289,12 @@ public final class TaigiInputController: IMKInputController {
         NSRange(location: armedCaret - 1, length: 1)
     }
 
-    /// Where the composition's last character is drawn, in screen coordinates.
+    /// Where the character of the marked text that ends at `anchorEnd` is
+    /// drawn, in screen coordinates — the composition's last character, or
+    /// under TPS the last character before the caret.
     ///
-    /// Walks back from the end of the marked region until the client answers
-    /// with a real rectangle, matching McBopomofo
+    /// Walks back from there until the client answers with a real rectangle,
+    /// matching McBopomofo
     /// (`references/McBopomofo/Source/InputMethodController.swift:886-891`).
     /// Index 0 would be wrong twice over: it is the START of the marked region
     /// rather than the caret, so the bar would drift further from the insertion
@@ -1310,8 +1312,8 @@ public final class TaigiInputController: IMKInputController {
     /// Safe to ask here and only here: the deadlock this call causes in Chromium
     /// hosts is specific to activation (see `activateServer`).
     @MainActor
-    private func caretRect(in client: IMKTextInput, markedTextLength: Int) -> CGRect? {
-        var index = max(markedTextLength - 1, 0)
+    private func caretRect(in client: IMKTextInput, anchorEnd: Int) -> CGRect? {
+        var index = max(anchorEnd - 1, 0)
         while index >= 0 {
             var lineHeightRect = CGRect.zero
             _ = client.attributes(forCharacterIndex: index, lineHeightRectangle: &lineHeightRect)

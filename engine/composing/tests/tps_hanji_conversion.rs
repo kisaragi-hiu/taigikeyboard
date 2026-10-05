@@ -2,6 +2,7 @@
 //! (`docs/architecture/desktop-tps-hanji-conversion-roadmap.md` H1, H2): with
 //! `AppConfig.hanji_conversion` present, the closed readings of a TPS tail
 //! show as the walker's words and the reading being typed as glyphs.
+//! INVARIANT_TPS_PREEDIT_HANJI_CONVERSION (behavioral-invariants §59).
 //!
 //! Hermetic TPS fixture, the shape of `tps_space_pinned_tone.rs`. Per the
 //! fixture rule in `docs/contributing/known-pitfalls.md`, every production
