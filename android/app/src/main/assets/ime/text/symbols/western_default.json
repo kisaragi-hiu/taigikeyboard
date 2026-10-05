@@ -31,7 +31,7 @@
       { "code": 58, "label": ":", "popup": [{"code": 65306, "label": "："}, {"code": 8758, "label": "∶"}] },
       { "code": 59, "label": ";", "popup": [{"code": 65307, "label": "；"}] },
       { "code": 39, "label": "'", "popup": [{"code": 12289, "label": "、"}, {"code": 8242, "label": "′"}, {"code": 8219, "label": "‛"}] },
-      { "code": 45, "label": "-", "popup": [{"code": 8211, "label": "–"}, {"code": 8212, "label": "—"}, {"code": 65103, "label": "﹏"}] },
+      { "code": 45, "label": "-", "popup": [{"code": 183, "label": "·"}, {"code": 8211, "label": "–"}, {"code": 8212, "label": "—"}, {"code": 65103, "label": "﹏"}] },
       { "code": 8212, "label": "—", "popup": [{"code": 9472, "label": "─"}, {"code": 8211, "label": "–"}] },
       { "code": 8230, "label": "…", "popup": [{"code": 8943, "label": "⋯"}, {"code": 8229, "label": "‥"}] },
       { "code": 36, "label": "$", "popup": [{"code": 8364, "label": "€"}, {"code": 163, "label": "£"}, {"code": 165, "label": "¥"}, {"code": 162, "label": "¢"}, {"code": 8361, "label": "₩"}] },

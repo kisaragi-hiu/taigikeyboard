@@ -16,7 +16,7 @@
         { "code": -100, "label": "settings", "type": "system_gui" }
       ] },
       { "code":   32, "label": " " },
-      { "code":   45, "label": "-", "type": "character" },
+      { "code":   45, "label": "-", "type": "character", "popup": [{"code": 183, "label": "·"}, {"code": 8211, "label": "–"}, {"code": 8212, "label": "—"}, {"code": 65103, "label": "﹏"}] },
       { "code": -210, "label": "language_switch", "type": "system_gui" },
       { "code": -230, "label": "", "type": "function", "variation": "email_address" },
       { "code": -230, "label": "", "type": "function", "variation": "normal" },
