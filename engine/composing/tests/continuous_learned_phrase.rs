@@ -634,6 +634,50 @@ fn learned_pair_the_dictionary_also_carries_is_listed_once_from_the_dictionary()
 }
 
 #[test]
+fn custom_row_whose_reading_has_a_word_space_overrides_the_dictionary_word() {
+    // A custom roman committed from a multi-word candidate keeps the space
+    // between its words (`kì khí-lâi`). The walker key folds that space like
+    // the learned key always did, so the row still overrides the dictionary
+    // word under the same key (機器來), toneless and toned, listed once.
+    let _lock = engine_install_lock();
+    let mut rows = fixture_rows();
+    rows.push(Row {
+        toneless_key: "kikhilai",
+        hanji: "機器來",
+        tl: "ki-khì-lâi",
+        syll: 3,
+        freq: 12,
+    });
+    install(&rows, FIXTURE_SYLLABLES);
+    let custom = |roman: &str, hanji: &str| Fetch {
+        custom: vec![CustomEntry {
+            roman: roman.into(),
+            hanji: Some(hanji.into()),
+        }],
+        ..Default::default()
+    };
+    for raw in ["kikhilai", "ki3khi2lai5"] {
+        let hanji = fetch_hanji(raw, "tl", custom("kì khí-lâi", "既起來"));
+        assert_eq!(
+            hanji[0], "既起來",
+            "{raw}: custom override wins; got {hanji:?}"
+        );
+        assert_eq!(
+            hanji.iter().filter(|h| *h == "既起來").count(),
+            1,
+            "{raw}: walker slot 0 and the span-local row collapse to one; got {hanji:?}"
+        );
+    }
+    // The fold changes the key only: a wrong-tone spaced row is still
+    // refused by the typed tone.
+    let hanji = fetch_hanji("ki3khi2lai5", "tl", custom("kí khí-lâi", "忌起來"));
+    assert!(
+        !hanji.contains(&"忌起來".to_string()),
+        "typed kì must not admit kí; got {hanji:?}"
+    );
+}
+
+#[test]
 fn manual_custom_row_outranks_a_learned_row_under_the_same_key() {
     let _lock = engine_install_lock();
     install(&fixture_rows(), FIXTURE_SYLLABLES);
