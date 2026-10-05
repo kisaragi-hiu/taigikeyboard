@@ -47,6 +47,10 @@ pub struct ComposingManager {
     /// prefix included. Mirrored because only the engine knows how segments
     /// join, and because the candidate window anchors to what is on screen.
     display_text: String,
+    /// Where the caret sits in `display_text`, as a UTF-16 offset. Under TPS
+    /// the candidate window lists the word before it, so the macOS window
+    /// anchors there (`taigi-macos-ffi` `RecordingSurface::finish`).
+    display_caret_utf16: u32,
     /// The input mode the composition in flight began under; `None` while
     /// idle. A switch across TPS changes the raw buffer's alphabet, so the
     /// composition it leaves behind cannot take the new mode's keys
@@ -83,6 +87,7 @@ impl ComposingManager {
             is_composing: false,
             raw_input: String::new(),
             display_text: String::new(),
+            display_caret_utf16: 0,
             composition_input_mode: None,
             preedit_settings: None,
             settings,
@@ -103,6 +108,10 @@ impl ComposingManager {
 
     pub fn display_text(&self) -> &str {
         &self.display_text
+    }
+
+    pub fn display_caret_utf16(&self) -> u32 {
+        self.display_caret_utf16
     }
 
     pub fn generation(&self) -> u64 {
@@ -524,6 +533,7 @@ impl ComposingManager {
         self.is_composing = transition.is_composing;
         self.raw_input = transition.raw_input.clone();
         self.display_text = transition.display_text.clone();
+        self.display_caret_utf16 = transition.caret_utf16;
         if transition.is_composing {
             self.composition_input_mode = self.composition_input_mode.or(Some(input_mode));
         } else {
@@ -536,6 +546,7 @@ impl ComposingManager {
         self.is_composing = false;
         self.raw_input.clear();
         self.display_text.clear();
+        self.display_caret_utf16 = 0;
         self.composition_input_mode = None;
         self.preedit_settings = None;
     }

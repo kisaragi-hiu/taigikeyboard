@@ -84,6 +84,8 @@ struct CandidateListUpdate: Equatable {
     /// The first cell is the §34 literal, which takes no slot key.
     let leadsWithLiteralRoman: Bool
 
-    /// The composition's length on screen — where the caret walk starts.
-    let markedTextLengthUTF16: Int
+    /// The window sits under the character of the marked text that ends
+    /// here — where the caret walk starts. The end of the marked text, or the
+    /// caret under TPS, whose list is the word before it.
+    let anchorEndUTF16: Int
 }

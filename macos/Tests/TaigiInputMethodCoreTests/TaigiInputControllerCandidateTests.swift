@@ -509,6 +509,35 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         XCTAssertEqual(caretRect, atOrigin)
     }
 
+    /// INVARIANT_TPS_PREEDIT_HANJI_CONVERSION (§59): under TPS the list is the
+    /// word before the caret's, so the bar sits under that word, not at the
+    /// end of the marked text. trace, read by running (seam
+    /// `under_tps_the_list_anchors_at_the_caret`): `e` `8` Space `1` `8` `5`
+    /// marks 家罷; ← steps over 罷 to caret 1, so ↓ lists 家 and the walk
+    /// starts at index 0.
+    func testTpsList_anchorsUnderTheWordBeforeTheCaret() throws {
+        let key = SettingsStore.Keys.inputMode.name
+        clearSettingRestoredAtTeardown(key)
+        UserDefaults.standard.set(InputMode.tps.rawValue, forKey: key)
+        let underJia = CGRect(x: 100, y: 400, width: 1, height: 18)
+        let underBa = CGRect(x: 120, y: 400, width: 1, height: 18)
+        let session = try makeSession(caretRects: [0: underJia, 1: underBa])
+        for character in ["e", "8", " ", "1", "8", "5"] {
+            _ = try session.controller.handle(
+                TestFixtures.keyDownEvent(characters: character),
+                client: session.client,
+            )
+        }
+
+        session.press(.leftArrow)
+        session.press(.downArrow)
+
+        guard case let .show(_, caretRect) = try XCTUnwrap(session.presenter.calls.last) else {
+            return XCTFail("↓ must have shown the list of 家")
+        }
+        XCTAssertEqual(caretRect, underJia, "the bar points at 家, whose list it is, not at 罷 at the end")
+    }
+
     // MARK: - Navigating
 
     func testArrowKeys_moveTheHighlightAndClampAtTheStart() throws {

@@ -1320,8 +1320,11 @@ public nonisolated struct Taigi_DesktopShell_CandidatesChanged: Sendable {
   /// The first cell is the literal romanization, which takes no slot key.
   public var leadsWithLiteralRoman: Bool = false
 
-  /// The composition's length on screen — where the caret walk starts.
-  public var markedTextLengthUtf16: UInt32 = 0
+  /// The window sits under the character of the marked text that ends at this
+  /// UTF-16 offset — the caret walk starts there and goes left. The end of the
+  /// marked text, except under TPS, where it is the caret: the list is the
+  /// word before it.
+  public var anchorEndUtf16: UInt32 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -3613,7 +3616,7 @@ nonisolated extension Taigi_DesktopShell_ArmSwap: SwiftProtobuf.Message, SwiftPr
 
 nonisolated extension Taigi_DesktopShell_CandidatesChanged: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CandidatesChanged"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}cells\0\u{3}leads_with_literal_roman\0\u{3}marked_text_length_utf16\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}cells\0\u{3}leads_with_literal_roman\0\u{3}anchor_end_utf16\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -3623,7 +3626,7 @@ nonisolated extension Taigi_DesktopShell_CandidatesChanged: SwiftProtobuf.Messag
       switch fieldNumber {
       case 1: try { try decoder.decodeRepeatedMessageField(value: &self.cells) }()
       case 2: try { try decoder.decodeSingularBoolField(value: &self.leadsWithLiteralRoman) }()
-      case 3: try { try decoder.decodeSingularUInt32Field(value: &self.markedTextLengthUtf16) }()
+      case 3: try { try decoder.decodeSingularUInt32Field(value: &self.anchorEndUtf16) }()
       default: break
       }
     }
@@ -3636,8 +3639,8 @@ nonisolated extension Taigi_DesktopShell_CandidatesChanged: SwiftProtobuf.Messag
     if self.leadsWithLiteralRoman != false {
       try visitor.visitSingularBoolField(value: self.leadsWithLiteralRoman, fieldNumber: 2)
     }
-    if self.markedTextLengthUtf16 != 0 {
-      try visitor.visitSingularUInt32Field(value: self.markedTextLengthUtf16, fieldNumber: 3)
+    if self.anchorEndUtf16 != 0 {
+      try visitor.visitSingularUInt32Field(value: self.anchorEndUtf16, fieldNumber: 3)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -3645,7 +3648,7 @@ nonisolated extension Taigi_DesktopShell_CandidatesChanged: SwiftProtobuf.Messag
   public static func ==(lhs: Taigi_DesktopShell_CandidatesChanged, rhs: Taigi_DesktopShell_CandidatesChanged) -> Bool {
     if lhs.cells != rhs.cells {return false}
     if lhs.leadsWithLiteralRoman != rhs.leadsWithLiteralRoman {return false}
-    if lhs.markedTextLengthUtf16 != rhs.markedTextLengthUtf16 {return false}
+    if lhs.anchorEndUtf16 != rhs.anchorEndUtf16 {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
