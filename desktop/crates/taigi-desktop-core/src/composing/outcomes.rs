@@ -59,8 +59,11 @@ pub enum CandidateCommitOutcome {
     /// one-script cell). Nothing changed.
     Ignored,
     /// The segment was nailed and the composition continues. Under Model B
-    /// this writes nothing to the document.
-    Nailed,
+    /// this writes nothing to the document. `refetch` is whether the engine
+    /// asked for the list again (`RefreshCandidates`): a nail lists what
+    /// follows it, a pick under a TPS Hanji conversion answers
+    /// `ClearCandidates` and the window closes (Hanji conversion H4).
+    Nailed { refetch: bool },
     /// The whole composition was consumed, written to the document in one
     /// mutation, and the engine returned to Idle. `earns_auto_space` is the
     /// engine's §23 verdict on what the pick wrote (romanization, no
@@ -69,9 +72,11 @@ pub enum CandidateCommitOutcome {
 }
 
 impl CandidateCommitOutcome {
-    pub(crate) fn from_resolution(resolution: &CommitResolution) -> Self {
+    pub(crate) fn from_resolution(resolution: &CommitResolution, asks_refetch: bool) -> Self {
         match resolution.outcome() {
-            CommitOutcome::Nailed => Self::Nailed,
+            CommitOutcome::Nailed => Self::Nailed {
+                refetch: asks_refetch,
+            },
             CommitOutcome::Finalized => Self::Finalized {
                 earns_auto_space: resolution.earns_auto_space,
             },
@@ -120,21 +125,30 @@ mod tests {
     #[test]
     fn outcome_reads_the_engine_resolution() {
         assert_eq!(
-            CandidateCommitOutcome::from_resolution(&resolution(CommitOutcome::Finalized, true)),
+            CandidateCommitOutcome::from_resolution(
+                &resolution(CommitOutcome::Finalized, true),
+                false
+            ),
             CandidateCommitOutcome::Finalized {
                 earns_auto_space: true
             }
         );
         assert_eq!(
-            CandidateCommitOutcome::from_resolution(&resolution(CommitOutcome::Nailed, false)),
-            CandidateCommitOutcome::Nailed
+            CandidateCommitOutcome::from_resolution(
+                &resolution(CommitOutcome::Nailed, false),
+                true
+            ),
+            CandidateCommitOutcome::Nailed { refetch: true }
         );
         assert_eq!(
-            CandidateCommitOutcome::from_resolution(&resolution(CommitOutcome::Ignored, false)),
+            CandidateCommitOutcome::from_resolution(
+                &resolution(CommitOutcome::Ignored, false),
+                false
+            ),
             CandidateCommitOutcome::Ignored
         );
         assert_eq!(
-            CandidateCommitOutcome::from_resolution(&CommitResolution::default()),
+            CandidateCommitOutcome::from_resolution(&CommitResolution::default(), false),
             CandidateCommitOutcome::Ignored,
             "an answer with no resolution is not a commit"
         );

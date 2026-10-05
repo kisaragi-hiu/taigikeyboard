@@ -449,8 +449,9 @@ fn nailed_join(
 /// [`Phase::composing_display`] and the `transition.rs` Continuous paths
 /// route through this so the rendered preedit and the hard-finalize commit
 /// can never diverge (Codex post-impl review point). The one preedit that
-/// is not this string is a shown Hanji conversion (`transition::phase_preedit`);
-/// every commit still writes this one.
+/// is not this string is a shown Hanji conversion (`transition::phase_preedit`),
+/// which `CommitAsShown` and `CommitPreeditThenInsertExternal` write; the
+/// other commits write this one.
 pub(crate) fn combined_display(nailed: &[NailedSegment], raw: &str, config: &AppConfig) -> String {
     combined_display_with_tail(nailed, raw, config).0
 }

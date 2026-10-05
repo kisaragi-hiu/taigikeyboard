@@ -574,15 +574,16 @@ impl TextService_Impl {
     }
 
     /// `ITfCandidateListUIElementBehavior::Finalize`: the host commits the
-    /// highlighted candidate — the key path with the commit key's intent.
+    /// highlighted candidate — the key path with the commit key's intent;
+    /// under TPS the composition as shown (`ComposingKeyIntent::commit_first`).
     pub(crate) fn ui_element_finalize(&self) -> windows::core::Result<()> {
-        self.run_from_ui_element(ComposingKeyIntent::CommitHighlightedCandidate)
+        self.run_from_ui_element(|input_mode| ComposingKeyIntent::commit_first(true, input_mode))
     }
 
     /// `ITfCandidateListUIElementBehavior::Abort`: the host cancels the
     /// composition — Escape's intent.
     pub(crate) fn ui_element_abort(&self) -> windows::core::Result<()> {
-        self.run_from_ui_element(ComposingKeyIntent::Cancel)
+        self.run_from_ui_element(|_| ComposingKeyIntent::Cancel)
     }
 
     /// A host-initiated synchronous call on the TIP thread, outside any
@@ -590,7 +591,10 @@ impl TextService_Impl {
     /// edit session. Refused (`E_UNEXPECTED`) when no list is up, the
     /// owner's context is gone, or the engine is busy — which means the
     /// host re-entered us from inside our own session.
-    fn run_from_ui_element(&self, intent: ComposingKeyIntent) -> windows::core::Result<()> {
+    fn run_from_ui_element(
+        &self,
+        intent: impl FnOnce(InputMode) -> ComposingKeyIntent,
+    ) -> windows::core::Result<()> {
         let busy = || windows::core::Error::from_hresult(E_UNEXPECTED);
         let presenter = self.presenter();
         let owner = presenter
@@ -607,12 +611,13 @@ impl TextService_Impl {
         .ok_or_else(busy)?;
         let identity = ContextRegistry::identity(&context).ok_or_else(busy)?;
         let runtime = Runtime::shared();
+        let settings = runtime.settings.current();
+        let intent = intent(settings.choice(&keys::INPUT_MODE));
         let engine_free = runtime.try_coordinator().is_some();
         if !engine_free {
             log::warn!("ui_element.reentered intent={intent:?}");
             return Err(busy());
         }
-        let settings = runtime.settings.current();
         log::debug!("ui_element.intent {intent:?}");
         let outcome = self.run_key(
             &context,
@@ -1181,11 +1186,8 @@ impl TextService_Impl {
         let runtime = Runtime::shared();
         let (is_composing, is_showing) = self.composing_flags(runtime, token);
         if is_composing {
-            let intent = if is_showing {
-                ComposingKeyIntent::CommitHighlightedCandidate
-            } else {
-                ComposingKeyIntent::Commit
-            };
+            let intent =
+                ComposingKeyIntent::commit_first(is_showing, settings.choice(&keys::INPUT_MODE));
             let outcome = self.run_key(
                 context,
                 token,

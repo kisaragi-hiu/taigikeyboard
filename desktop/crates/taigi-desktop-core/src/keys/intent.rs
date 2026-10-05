@@ -98,8 +98,13 @@ pub enum ComposingKeyIntent {
     /// syllable.
     TpsKey(String),
     DeleteBackward,
-    /// Finish the composition as rendered (the literal commit).
+    /// Finish the composition as rendered: the literal commit under TL and
+    /// POJ, the Hanji conversion as shown under TPS.
     Commit,
+    /// Finish a TPS composition as typed: the glyphs of the whole
+    /// composition, picks included — the Commit as Typed row under TPS
+    /// (`desktop-tps-hanji-conversion-roadmap.md` B2).
+    CommitAsTyped,
     /// Abandon the composition without writing to the document.
     Cancel,
     /// Finish the composition and write `text` after it, as one step.
@@ -334,14 +339,17 @@ impl ComposingKeyIntent {
         }
     }
 
-    /// What a key does to the TPS candidate window, which opens on demand
-    /// (D7), or `None` for a key that types. With the window up the number
-    /// row and the keypad pick and Space confirms. While typing, the keys
-    /// that would move through a window open it — the navigation keys and
-    /// whatever the navigation and paging rows are bound to — and the
-    /// Confirm and Commit as Typed rows commit the glyphs: the user has seen
-    /// no candidate. With the window switched off nothing opens, and a key
-    /// that would have opened it commits and goes on to the host.
+    /// What a key does to a TPS composition and its candidate window, which
+    /// opens on demand (D7), or `None` for a key that types or falls to the
+    /// shared tiers. With the window up the number row and the keypad pick
+    /// and Space confirms. The Commit as Typed row writes the glyphs of the
+    /// whole composition, window up or not (Hanji conversion B2). While
+    /// typing, plain ← → step the caret over the converted words (H3); the
+    /// other keys that would move through a window open it — ↑ ↓, the paging
+    /// keys and whatever the navigation and paging rows are bound to — for
+    /// the word before the caret (H4); the Confirm row commits the
+    /// composition as shown. With the window switched off nothing opens, and
+    /// a key that would have opened it commits and goes on to the host.
     fn tps_window_key(
         key: &KeyEventSnapshot,
         is_composing: bool,
@@ -353,11 +361,19 @@ impl ComposingKeyIntent {
             if let Some(slot) = bindings.slot_key_set().slot_for_event(key) {
                 return Some(Self::SelectCandidateSlot { slot, flip: false });
             }
-            let is_bare_space = key.modifiers.is_empty() && key.characters.as_deref() == Some(" ");
-            return is_bare_space.then_some(Self::CommitHighlightedCandidate);
+            if key.modifiers.is_empty() && key.characters.as_deref() == Some(" ") {
+                return Some(Self::CommitHighlightedCandidate);
+            }
         }
         // A key that types a glyph types it; only the rest can move or commit.
         if !is_composing || tps_glyph_for_event(key).is_some() {
+            return None;
+        }
+        let action = bindings.action_for(key, platform);
+        if action == Some(ComposingAction::CommitLiteral) {
+            return Some(Self::CommitAsTyped);
+        }
+        if is_showing_candidates {
             return None;
         }
         let open = if bindings.is_candidate_window_enabled {
@@ -367,12 +383,11 @@ impl ComposingKeyIntent {
         };
         let modifiers = key.modifiers;
         if key.navigation_key.is_some() && !modifiers.shift && !modifiers.has_host_chord() {
-            return Some(open);
+            let step = CaretDirection::horizontal(key.navigation_key);
+            return Some(step.map_or(open, Self::MoveCaret));
         }
-        match bindings.action_for(key, platform)? {
-            ComposingAction::ConfirmHighlighted | ComposingAction::CommitLiteral => {
-                Some(Self::Commit)
-            }
+        match action? {
+            ComposingAction::ConfirmHighlighted => Some(Self::Commit),
             action if action.navigation().is_some() => Some(open),
             _ => None,
         }
@@ -393,6 +408,21 @@ impl ComposingKeyIntent {
             ));
         }
         None
+    }
+
+    /// The commit a keyless event runs over a composition before it writes
+    /// to the document itself — the symbol picker's commit-first, a host's
+    /// Finalize of the candidate list: the highlighted cell while a list
+    /// shows one, as Enter picks it, the composition as rendered otherwise.
+    /// Under TPS always the composition, as shown: a pick there nails one
+    /// word and keeps composing (Hanji conversion H4, H6), so the event
+    /// would find the composition still up.
+    pub fn commit_first(has_highlight: bool, input_mode: InputMode) -> Self {
+        if has_highlight && input_mode != InputMode::Tps {
+            Self::CommitHighlightedCandidate
+        } else {
+            Self::Commit
+        }
     }
 
     /// A click on a cap of the on-screen TPS key panel (desktop TPS roadmap
@@ -1483,10 +1513,11 @@ mod tests {
     }
 
     #[test]
-    fn under_tps_typing_the_moving_keys_open_the_window_and_enter_commits() {
+    fn under_tps_typing_the_moving_keys_open_the_window_and_the_commit_rows_part_ways() {
         // trace: D7 — no window, composing: ↓ and the keys bound to the
-        // navigation rows (Tab, `]`) open; Enter / Shift+Enter commit the
-        // glyphs; idle, every one is the host's.
+        // navigation rows (Tab, `]`) open; Hanji conversion B2 — Enter
+        // commits as shown (`Commit`), Shift+Enter the glyphs as typed,
+        // window up or not; idle, every one is the host's.
         let down = KeyEventSnapshot::navigation(NavigationKey::DownArrow, KeyModifiers::NONE);
         let tab = text("\t");
         let page = text("]");
@@ -1513,12 +1544,17 @@ mod tests {
         );
         assert_eq!(
             classify_tps(&shift_enter, true, false),
-            ComposingKeyIntent::Commit
+            ComposingKeyIntent::CommitAsTyped
         );
         assert_eq!(
             classify_tps(&shift_enter, true, true),
-            ComposingKeyIntent::Commit,
+            ComposingKeyIntent::CommitAsTyped,
             "window up: Shift+Enter still commits as typed"
+        );
+        assert_eq!(
+            classify(&shift_enter, true, false),
+            ComposingKeyIntent::Commit,
+            "TL: Shift+Enter is the literal commit"
         );
         assert_eq!(
             classify_tps(&down, false, false),
@@ -1533,6 +1569,92 @@ mod tests {
             ComposingKeyIntent::CommitThenPassThrough,
             "TL: no list, ↓ is the host's"
         );
+    }
+
+    #[test]
+    fn under_tps_typing_plain_left_and_right_step_the_caret() {
+        // trace: Hanji conversion H3/H6 — composing, no window: plain ← →
+        // are `MoveCaret`, with Show Candidate Window on or off; with the
+        // window up tier 1 keeps them the window's; idle they are the host's;
+        // TL keeps D7's rule (no list, the host's).
+        let mut window_off = tps_bindings();
+        window_off.is_candidate_window_enabled = false;
+        for (key, direction) in [
+            (NavigationKey::LeftArrow, CaretDirection::Left),
+            (NavigationKey::RightArrow, CaretDirection::Right),
+        ] {
+            let arrow = KeyEventSnapshot::navigation(key, KeyModifiers::NONE);
+            assert_eq!(
+                classify_tps(&arrow, true, false),
+                ComposingKeyIntent::MoveCaret(direction)
+            );
+            assert_eq!(
+                ComposingKeyIntent::intent(&arrow, true, false, &window_off, PLATFORM),
+                ComposingKeyIntent::MoveCaret(direction),
+                "window off"
+            );
+            assert_eq!(
+                classify_tps(&arrow, true, true),
+                ComposingKeyIntent::Navigate(CandidateNavigation::from(key))
+            );
+            assert_eq!(
+                classify_tps(&arrow, false, false),
+                ComposingKeyIntent::PassThrough
+            );
+            assert_eq!(
+                classify(&arrow, true, false),
+                ComposingKeyIntent::CommitThenPassThrough,
+                "TL"
+            );
+            // Shift+← is the host's selection: no caret step.
+            let shifted = KeyEventSnapshot::navigation(key, KeyModifiers::SHIFT);
+            assert_ne!(
+                classify_tps(&shifted, true, false),
+                ComposingKeyIntent::MoveCaret(direction)
+            );
+        }
+    }
+
+    #[test]
+    fn under_tps_a_rebound_commit_as_typed_row_commits_the_glyphs() {
+        // trace: the TPS branch reads the CommitLiteral row by binding, not by
+        // key: a recorded Ctrl+' commits as typed, window up or not.
+        let mut stored = BTreeMap::new();
+        stored.insert(
+            ComposingAction::CommitLiteral,
+            Some(ComposingKeyChord {
+                key: "'".into(),
+                modifiers: KeyModifiers::CONTROL,
+            }),
+        );
+        let mut bindings = ComposingKeyBindings::resolve(&stored, ToneInputScheme::Standard);
+        bindings.input_mode = InputMode::Tps;
+        let chord = KeyEventSnapshot::chord(None, "'", KeyModifiers::CONTROL);
+        for is_showing in [false, true] {
+            assert_eq!(
+                ComposingKeyIntent::intent(&chord, true, is_showing, &bindings, PLATFORM),
+                ComposingKeyIntent::CommitAsTyped,
+                "window up: {is_showing}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_commit_first_is_the_highlight_except_under_tps() {
+        use ComposingKeyIntent::{Commit, CommitHighlightedCandidate};
+        for mode in [InputMode::Tl, InputMode::Poj] {
+            assert_eq!(
+                ComposingKeyIntent::commit_first(true, mode),
+                CommitHighlightedCandidate
+            );
+            assert_eq!(ComposingKeyIntent::commit_first(false, mode), Commit);
+        }
+        for has_highlight in [true, false] {
+            assert_eq!(
+                ComposingKeyIntent::commit_first(has_highlight, InputMode::Tps),
+                Commit
+            );
+        }
     }
 
     #[test]
