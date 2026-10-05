@@ -8,7 +8,8 @@ use crate::winui::cards;
 use crate::winui::window::{Message, ResetScope, SettingsWindow, SettingsWrite};
 use taigi_desktop_core::keys::ToneInputScheme;
 use taigi_desktop_core::settings::presentation::{
-    display_language_label, output_script_label, OUTPUT_SCRIPTS,
+    display_language_label, nasal_marker_style_label, output_script_label, NASAL_MARKER_STYLES,
+    OUTPUT_SCRIPTS,
 };
 use taigi_desktop_core::settings::{keys, InputMode, SettingChoice};
 use taigi_desktop_core::strings::{DisplayLanguage, StringKey, StringResolver};
@@ -109,14 +110,25 @@ pub fn view(
             true,
             context.callback(|is_on| Message::SetSwitch(keys::IS_HYPHENLESS_ROMAN_ENABLED, is_on)),
         ),
-        // ⁿ becomes ᴺ in capitals (§53): the other switch that shapes the output's romanization.
-        cards::switch_row(
+        // Nasal mark in POJ capitals (§53): the other setting that shapes the
+        // output's romanization — a pop-up over the stored switch, ᴺ or ⁿ.
+        choice_row(
             strings.resolve(StringKey::SettingsNasalMarkerUppercase),
+            NASAL_MARKER_STYLES,
             document.bool(&keys::IS_NASAL_MARKER_UPPERCASE_ENABLED),
             true,
-            context.callback(|is_on| {
-                Message::SetSwitch(keys::IS_NASAL_MARKER_UPPERCASE_ENABLED, is_on)
-            }),
+            |is_uppercase: bool| {
+                strings
+                    .resolve(nasal_marker_style_label(is_uppercase))
+                    .to_owned()
+            },
+            |is_uppercase| match is_uppercase {
+                Some(is_uppercase) => {
+                    Message::SetSwitch(keys::IS_NASAL_MARKER_UPPERCASE_ENABLED, is_uppercase)
+                }
+                None => Message::SetChoice(None),
+            },
+            context,
         ),
         // The space after a commit: the last thing the output stage does.
         cards::switch_row(

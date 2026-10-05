@@ -3710,37 +3710,55 @@
       }
     },
     "i18n_settings_nasalMarkerUppercase": {
-      "comment": "Toggle label: the POJ nasal marker follows the case of the letters before it (SIÂᴺ); off, it is always ⁿ (SIÂⁿ). Default ON. All four platforms, host settings only.",
+      "comment": "Picker label: how the POJ nasal marker is written in capitals — the stored switch, true = ᴺ (nasalMarkerUppercaseCapital, the default), false = ⁿ (nasalMarkerUppercaseSmall). All five platforms, host settings only.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "ⁿ becomes ᴺ in capitals"
+            "value": "Nasal mark in POJ capitals"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "大文字では ⁿ を ᴺ に"
+            "value": "白話字の大文字での鼻音記号"
           }
         }
       }
     },
-    "i18n_settings_nasalMarkerUppercaseInfo": {
-      "comment": "Help text for the ⁿ becomes ᴺ in capitals toggle (mobile host app).",
+    "i18n_settings_nasalMarkerUppercaseCapital": {
+      "comment": "Picker value (default): in capitals the nasal marker follows the letters before it, ᴺ (SIÂᴺ).",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "When you type in capitals, the nasal marker ⁿ is written as its capital ᴺ (SIÂᴺ). Off, it is always ⁿ (SIÂⁿ)."
+            "value": "ᴺ (SIÂᴺ)"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "大文字で入力すると鼻音記号 ⁿ も大文字の ᴺ になります（SIÂᴺ）。オフにすると常に ⁿ になります（SIÂⁿ）。"
+            "value": "ᴺ（SIÂᴺ）"
+          }
+        }
+      }
+    },
+    "i18n_settings_nasalMarkerUppercaseSmall": {
+      "comment": "Picker value: the nasal marker is always the small ⁿ, even in capitals (SIÂⁿ).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ⁿ (SIÂⁿ)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ⁿ（SIÂⁿ）"
           }
         }
       }

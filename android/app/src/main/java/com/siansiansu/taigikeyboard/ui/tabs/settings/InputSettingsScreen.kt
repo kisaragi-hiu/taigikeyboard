@@ -71,6 +71,7 @@ fun InputSettingsScreen(
     var showDisplayLanguagePicker by remember { mutableStateOf(false) }
     var showInputModePicker by remember { mutableStateOf(false) }
     var showCandidateDisplayModePicker by remember { mutableStateOf(false) }
+    var showNasalMarkerStylePicker by remember { mutableStateOf(false) }
     var showFontPicker by remember { mutableStateOf(false) }
     // Authoritative SELECTED display language (may be SYSTEM) — driven by the Activity-root
     // ProvideDisplayLanguage(prefs) Flow, so it stays correct across reset/live-switch without a local
@@ -124,6 +125,15 @@ fun InputSettingsScreen(
                 prefs.candidateDisplayMode = it
             },
             onBack = { showCandidateDisplayModePicker = false },
+        )
+    } else if (showNasalMarkerStylePicker) {
+        NasalMarkerStyleScreen(
+            isUppercase = nasalMarkerUppercase,
+            onSelected = {
+                nasalMarkerUppercase = it
+                prefs.isNasalMarkerUppercaseEnabled = it
+            },
+            onBack = { showNasalMarkerStylePicker = false },
         )
     } else if (showFontPicker) {
         FontPickerContent(
@@ -335,15 +345,12 @@ fun InputSettingsScreen(
                         },
                     )
                     SettingsDivider()
-                    // ⁿ becomes ᴺ in capitals (§53) — the case rule of the marker the row above composes.
-                    SwitchRow(
+                    // Nasal mark in POJ capitals (§53) — the case rule of the marker the row above
+                    // composes: ᴺ or ⁿ on a sub-screen, the Candidate Display row's shape.
+                    SettingNavigationRow(
                         label = L10n.settingsNasalMarkerUppercase,
-                        checked = nasalMarkerUppercase,
-                        infoText = L10n.settingsNasalMarkerUppercaseInfo,
-                        onCheckedChange = {
-                            nasalMarkerUppercase = it
-                            prefs.isNasalMarkerUppercaseEnabled = it
-                        },
+                        value = nasalMarkerStyleDisplayName(nasalMarkerUppercase),
+                        onClick = { showNasalMarkerStylePicker = true },
                     )
                 }
 

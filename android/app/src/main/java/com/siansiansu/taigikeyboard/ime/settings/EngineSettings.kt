@@ -85,7 +85,7 @@ interface EngineSettings {
     val isHyphenlessRomanEnabled: Boolean
 
     /**
-     * The POJ marker options (double-tap folds + ⁿ becomes ᴺ in capitals, §53) bundled as a
+     * The POJ marker options (double-tap folds + Nasal mark in POJ capitals, §53) bundled as a
      * live-read value so `ComposingState` / `ToneConverter` can stay
      * Kotlin-stdlib-pure.
      */

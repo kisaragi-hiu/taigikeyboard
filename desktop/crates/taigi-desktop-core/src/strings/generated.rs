@@ -203,6 +203,8 @@ pub enum StringKey {
     SettingsToneSchemeTelex,
     SettingsAutoSpace,
     SettingsNasalMarkerUppercase,
+    SettingsNasalMarkerUppercaseCapital,
+    SettingsNasalMarkerUppercaseSmall,
     ThemeCustomFont,
     ThemeEditorResetAll,
 }
@@ -407,6 +409,8 @@ impl StringKey {
             Self::SettingsToneSchemeTelex => "i18n_settings_toneSchemeTelex",
             Self::SettingsAutoSpace => "i18n_settings_autoSpace",
             Self::SettingsNasalMarkerUppercase => "i18n_settings_nasalMarkerUppercase",
+            Self::SettingsNasalMarkerUppercaseCapital => "i18n_settings_nasalMarkerUppercaseCapital",
+            Self::SettingsNasalMarkerUppercaseSmall => "i18n_settings_nasalMarkerUppercaseSmall",
             Self::ThemeCustomFont => "i18n_theme_customFont",
             Self::ThemeEditorResetAll => "i18n_theme_editorResetAll",
         }
@@ -622,7 +626,9 @@ fn hanji(key: StringKey) -> Option<&'static str> {
         StringKey::SettingsToneSchemeStandard => "數字調",
         StringKey::SettingsToneSchemeTelex => "Telex",
         StringKey::SettingsAutoSpace => "自動閬一格",
-        StringKey::SettingsNasalMarkerUppercase => "大本字時 ⁿ 轉做 ᴺ",
+        StringKey::SettingsNasalMarkerUppercase => "白話字大本字的鼻音符號輸出",
+        StringKey::SettingsNasalMarkerUppercaseCapital => "ᴺ（SIÂᴺ）",
+        StringKey::SettingsNasalMarkerUppercaseSmall => "ⁿ（SIÂⁿ）",
         StringKey::ThemeCustomFont => "字型設定",
         StringKey::ThemeEditorResetAll => "恢復預設設定",
     })
@@ -826,7 +832,9 @@ fn en(key: StringKey) -> Option<&'static str> {
         StringKey::SettingsToneSchemeStandard => "Numeric Tones",
         StringKey::SettingsToneSchemeTelex => "Telex",
         StringKey::SettingsAutoSpace => "Auto-Space",
-        StringKey::SettingsNasalMarkerUppercase => "ⁿ becomes ᴺ in capitals",
+        StringKey::SettingsNasalMarkerUppercase => "Nasal mark in POJ capitals",
+        StringKey::SettingsNasalMarkerUppercaseCapital => "ᴺ (SIÂᴺ)",
+        StringKey::SettingsNasalMarkerUppercaseSmall => "ⁿ (SIÂⁿ)",
         StringKey::ThemeCustomFont => "Font",
         StringKey::ThemeEditorResetAll => "Reset to Defaults",
     })
@@ -1030,7 +1038,9 @@ fn ja(key: StringKey) -> Option<&'static str> {
         StringKey::SettingsToneSchemeStandard => "数字で声調",
         StringKey::SettingsToneSchemeTelex => "Telex",
         StringKey::SettingsAutoSpace => "自動スペース",
-        StringKey::SettingsNasalMarkerUppercase => "大文字では ⁿ を ᴺ に",
+        StringKey::SettingsNasalMarkerUppercase => "白話字の大文字での鼻音記号",
+        StringKey::SettingsNasalMarkerUppercaseCapital => "ᴺ（SIÂᴺ）",
+        StringKey::SettingsNasalMarkerUppercaseSmall => "ⁿ（SIÂⁿ）",
         StringKey::ThemeCustomFont => "フォント",
         StringKey::ThemeEditorResetAll => "既定値に戻す",
     })
@@ -1234,7 +1244,9 @@ fn tailo(key: StringKey) -> Option<&'static str> {
         StringKey::SettingsToneSchemeStandard => "Sòo-jī-tiāu",
         StringKey::SettingsToneSchemeTelex => "Telex",
         StringKey::SettingsAutoSpace => "Tsū-tōng làng tsi̍t ê phāng",
-        StringKey::SettingsNasalMarkerUppercase => "Tuā-pún-jī sî ⁿ tsuán tsò ᴺ",
+        StringKey::SettingsNasalMarkerUppercase => "Pe̍h-uē-jī tuā-pún-jī ê phīnn-im hû-hō su-tshut",
+        StringKey::SettingsNasalMarkerUppercaseCapital => "ᴺ (SIÂᴺ)",
+        StringKey::SettingsNasalMarkerUppercaseSmall => "ⁿ (SIÂⁿ)",
         StringKey::ThemeCustomFont => "Jī-hîng siat-tīng",
         StringKey::ThemeEditorResetAll => "Hue-ho̍k ī-siat siat-tīng",
     })
@@ -1438,7 +1450,9 @@ fn poj(key: StringKey) -> Option<&'static str> {
         StringKey::SettingsToneSchemeStandard => "Sò͘-jī-tiāu",
         StringKey::SettingsToneSchemeTelex => "Telex",
         StringKey::SettingsAutoSpace => "Chū-tōng làng chi̍t ê phāng",
-        StringKey::SettingsNasalMarkerUppercase => "Tōa-pún-jī sî ⁿ choán chò ᴺ",
+        StringKey::SettingsNasalMarkerUppercase => "Pe̍h-ōe-jī tōa-pún-jī ê phīⁿ-im hû-hō su-chhut",
+        StringKey::SettingsNasalMarkerUppercaseCapital => "ᴺ (SIÂᴺ)",
+        StringKey::SettingsNasalMarkerUppercaseSmall => "ⁿ (SIÂⁿ)",
         StringKey::ThemeCustomFont => "Jī-hêng siat-tēng",
         StringKey::ThemeEditorResetAll => "Hoe-ho̍k ī-siat siat-tēng",
     })

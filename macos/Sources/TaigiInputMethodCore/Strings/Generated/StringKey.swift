@@ -204,6 +204,8 @@ enum StringKey: String {
     case settingsToneSchemeTelex = "i18n_settings_toneSchemeTelex"
     case settingsAutoSpace = "i18n_settings_autoSpace"
     case settingsNasalMarkerUppercase = "i18n_settings_nasalMarkerUppercase"
+    case settingsNasalMarkerUppercaseCapital = "i18n_settings_nasalMarkerUppercaseCapital"
+    case settingsNasalMarkerUppercaseSmall = "i18n_settings_nasalMarkerUppercaseSmall"
     case themeCustomFont = "i18n_theme_customFont"
     case themeEditorResetAll = "i18n_theme_editorResetAll"
 }

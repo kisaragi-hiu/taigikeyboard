@@ -251,13 +251,17 @@ struct SettingsTab: View {
                             settings.isDoubleTapNNEnabled = newValue
                         }
 
-                    // ⁿ becomes ᴺ in capitals (§53) — the case rule of the marker the row above composes.
-                    Toggle(isOn: $isNasalMarkerUppercaseEnabled) {
-                        HStack {
-                            Text(lang.string(.settingsNasalMarkerUppercase))
-                            SettingInfoButton(description: lang.string(.settingsNasalMarkerUppercaseInfo))
-                        }
+                    // Nasal mark in POJ capitals (§53) — the case rule of the marker the row above
+                    // composes: a picker over the stored switch, ᴺ or ⁿ, on a selection sub-page.
+                    Picker(selection: $isNasalMarkerUppercaseEnabled) {
+                        Text(lang.string(.settingsNasalMarkerUppercaseCapital)).tag(true)
+                        Text(lang.string(.settingsNasalMarkerUppercaseSmall)).tag(false)
+                    } label: {
+                        Text(lang.string(.settingsNasalMarkerUppercase))
                     }
+                    // Explicit: a Form's automatic picker style is context-dependent (Apple
+                    // `PickerStyle`), and this row is a selection sub-page on purpose.
+                    .pickerStyle(.navigationLink)
                     .onChange(of: isNasalMarkerUppercaseEnabled) { _, newValue in
                         settings.isNasalMarkerUppercaseEnabled = newValue
                     }

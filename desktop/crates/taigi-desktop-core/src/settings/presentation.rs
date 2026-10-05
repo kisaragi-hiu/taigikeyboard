@@ -65,6 +65,19 @@ pub fn output_script_label(is_hanji: bool) -> StringKey {
     }
 }
 
+/// The Nasal mark in POJ capitals pop-up's roster: the stored switch as the
+/// two markers it picks between, ᴺ (the default) first.
+pub const NASAL_MARKER_STYLES: &[bool] = &[true, false];
+
+/// The Nasal mark in POJ capitals pop-up's row for the stored switch.
+pub fn nasal_marker_style_label(is_uppercase: bool) -> StringKey {
+    if is_uppercase {
+        StringKey::SettingsNasalMarkerUppercaseCapital
+    } else {
+        StringKey::SettingsNasalMarkerUppercaseSmall
+    }
+}
+
 /// What a page reports after a job (`UserDataPageChrome.swift` `UserDataPageMessage`
 /// is the macOS twin).
 #[derive(Clone, Debug, PartialEq, Eq)]

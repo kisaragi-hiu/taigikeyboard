@@ -137,7 +137,7 @@ struct EngineSettings: Sendable {
     /// android/…/ime/settings/PrefHelper.kt, both OFF.
     let isHyphenlessRomanEnabled: Bool
 
-    /// ⁿ becomes ᴺ in capitals (`behavioral-invariants.md` §53) — the POJ nasal marker follows
+    /// Nasal mark in POJ capitals (`behavioral-invariants.md` §53) — the POJ nasal marker follows
     /// the case of the letters before it (`SIÂᴺ`); off, it is always `ⁿ`.
     /// Sent inverted as `AppConfig.force_lowercase_nasal_marker` on the base
     /// config.

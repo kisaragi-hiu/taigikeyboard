@@ -4,7 +4,7 @@ import SwiftProtobuf
 // MARK: - RustEngineBridge Case-Transform surface
 
 /// Case-transform extension for `RustEngineBridge`. Single FFI hop per
-/// typed key. Mode and ⁿ becomes ᴺ in capitals (§53) are forwarded
+/// typed key. Mode and Nasal mark in POJ capitals (§53) are forwarded
 /// via the envelope `AppConfig`; the double-tap folds are not (case-transform
 /// is independent of POJ preprocessing).
 public extension RustEngineBridge {
@@ -62,7 +62,7 @@ public extension RustEngineBridge {
     }
 
     /// Case-transform dispatch — single FFI hop per word/char. Mode and
-    /// ⁿ becomes ᴺ in capitals are carried via the envelope `AppConfig`; the double-tap
+    /// Nasal mark in POJ capitals are carried via the envelope `AppConfig`; the double-tap
     /// folds are not, case-transform is independent of POJ preprocessing.
     private static func caseDispatch(
         method: Taigi_Engine_CaseRequest.OneOf_Method,
