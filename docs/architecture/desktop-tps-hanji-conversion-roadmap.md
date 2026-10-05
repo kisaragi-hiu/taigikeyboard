@@ -2,7 +2,7 @@
 
 Under TPS (方音符號, the i18n `en` label "Phonetic Symbols") on macOS, Windows and Linux, the preedit shows the predicted Hanji while the user types, and ↓ opens the candidates of the word at the caret — the way the Zhuyin input methods work. This is arm B of U8 in [`desktop-tps-roadmap.md`](desktop-tps-roadmap.md); arm A (the preedit stays glyphs, D7) is what P1–P6 of that roadmap built.
 
-Status: H-P1 (engine, typing forward) is merged (#398); H-P2 (engine, the caret) is in review; the later phases have not started. No shell asks for the conversion until H-P4, so nothing a user types changes yet. No release is assigned; scope and timing are the maintainer's call.
+Status: H-P1 (engine, typing forward) is merged (#398); H-P2 (engine, the caret) is merged (#401); the later phases have not started. No shell asks for the conversion until H-P4, so nothing a user types changes yet. No release is assigned; scope and timing are the maintainer's call.
 
 Not next-word prediction. The desktops never suggest a word after a commit (maintainer, 2026-10-03), and nothing here changes that: this converts the glyphs being composed, before any commit. TL and POJ are untouched (U8).
 
@@ -200,7 +200,7 @@ Sizes are estimates. The engine phases are unreachable until H-P4 sets the switc
 |---|---|---|---|---|---|
 | H-P0 | docs | This roadmap, the `roadmap.md` row | — | — | Merged |
 | H-P1 | feat (engine) | H1, H2 for typing forward: the switch, the conversion in the state, the closed-part boundary, the walk on closing, the derived preedit and caret, Backspace; tests from production syllables (fixture rule: every strict-prefix syllable asserted) | engine; `make build` for the mobile artifacts (additive) | ~450 | Merged #398 `3e81146b` |
-| H-P2 | feat (engine) | H3: the caret by word, the open reading inside the tail, re-opening a nailed segment | engine; `make build` | ~400 | In review |
+| H-P2 | feat (engine) | H3: the caret by word, the open reading inside the tail, re-opening a nailed segment | engine; `make build` | ~400 | Merged #401 `1f54d61b` |
 | H-P3 | feat (engine) | H4, H5, H7: the word's list and its frequency lookup, the pick that keeps composing, commit as shown, commit as typed, the picked mark and what it withholds | engine, dispatch, nextword; `make build` | ~500 | Pending |
 | H-P4 | feat (desktop-core, all three shells) | H6, H8: the switch on under TPS, the classifier and executor rows, every shell's tests | desktop-core, Windows, Linux, macOS | ~500 | Pending |
 | H-P5 | feat (macOS) + docs | The window's place on device; the behavioural invariant for H1–H7; the dogfood items; D7 and U8 in `desktop-tps-roadmap.md` marked as revised, S91 reworded | macOS | ~250 | Pending |
