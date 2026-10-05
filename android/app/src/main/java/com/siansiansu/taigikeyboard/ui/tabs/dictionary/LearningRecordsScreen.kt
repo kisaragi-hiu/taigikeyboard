@@ -226,8 +226,9 @@ fun LearningRecordsScreen(
     }
 }
 
+// The kind's row on the Learning Records page and its list's title.
 @Composable
-private fun kindLabel(kind: LearningRecordKind): String =
+internal fun kindLabel(kind: LearningRecordKind): String =
     when (kind) {
         LearningRecordKind.LEARNING_RECORD_KIND_LEARNED_PHRASE -> L10n.dictionaryLearningRecordsPhrases
         else -> L10n.dictionaryLearningRecordsFrequency

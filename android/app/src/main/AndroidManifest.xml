@@ -100,11 +100,16 @@
             android:parentActivityName="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
             android:exported="false"/>
 
-        <!-- Learning Records Activity -->
+        <!-- Learning Records Activities (kind menu, then one kind's list) -->
+        <activity
+            android:name="com.siansiansu.taigikeyboard.settings.LearningRecordsMenuActivity"
+            android:theme="@style/SettingsTheme"
+            android:parentActivityName="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
+            android:exported="false"/>
         <activity
             android:name="com.siansiansu.taigikeyboard.settings.LearningRecordsActivity"
             android:theme="@style/SettingsTheme"
-            android:parentActivityName="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
+            android:parentActivityName="com.siansiansu.taigikeyboard.settings.LearningRecordsMenuActivity"
             android:exported="false"/>
 
         <!-- Data Management Activity (Backup/Restore) -->

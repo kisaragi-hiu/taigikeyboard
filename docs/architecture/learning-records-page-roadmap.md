@@ -73,8 +73,8 @@ message DeleteLearningRecord { record }                              → Learnin
 
 | Platform | Entry | Page |
 |---|---|---|
-| iOS | Dictionary tab → "Data management": two rows, Word Frequency and Phrases, after Custom Dictionary (maintainer dogfood 2026-10-03: one item per kind, no kind picker) | `LearningRecordsView(kind:)` + view model over `UserDataClient`; order menu row, list, bottom `SearchBar`, swipe delete, alert edit — the Custom Dictionary idiom, but engine-paged (100 rows, load more at the end; re-reads in ≤100-row chunks) with the filter sent to the engine |
-| Android | Dictionary settings → "Data management": the same two rows | `LearningRecordsActivity` (kind as intent extra) / `Screen` / `ViewModel`; order card, `FilterSearchBar`, dialog edit; same engine paging as iOS |
+| iOS | Dictionary tab → "Keyboard Data": one Learning Records row after Custom Dictionary, opening a subpage with two rows, Word Frequency and Phrases (maintainer dogfood 2026-10-03: one item per kind, no kind picker; 2026-10-05: group them under Learning Records, matching desktop) | `LearningRecordsMenuView` → `LearningRecordsView(kind:)` + view model over `UserDataClient`; order menu row, list, bottom `SearchBar`, swipe delete, alert edit — the Custom Dictionary idiom, but engine-paged (100 rows, load more at the end; re-reads in ≤100-row chunks) with the filter sent to the engine |
+| Android | Dictionary settings → "Keyboard Data": the same Learning Records row and subpage | `LearningRecordsMenuActivity` / `Screen` → `LearningRecordsActivity` (kind as intent extra) / `Screen` / `ViewModel`; order card, `FilterSearchBar`, dialog edit; same engine paging as iOS |
 | macOS | sidebar pane after Custom Dictionary (`SettingsSplitView.swift:13`) | `LearningRecordsPage` on `UserDataPageChrome` (`UserDataFilterField`, `Table`, `UserDataListPager`) |
 | Windows / Linux | sidebar pane after Custom Dictionary (`settings/choices.rs:316`) | shared model `desktop-core/src/settings/learning_records.rs` (reusing the `Listing` paging / settle logic) + one page file per toolkit |
 
