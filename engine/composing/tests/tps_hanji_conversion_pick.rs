@@ -581,7 +581,12 @@ enum Step {
 fn arb_step() -> impl Strategy<Value = Step> {
     prop_oneof![
         6 => prop::sample::select(vec!["ㄒ", "ㄧ", "ˋ", " ", "ㄍ", "ㄣ"]).prop_map(Step::Key),
-        2 => prop::sample::select(vec![CaretDirection::Left, CaretDirection::Right])
+        2 => prop::sample::select(vec![
+            CaretDirection::Left,
+            CaretDirection::Right,
+            CaretDirection::Start,
+            CaretDirection::End,
+        ])
             .prop_map(Step::Caret),
         1 => Just(Step::DeleteBackward),
         2 => (0usize..3).prop_map(Step::Pick),

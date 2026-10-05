@@ -50,11 +50,14 @@ pub enum Phase {
     },
 }
 
-/// One step of `Intent::MoveCaret`.
+/// One move of `Intent::MoveCaret`: a step left / right, or a jump to the
+/// start / end of the pending tail.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CaretDirection {
     Left,
     Right,
+    Start,
+    End,
 }
 
 /// Which rendering of a pick the document gets — the wire `CommitScript`
@@ -647,8 +650,10 @@ pub enum Intent {
         key: String,
     },
     /// Desktop caret — step one char inside the pending tail, one word over
-    /// a converted word; see the `MoveCaret` proto comment for the contract
-    /// (no refetch, edge = no-op, re-open under a conversion).
+    /// a converted word, or jump to the tail's start / end; see the
+    /// `MoveCaret` proto comment for the contract (no refetch, a move the
+    /// caret cannot make = no effects unless a conversion is rebuilt, re-open
+    /// under a conversion).
     /// `None` is a wire direction the engine does not know (unspecified or
     /// newer than this build) and steps nowhere.
     MoveCaret {

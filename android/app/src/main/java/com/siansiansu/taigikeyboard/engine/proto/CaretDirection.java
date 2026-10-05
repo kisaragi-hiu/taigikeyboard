@@ -27,6 +27,22 @@ public enum CaretDirection
    * <code>CARET_DIRECTION_RIGHT = 2;</code>
    */
   CARET_DIRECTION_RIGHT(2),
+  /**
+   * <pre>
+   * jump to the pending tail's start
+   * </pre>
+   *
+   * <code>CARET_DIRECTION_START = 3;</code>
+   */
+  CARET_DIRECTION_START(3),
+  /**
+   * <pre>
+   * jump to the pending tail's end
+   * </pre>
+   *
+   * <code>CARET_DIRECTION_END = 4;</code>
+   */
+  CARET_DIRECTION_END(4),
   UNRECOGNIZED(-1),
   ;
 
@@ -46,6 +62,22 @@ public enum CaretDirection
    * <code>CARET_DIRECTION_RIGHT = 2;</code>
    */
   public static final int CARET_DIRECTION_RIGHT_VALUE = 2;
+  /**
+   * <pre>
+   * jump to the pending tail's start
+   * </pre>
+   *
+   * <code>CARET_DIRECTION_START = 3;</code>
+   */
+  public static final int CARET_DIRECTION_START_VALUE = 3;
+  /**
+   * <pre>
+   * jump to the pending tail's end
+   * </pre>
+   *
+   * <code>CARET_DIRECTION_END = 4;</code>
+   */
+  public static final int CARET_DIRECTION_END_VALUE = 4;
 
 
   @java.lang.Override
@@ -71,6 +103,8 @@ public enum CaretDirection
       case 0: return CARET_DIRECTION_UNSPECIFIED;
       case 1: return CARET_DIRECTION_LEFT;
       case 2: return CARET_DIRECTION_RIGHT;
+      case 3: return CARET_DIRECTION_START;
+      case 4: return CARET_DIRECTION_END;
       default: return null;
     }
   }

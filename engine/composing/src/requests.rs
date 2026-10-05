@@ -77,6 +77,8 @@ pub fn decode_intent(req: &ComposingRequest) -> Result<Intent, ComposingError> {
             direction: match m.direction() {
                 protos::engine::CaretDirection::Left => Some(CaretDirection::Left),
                 protos::engine::CaretDirection::Right => Some(CaretDirection::Right),
+                protos::engine::CaretDirection::Start => Some(CaretDirection::Start),
+                protos::engine::CaretDirection::End => Some(CaretDirection::End),
                 protos::engine::CaretDirection::Unspecified => None,
             },
         },

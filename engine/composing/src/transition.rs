@@ -179,12 +179,14 @@ fn telex_key(
     }
 }
 
-/// `Intent::MoveCaret` — step the caret one char inside the pending tail;
-/// under a shown Hanji conversion, one word over a converted word. The
+/// `Intent::MoveCaret` — step the caret one char inside the pending tail
+/// (under a shown Hanji conversion, one word over a converted word), or jump
+/// it to the tail's start / end. The
 /// buffer is untouched, so the answer is the snapshot plus one
 /// `UpdatePreedit` carrying the new caret and nothing else: no
-/// `RefreshCandidates`, so candidates, highlight and page stay. At an
-/// edge (the caret never enters a nailed segment) it is a plain snapshot —
+/// `RefreshCandidates`, so candidates, highlight and page stay. A move the
+/// caret cannot make (a step past an edge — the caret never enters a nailed
+/// segment — or a jump to the edge it sits at) is a plain snapshot —
 /// except a step left from the start of a tail the request converts, which
 /// re-opens the last nailed segment ([`unnail_last`]) and answers as
 /// Backspace's un-nail does. A tail the request converts and the phase holds
@@ -250,12 +252,13 @@ fn move_caret(
             nailed,
             conversion,
         } => direction
-            .and_then(|direction| {
-                conversion
+            .and_then(|direction| match direction {
+                CaretDirection::Start | CaretDirection::End => step_caret(raw, *caret, direction),
+                CaretDirection::Left | CaretDirection::Right => conversion
                     .as_ref()
                     .filter(|conversion| conversion.is_for(config))
                     .and_then(|conversion| conversion.step_over_word(*caret, direction))
-                    .or_else(|| step_caret(raw, *caret, direction))
+                    .or_else(|| step_caret(raw, *caret, direction)),
             })
             .map(|next| (raw.clone(), next, nailed.clone())),
     };
@@ -348,7 +351,9 @@ fn tps_key_before_caret(raw: &str, caret: usize, key: &str) -> Option<(String, u
     }
 }
 
-/// `None` at the edge the step would cross.
+/// Where the caret goes in `raw`: one char for a step, the tail's edge for a
+/// jump. `None` when it would not move — at the edge a step would cross, or
+/// already at the edge a jump goes to.
 fn step_caret(raw: &str, caret: usize, direction: CaretDirection) -> Option<usize> {
     match direction {
         CaretDirection::Left => raw[..caret]
@@ -356,6 +361,8 @@ fn step_caret(raw: &str, caret: usize, direction: CaretDirection) -> Option<usiz
             .next_back()
             .map(|c| caret - c.len_utf8()),
         CaretDirection::Right => raw[caret..].chars().next().map(|c| caret + c.len_utf8()),
+        CaretDirection::Start => (caret > 0).then_some(0),
+        CaretDirection::End => (caret < raw.len()).then_some(raw.len()),
     }
 }
 
