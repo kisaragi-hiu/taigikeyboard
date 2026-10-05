@@ -514,6 +514,7 @@ jobs:
           cache=/usr/share/icons/hicolor/icon-theme.cache
           if [ -f "$cache" ]; then
             grep -q taigikeyboard "$cache" || { echo "::error::$cache exists but lacks the taigikeyboard icon — no hook refreshed it"; exit 1; }
+            grep -q taigikeyboard-tl-hanji "$cache" || { echo "::error::$cache exists but lacks the mode indicator icons — no hook refreshed it"; exit 1; }
             echo "icon cache refreshed"
           else
             echo "no hicolor icon cache on this system; GTK scans the directories"

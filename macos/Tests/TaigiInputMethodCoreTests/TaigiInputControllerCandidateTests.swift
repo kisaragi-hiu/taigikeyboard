@@ -978,8 +978,9 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     }
 
     /// With a composition but no bar on screen, the swap flips the setting and
-    /// nothing else — no window may appear from a hotkey.
-    func testTogglingTranslateSwapped_withNoBar_showsNothing() throws {
+    /// leaves the presenter alone — no candidate window may appear from a
+    /// hotkey; only the HUD says what a commit now writes.
+    func testTogglingTranslateSwapped_withNoBar_touchesNoPresenterButFlashes() throws {
         try withRestoredSwapSetting {
             let session = try composedSession()
             session.controller.hidePalettes()
