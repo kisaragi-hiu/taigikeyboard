@@ -2,14 +2,17 @@
 //! output, applied only while the
 //! Hanji/Romanization Swap has Hanji coming first (the MOE rule: full-width in Hanji mode, TL mode
 //! half-width); the caller reads the mode, and the auto-space swap is read first
-//! and wins. The mode is a default, not a wall: Ctrl on any key of this map
-//! types the other width once (`ComposingKeyIntent::width_flip_character`).
+//! and wins. The mode is a default, not a wall: Ctrl on a key of this map
+//! types the other width once (`ComposingKeyIntent::width_flip_character`),
+//! except the keys in [`HOST_CHORD_KEYS`].
 //! macOS keeps a Swift twin: `macos/.../Policies/FullWidthPunctuation.swift`.
 
 /// The MOE manual's symbol shortcut table, minus what this input method must keep
 /// half-width: digits (tone markers), the hyphen (syllable separator),
-/// letters, and the straight double quote (one glyph serves both sides).
-const MAP: [(char, char); 24] = [
+/// letters, and the straight double quote (one glyph serves both sides). Plus
+/// `~` (⇧ on the backtick key): the rest of the shifted number row is here, so
+/// its first key is too (user report 2026-09-28).
+const MAP: [(char, char); 25] = [
     (',', '，'),
     ('.', '。'),
     ('?', '？'),
@@ -25,6 +28,7 @@ const MAP: [(char, char); 24] = [
     ('<', '《'),
     ('>', '》'),
     ('\'', '、'),
+    ('~', '～'),
     ('@', '＠'),
     ('#', '＃'),
     ('$', '＄'),
@@ -35,6 +39,16 @@ const MAP: [(char, char); 24] = [
     ('_', '＿'),
     ('+', '＋'),
 ];
+
+/// Mapped keys whose Ctrl chord stays the host's instead of flipping the
+/// width: Ctrl+Shift+` (`~`) is VS Code's New Terminal on every desktop.
+const HOST_CHORD_KEYS: [char; 1] = ['~'];
+
+/// Whether Ctrl on the key that typed `text` flips the punctuation width: a
+/// mapped key outside [`HOST_CHORD_KEYS`].
+pub fn is_width_flip_key(text: &str) -> bool {
+    full_width_mapped(text).is_some() && !text.chars().any(|c| HOST_CHORD_KEYS.contains(&c))
+}
 
 /// The full-width form of one typed character, or `None` when the key is
 /// not punctuation this policy maps. Multi-character strings are never
@@ -91,7 +105,7 @@ mod tests {
 
     #[test]
     fn every_mapped_pair_follows_the_moe_table() {
-        // trace: the 24 rows of `MAP`, the MOE symbol shortcut table.
+        // trace: the 25 rows of `MAP`, the MOE symbol shortcut table plus `~`.
         for (half, full) in MAP {
             assert_eq!(
                 full_width_mapped(&half.to_string()).as_deref(),
@@ -100,7 +114,18 @@ mod tests {
         }
         assert_eq!(full_width_mapped(","), Some("，".into()));
         assert_eq!(full_width_mapped("'"), Some("、".into()));
-        assert_eq!(MAP.len(), 24);
+        assert_eq!(full_width_mapped("~"), Some("～".into()));
+        assert_eq!(MAP.len(), 25);
+    }
+
+    #[test]
+    fn ctrl_shift_backtick_stays_the_hosts_while_tilde_still_maps() {
+        // trace: `~` is in `MAP` and in `HOST_CHORD_KEYS` → mapped, no flip.
+        assert_eq!(full_width_mapped("~").as_deref(), Some("～"));
+        assert!(!is_width_flip_key("~"));
+        assert!(is_width_flip_key(","));
+        assert!(is_width_flip_key("<"));
+        assert!(!is_width_flip_key("5"));
     }
 
     #[test]

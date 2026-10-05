@@ -129,7 +129,8 @@ final class KeyEventSnapshotTests: XCTestCase {
     }
 
     /// Exactly ⌃ on a mapped key: another chording modifier beside it, a key
-    /// the policy does not map, or a bare key is no flip.
+    /// the policy does not map or leaves to the host (⌃⇧` is VS Code's New
+    /// Terminal), or a bare key is no flip.
     func testWidthFlipChord_needsExactlyControlOnAMappedKey() throws {
         let withCommand = try KeyEventSnapshot(TestFixtures.keyDownEvent(
             characters: ",", modifiers: [.control, .command], charactersIgnoringModifiers: ",",
@@ -146,7 +147,10 @@ final class KeyEventSnapshotTests: XCTestCase {
         let quote = try KeyEventSnapshot(TestFixtures.keyDownEvent(
             characters: "\"", modifiers: .control, charactersIgnoringModifiers: "\"",
         ))
-        for key in [withCommand, withOption, letter, hyphen, quote] {
+        let tilde = try KeyEventSnapshot(TestFixtures.keyDownEvent(
+            characters: "`", modifiers: [.control, .shift], charactersIgnoringModifiers: "~",
+        ))
+        for key in [withCommand, withOption, letter, hyphen, quote, tilde] {
             XCTAssertNil(key.widthFlipCharacter, "\(key)")
         }
         XCTAssertNil(textSnapshot(",").widthFlipCharacter)

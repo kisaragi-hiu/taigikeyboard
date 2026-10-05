@@ -11,4 +11,4 @@ pub use auto_space::{
     augment_insert, is_gate_active, raw_preedit_writes_romanization, should_append_space,
     AugmentedInsert,
 };
-pub use full_width::{document_punctuation, full_width_mapped};
+pub use full_width::{document_punctuation, full_width_mapped, is_width_flip_key};

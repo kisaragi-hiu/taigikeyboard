@@ -122,16 +122,17 @@ extension KeyEventSnapshot {
     /// The punctuation key under a width-flip chord, or nil when this key is
     /// not one: exactly ⌃ among the four chording modifiers, ⇧ allowed since it
     /// picks the key (`⌃⇧,` is `⌃<`), and the key one `FullWidthPunctuation`
-    /// maps. Read off `charactersIgnoringModifiers` because Control rewrites
-    /// what some keys type (`⌃[` arrives as Escape). Which width comes out is
-    /// the controller's call: the chord means "the other one", and only the
-    /// controller knows which one the mode would have typed.
+    /// flips (`isWidthFlipKey`). Read off `charactersIgnoringModifiers`
+    /// because Control rewrites what some keys type (`⌃[` arrives as Escape).
+    /// Which width comes out is the controller's call: the chord means "the
+    /// other one", and only the controller knows which one the mode would have
+    /// typed.
     var widthFlipCharacter: Character? {
         let chording = modifiers.intersection(Self.chordingModifiers)
         guard chording.subtracting(.shift) == Self.widthFlipModifiers else { return nil }
         guard !isNamedSpecialKey,
               let unmodified = charactersIgnoringModifiers,
-              FullWidthPunctuation.mapped(unmodified) != nil
+              FullWidthPunctuation.isWidthFlipKey(unmodified)
         else { return nil }
         return unmodified.first
     }

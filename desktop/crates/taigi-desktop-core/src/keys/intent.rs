@@ -469,10 +469,10 @@ impl ComposingKeyIntent {
     /// The punctuation key under a width-flip chord, or `None` when `key` is
     /// not one: exactly Ctrl among the chording modifiers, Shift allowed
     /// since it picks the key (Ctrl+Shift+, is Ctrl+<), and the key one the
-    /// full-width policy maps. Read off the unmodified characters because
-    /// Ctrl rewrites what a key types. Which width comes out is the session's
-    /// call: the chord means "the other one", and only the session knows
-    /// which one the mode would have typed. macOS keeps a Swift twin:
+    /// full-width policy flips (`policies::is_width_flip_key`). Read off the
+    /// unmodified characters because Ctrl rewrites what a key types. Which
+    /// width comes out is the session's call: the chord means "the other
+    /// one", and only the session knows which one the mode would have typed. macOS keeps a Swift twin:
     /// `KeyEventSnapshot.swift` `widthFlipCharacter`.
     pub fn width_flip_character(key: &KeyEventSnapshot) -> Option<char> {
         let chording = KeyModifiers {
@@ -483,7 +483,9 @@ impl ComposingKeyIntent {
             return None;
         }
         let unmodified = key.unmodified_characters()?;
-        crate::policies::full_width_mapped(unmodified)?;
+        if !crate::policies::is_width_flip_key(unmodified) {
+            return None;
+        }
         unmodified.chars().next()
     }
 
@@ -1342,7 +1344,8 @@ mod tests {
 
     #[test]
     fn width_flip_needs_exactly_control_on_a_mapped_key() {
-        // Another host chord beside Ctrl, a key the policy does not map, a
+        // Another host chord beside Ctrl, a key the policy does not map or
+        // leaves to the host (Ctrl+Shift+` is VS Code's New Terminal), a
         // named key, a bare key: all the host's or the ordinary text rule's.
         let with_alt =
             KeyEventSnapshot::chord(None, ",", KeyModifiers::CONTROL.with(KeyModifiers::ALT));
@@ -1351,8 +1354,12 @@ mod tests {
         let letter = KeyEventSnapshot::chord(Some("\u{13}"), "s", KeyModifiers::CONTROL);
         let hyphen = KeyEventSnapshot::chord(None, "-", KeyModifiers::CONTROL);
         let quote = KeyEventSnapshot::chord(None, "\"", KeyModifiers::CONTROL);
+        let tilde =
+            KeyEventSnapshot::chord(None, "~", KeyModifiers::CONTROL.with(KeyModifiers::SHIFT));
         let arrow = KeyEventSnapshot::navigation(NavigationKey::LeftArrow, KeyModifiers::CONTROL);
-        for key in [&with_alt, &with_win, &letter, &hyphen, &quote, &arrow] {
+        for key in [
+            &with_alt, &with_win, &letter, &hyphen, &quote, &tilde, &arrow,
+        ] {
             assert_eq!(
                 ComposingKeyIntent::width_flip_character(key),
                 None,
@@ -1360,10 +1367,13 @@ mod tests {
             );
             assert_eq!(classify(key, false, false), ComposingKeyIntent::PassThrough);
         }
-        assert_eq!(
-            classify(&letter, true, true),
-            ComposingKeyIntent::CommitThenPassThrough
-        );
+        for key in [&letter, &tilde] {
+            assert_eq!(
+                classify(key, true, true),
+                ComposingKeyIntent::CommitThenPassThrough,
+                "{key:?}"
+            );
+        }
         assert_eq!(ComposingKeyIntent::width_flip_character(&text(",")), None);
     }
 
