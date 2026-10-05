@@ -39,10 +39,22 @@ enum FullWidthPunctuation {
         "<": "《", ">": "》",
         "'": "、",
         // The shifted number row (`⇧2`…`⇧8`, `⇧-`, `⇧=`): symbols the MOE table
-        // also writes full-width. `!` `(` `)` above complete the row.
-        "@": "＠", "#": "＃", "$": "＄", "%": "％", "^": "＾", "&": "＆", "*": "＊",
+        // also writes full-width. `!` `(` `)` above complete the row; `~` (⇧ on
+        // the backtick key) is its first key (user report 2026-09-28).
+        "~": "～", "@": "＠", "#": "＃", "$": "＄", "%": "％", "^": "＾", "&": "＆", "*": "＊",
         "_": "＿", "+": "＋",
     ]
+
+    /// Mapped keys whose ⌃ chord stays the host's instead of flipping the
+    /// width: ⌃⇧` (`~`) is VS Code's New Terminal on every desktop.
+    private static let hostChordKeys: Set<Character> = ["~"]
+
+    /// Whether ⌃ on the key that typed `text` flips the punctuation width: a
+    /// mapped key outside `hostChordKeys` (the desktop core's
+    /// `is_width_flip_key`).
+    static func isWidthFlipKey(_ text: String) -> Bool {
+        mapped(text) != nil && !text.contains(where: hostChordKeys.contains)
+    }
 
     /// The full-width form of one typed character, or nil when the key is not
     /// punctuation this policy maps. Multi-character strings are never mapped:

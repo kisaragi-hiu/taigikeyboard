@@ -34,13 +34,21 @@ final class FullWidthPunctuationTests: XCTestCase {
             "{": "『", "}": "』",
             "<": "《", ">": "》",
             "'": "、",
-            "@": "＠", "#": "＃", "$": "＄", "%": "％", "^": "＾", "&": "＆", "*": "＊",
+            "~": "～", "@": "＠", "#": "＃", "$": "＄", "%": "％", "^": "＾", "&": "＆", "*": "＊",
             "_": "＿", "+": "＋",
         ]
 
         for (typed, fullWidth) in expected {
             XCTAssertEqual(FullWidthPunctuation.mapped(typed), fullWidth, "for \(typed)")
         }
+    }
+
+    func testTilde_mapsButItsControlChordStaysTheHosts() {
+        // trace: `~` is in `map` and in `hostChordKeys` → mapped, no flip.
+        XCTAssertEqual(FullWidthPunctuation.mapped("~"), "～")
+        XCTAssertFalse(FullWidthPunctuation.isWidthFlipKey("~"))
+        XCTAssertTrue(FullWidthPunctuation.isWidthFlipKey(","))
+        XCTAssertFalse(FullWidthPunctuation.isWidthFlipKey("5"))
     }
 
     func testToneDigitsSyllableCharactersAndTheHyphen_neverMap() {
