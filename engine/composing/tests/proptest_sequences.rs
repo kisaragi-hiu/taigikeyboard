@@ -59,6 +59,12 @@ fn arb_intent() -> impl Strategy<Value = Intent> {
         Just(Intent::MoveCaret {
             direction: Some(CaretDirection::Right)
         }),
+        Just(Intent::MoveCaret {
+            direction: Some(CaretDirection::Start)
+        }),
+        Just(Intent::MoveCaret {
+            direction: Some(CaretDirection::End)
+        }),
         any::<u8>().prop_map(|b| Intent::TelexKey {
             key: ["v", "y", "d", "z", "f"][usize::from(b % 5)].to_string(),
         }),

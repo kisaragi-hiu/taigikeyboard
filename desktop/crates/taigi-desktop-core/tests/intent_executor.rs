@@ -511,6 +511,35 @@ fn tps_moving_the_caret_shuts_the_window() {
     assert_eq!(rig.calls(), ["list closed"]);
 }
 
+/// The caret jumps (Ctrl+↑ / Ctrl+↓) leave a TL window and its list as they
+/// are — no refetch, nothing told to the surface — as a step does; under TPS
+/// they take the window down, as a step does (D7).
+#[test]
+fn the_caret_jumps_keep_a_tl_window_and_shut_a_tps_one() {
+    let mut rig = new_rig(false);
+    rig.type_word("tsiah");
+    let shown = rig.list.len();
+    assert!(shown > 0);
+    for direction in [CaretDirection::Start, CaretDirection::End] {
+        assert!(rig.run(ComposingKeyIntent::MoveCaret(direction), &no_key()));
+        assert_eq!(rig.manager.raw_input(), "tsiah", "{direction:?}");
+        assert_eq!(rig.list.len(), shown, "{direction:?}");
+        assert!(rig.calls().is_empty(), "{direction:?}: {:?}", rig.calls());
+    }
+    drop(rig);
+
+    let mut rig = new_tps_rig();
+    rig.type_tps("ㄏㄛˋ");
+    rig.open_window();
+    assert!(rig.run(
+        ComposingKeyIntent::MoveCaret(CaretDirection::Start),
+        &no_key()
+    ));
+    assert!(rig.list.is_empty());
+    assert_eq!(rig.calls(), ["list closed"]);
+    assert_eq!(rig.manager.raw_input(), "ㄏㄛˋ");
+}
+
 #[test]
 fn tps_space_after_an_open_syllable_is_taken_as_the_separator() {
     let mut rig = new_tps_rig();

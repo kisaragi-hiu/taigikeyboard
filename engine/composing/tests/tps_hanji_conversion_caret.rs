@@ -321,6 +321,38 @@ fn a_reopen_keeps_the_segments_before_the_last() {
     assert_eq!(nailed(&engine).len(), 1);
 }
 
+// Start and End jump over every word at once and never re-open. trace:
+// "ㄒㄧˋㄒㄧ " → 死 (0, 8) + 詩 (8, 15), caret 15. Start → 0 (display 0);
+// End → 15 (display 2). Then pick 是 over 死 (caret 8 first): "是詩", tail
+// "ㄒㄧ ", caret at its end. Start → 0 (display 1, after 是), and Start
+// again is no effect — 是 stays nailed, where a Left would re-open it.
+#[test]
+fn start_and_end_jump_over_the_words_and_never_reopen() {
+    let _lock = engine_install_lock();
+    install_fixture_with(&[]);
+    let config = config_converting("tps");
+    let (mut engine, _) = composing_engine("ㄒㄧˋㄒㄧ ", &config);
+    let words = converted_words(&engine);
+
+    let response = step(&mut engine, CaretDirection::Start, &config);
+    assert_eq!(effect_kinds(&response.effect), vec!["UpdatePreedit"]);
+    assert_eq!((raw_caret(&engine), caret_utf16(&response)), (0, 0));
+    let response = step(&mut engine, CaretDirection::End, &config);
+    assert_eq!(effect_kinds(&response.effect), vec!["UpdatePreedit"]);
+    assert_eq!((raw_caret(&engine), caret_utf16(&response)), (15, 2));
+    assert_eq!(converted_words(&engine), words);
+
+    step(&mut engine, CaretDirection::Left, &config);
+    let response = engine.apply(pick("是", "sī", 8), &config);
+    assert_eq!(display(&response), "是詩");
+    let response = step(&mut engine, CaretDirection::Start, &config);
+    assert_eq!(caret_utf16(&response), 1);
+    let response = step(&mut engine, CaretDirection::Start, &config);
+    assert!(response.effect.is_empty());
+    assert_eq!(nailed(&engine).len(), 1);
+    assert_eq!(display(&response), "是詩");
+}
+
 // Without the switch, and on a romanization buffer with it, the start of the
 // tail stays an edge (MoveCaret's contract): nothing re-opens.
 #[test]

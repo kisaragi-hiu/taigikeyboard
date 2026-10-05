@@ -3,17 +3,31 @@
 
 use super::action::ComposingAction;
 use super::bindings::ComposingKeyBindings;
-use super::snapshot::{KeyEventSnapshot, KeyModifiers, NavigationKey};
+use super::snapshot::{KeyEventSnapshot, KeyModifiers, LineEdgeKey, NavigationKey};
 use super::tone_input_scheme::ToneInputScheme;
 use super::tps_layout::{is_layout_glyph, tps_glyph_for_event};
 use crate::platform::DesktopPlatform;
 use crate::settings::InputMode;
 
-/// One step of the caret inside the composition (`ComposingKeyIntent::MoveCaret`).
+/// One move of the caret inside the composition
+/// (`ComposingKeyIntent::MoveCaret`): a step, or a jump to the start / end
+/// of what is still being typed.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum CaretDirection {
     Left,
     Right,
+    Start,
+    End,
+}
+
+impl From<LineEdgeKey> for CaretDirection {
+    /// Home / End: the start / end of the composition.
+    fn from(key: LineEdgeKey) -> Self {
+        match key {
+            LineEdgeKey::Home => Self::Start,
+            LineEdgeKey::End => Self::End,
+        }
+    }
 }
 
 impl CaretDirection {
@@ -23,6 +37,17 @@ impl CaretDirection {
             NavigationKey::LeftArrow => Some(Self::Left),
             NavigationKey::RightArrow => Some(Self::Right),
             _ => None,
+        }
+    }
+
+    /// The move an arrow asks for under the caret chord: ← / → step, ↑ / ↓
+    /// jump to the start / end — the host's own paragraph jump under the
+    /// same modifier (⌥↑ on the Mac, Ctrl+↑ in Word).
+    pub fn under_caret_chord(key: Option<NavigationKey>) -> Option<Self> {
+        match key? {
+            NavigationKey::UpArrow => Some(Self::Start),
+            NavigationKey::DownArrow => Some(Self::End),
+            other => Self::horizontal(Some(other)),
         }
     }
 }
@@ -121,10 +146,11 @@ pub enum ComposingKeyIntent {
     OpenCandidates,
     /// Take the window down and keep composing — Escape over a TPS window.
     CloseCandidates,
-    /// Step the caret inside the romanization being typed, so the next
-    /// character lands there — `ka2`, Ctrl+← Ctrl+←, `h` → `kha2`. The
+    /// Move the caret inside the romanization being typed, so the next
+    /// character lands there — `ka2`, Ctrl+← Ctrl+←, `h` → `kha2`; Ctrl+↑ /
+    /// Ctrl+↓ jump to the start / end of what is still pending. The
     /// engine owns the caret (`MoveCaret`); the window, if up, is left
-    /// exactly as it is.
+    /// exactly as it is under TL / POJ and taken down under TPS (D7).
     MoveCaret(CaretDirection),
     /// Commit whichever candidate the window has highlighted, as the output
     /// settings render it.
@@ -168,13 +194,25 @@ impl ComposingKeyIntent {
         let modifiers = key.modifiers;
 
         // Tier 0 — the caret inside the composition, on Ctrl+← / Ctrl+→
-        // (⌥ on the Mac). Fixed, not recordable, shown read-only on the
-        // Shortcuts pane (USER 2026-09-09). Exactly the one modifier:
-        // Ctrl+Shift+← stays the host's selection, Ctrl+Alt+← its shortcut.
-        // Idle, the chord is the host's.
+        // (⌥ on the Mac), and to its start / end on Ctrl+↑ / Ctrl+↓
+        // (Discord request, maintainer 2026-10-05). Fixed, not recordable,
+        // shown read-only on the Shortcuts pane (USER 2026-09-09). Exactly
+        // the one modifier: Ctrl+Shift+← stays the host's selection,
+        // Ctrl+Alt+← its shortcut. Idle, the chord is the host's.
         if is_composing && modifiers == caret_chord_modifiers(platform) {
-            if let Some(direction) = CaretDirection::horizontal(key.navigation_key) {
+            if let Some(direction) = CaretDirection::under_caret_chord(key.navigation_key) {
                 return Self::MoveCaret(direction);
+            }
+        }
+        // Bare Home / End do the same jump (maintainer 2026-10-05): the
+        // convention of Microsoft IME, Kotoeri, McBopomofo and librime
+        // (`references/mozc/src/data/keymap/ms-ime.tsv`, `kotoeri.tsv`,
+        // `McBopomofo/Source/KeyHandler.mm` `isHome`,
+        // `librime/src/rime/gear/navigator.cc`). With a modifier — Shift+Home
+        // selects — and idle, they stay the host's.
+        if is_composing && modifiers.is_empty() {
+            if let Some(edge) = key.line_edge_key {
+                return Self::MoveCaret(edge.into());
             }
         }
 
@@ -715,6 +753,56 @@ mod tests {
         }
     }
 
+    /// Ctrl+↑ / Ctrl+↓ (⌥ on the Mac) jump to the start / end of what is
+    /// being typed — window up or not, under TL and under TPS (tier 0 is read
+    /// before the TPS keys, whose plain ↑ / ↓ open the window). Idle, they
+    /// are the host's paragraph jump.
+    #[test]
+    fn caret_chord_up_and_down_jump_to_the_start_and_end() {
+        for platform in [
+            DesktopPlatform::Windows,
+            DesktopPlatform::Linux,
+            DesktopPlatform::MacOS,
+        ] {
+            let chord = caret_chord_modifiers(platform);
+            let up = KeyEventSnapshot::navigation(NavigationKey::UpArrow, chord);
+            let down = KeyEventSnapshot::navigation(NavigationKey::DownArrow, chord);
+            for is_showing_candidates in [true, false] {
+                assert_eq!(
+                    classify_on(&up, true, is_showing_candidates, platform),
+                    ComposingKeyIntent::MoveCaret(CaretDirection::Start),
+                    "{platform:?}"
+                );
+                assert_eq!(
+                    classify_on(&down, true, is_showing_candidates, platform),
+                    ComposingKeyIntent::MoveCaret(CaretDirection::End),
+                    "{platform:?}"
+                );
+                for (key, direction) in [(&up, CaretDirection::Start), (&down, CaretDirection::End)]
+                {
+                    assert_eq!(
+                        ComposingKeyIntent::intent(
+                            key,
+                            true,
+                            is_showing_candidates,
+                            &tps_bindings(),
+                            platform
+                        ),
+                        ComposingKeyIntent::MoveCaret(direction),
+                        "TPS on {platform:?}"
+                    );
+                }
+            }
+            for key in [&up, &down] {
+                assert_eq!(
+                    classify_on(key, false, false, platform),
+                    ComposingKeyIntent::PassThrough,
+                    "idle on {platform:?}"
+                );
+            }
+        }
+    }
+
     #[test]
     fn control_arrow_is_the_hosts_word_jump_when_nothing_is_composing() {
         for platform in WINDOWS_AND_LINUX {
@@ -727,10 +815,59 @@ mod tests {
         }
     }
 
-    /// Only exactly Ctrl: with Shift it is the host's selection, with Alt or
-    /// Win its shortcut — and Ctrl+↑ is not a caret key at all.
+    /// Bare Home / End jump to the start / end while composing — window up
+    /// or not, TL or TPS, every desktop — and never drive the window. With a
+    /// modifier (Shift+Home selects) or idle they stay the host's.
     #[test]
-    fn control_arrow_with_any_other_chord_or_vertical_belongs_to_the_host() {
+    fn home_and_end_jump_to_the_start_and_end_while_composing() {
+        for platform in [
+            DesktopPlatform::Windows,
+            DesktopPlatform::Linux,
+            DesktopPlatform::MacOS,
+        ] {
+            for (edge, direction) in [
+                (LineEdgeKey::Home, CaretDirection::Start),
+                (LineEdgeKey::End, CaretDirection::End),
+            ] {
+                let key = KeyEventSnapshot::line_edge(edge, KeyModifiers::NONE);
+                for is_showing_candidates in [true, false] {
+                    assert_eq!(
+                        classify_on(&key, true, is_showing_candidates, platform),
+                        ComposingKeyIntent::MoveCaret(direction),
+                        "{edge:?} on {platform:?}"
+                    );
+                    assert_eq!(
+                        ComposingKeyIntent::intent(
+                            &key,
+                            true,
+                            is_showing_candidates,
+                            &tps_bindings(),
+                            platform
+                        ),
+                        ComposingKeyIntent::MoveCaret(direction),
+                        "TPS {edge:?} on {platform:?}"
+                    );
+                }
+                assert_eq!(
+                    classify_on(&key, false, false, platform),
+                    ComposingKeyIntent::PassThrough,
+                    "idle {edge:?} on {platform:?}"
+                );
+                let shifted = KeyEventSnapshot::line_edge(edge, KeyModifiers::SHIFT);
+                assert_eq!(
+                    classify_on(&shifted, true, true, platform),
+                    ComposingKeyIntent::CommitThenPassThrough,
+                    "Shift+{edge:?} on {platform:?}"
+                );
+            }
+        }
+    }
+
+    /// Only exactly Ctrl: with Shift it is the host's selection, with Alt or
+    /// Win its shortcut — on ↑ / ↓ as on ← / →. Paging keys are never caret
+    /// keys.
+    #[test]
+    fn control_arrow_with_any_other_chord_or_a_paging_key_belongs_to_the_host() {
         let cases = [
             (
                 NavigationKey::LeftArrow,
@@ -742,7 +879,14 @@ mod tests {
             ),
             (NavigationKey::LeftArrow, KeyModifiers::ALT),
             (NavigationKey::LeftArrow, KeyModifiers::WIN),
-            (NavigationKey::UpArrow, KeyModifiers::CONTROL),
+            (
+                NavigationKey::UpArrow,
+                KeyModifiers::CONTROL.with(KeyModifiers::SHIFT),
+            ),
+            (
+                NavigationKey::DownArrow,
+                KeyModifiers::CONTROL.with(KeyModifiers::ALT),
+            ),
             (NavigationKey::PageDown, KeyModifiers::CONTROL),
         ];
         for platform in WINDOWS_AND_LINUX {
@@ -786,12 +930,15 @@ mod tests {
             KeyModifiers::ALT.with(KeyModifiers::SHIFT),
             KeyModifiers::ALT.with(KeyModifiers::WIN),
         ] {
-            let snapshot = KeyEventSnapshot::navigation(NavigationKey::LeftArrow, modifiers);
-            assert_eq!(
-                classify_on(&snapshot, true, true, mac),
-                ComposingKeyIntent::CommitThenPassThrough,
-                "{modifiers:?}"
-            );
+            // ⌃↑ is Mission Control: the host's, like ⌃←.
+            for key in [NavigationKey::LeftArrow, NavigationKey::UpArrow] {
+                let snapshot = KeyEventSnapshot::navigation(key, modifiers);
+                assert_eq!(
+                    classify_on(&snapshot, true, true, mac),
+                    ComposingKeyIntent::CommitThenPassThrough,
+                    "{key:?} under {modifiers:?}"
+                );
+            }
         }
         assert_eq!(caret_chord_modifiers(mac), KeyModifiers::ALT);
         assert_eq!(WIDTH_FLIP_MODIFIERS, KeyModifiers::CONTROL);

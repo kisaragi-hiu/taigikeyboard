@@ -565,6 +565,27 @@ fn move_caret_and_typing_after_a_nail_keep_the_hanji_first_rendering() {
     );
 }
 
+/// Ctrl+↑ / Ctrl+↓ jump the drawn caret to the start / end of the
+/// composition in one move; a jump to where it already is tells the host
+/// nothing. trace, as the step test above: 家罷, caret 2.
+#[test]
+fn the_caret_jumps_to_the_start_and_end() {
+    let _lock = engine_lock();
+    let mut rig = rig();
+    rig.type_tps(&GA_BA);
+    rig.manager
+        .move_caret(CaretDirection::Start, &mut rig.recorder);
+    assert_eq!(rig.manager.display_caret_utf16(), 0);
+    rig.recorder.effects.clear();
+    rig.manager
+        .move_caret(CaretDirection::Start, &mut rig.recorder);
+    assert!(rig.recorder.effects.is_empty());
+    rig.manager
+        .move_caret(CaretDirection::End, &mut rig.recorder);
+    assert_eq!(rig.manager.display_caret_utf16(), 2);
+    assert_eq!(rig.manager.display_text(), "家罷");
+}
+
 #[test]
 fn move_caret_at_the_start_changes_nothing() {
     let _lock = engine_lock();

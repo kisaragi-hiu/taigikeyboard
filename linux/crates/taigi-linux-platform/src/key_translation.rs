@@ -17,7 +17,7 @@
 //! bare modifier press answer `None`, which the engine turns into "not
 //! handled" so the client processes the key itself.
 
-use taigi_desktop_core::keys::{KeyEventSnapshot, KeyModifiers, NavigationKey};
+use taigi_desktop_core::keys::{KeyEventSnapshot, KeyModifiers, LineEdgeKey, NavigationKey};
 use xkeysym::{key, Keysym};
 
 /// The modifier bits IBus packs into `state` (ibus `src/ibustypes.h:70-97`).
@@ -105,6 +105,7 @@ pub fn snapshot(event: RawKeyEvent) -> Option<KeyEventSnapshot> {
         modifiers: state.modifiers,
         is_named_special_key: is_named_special_keysym(keysym),
         navigation_key: navigation_key(keysym),
+        line_edge_key: line_edge_key(keysym),
     })
 }
 
@@ -157,6 +158,14 @@ fn navigation_key(keysym: Keysym) -> Option<NavigationKey> {
         key::Down | key::KP_Down => Some(NavigationKey::DownArrow),
         key::Page_Up | key::KP_Page_Up => Some(NavigationKey::PageUp),
         key::Page_Down | key::KP_Page_Down => Some(NavigationKey::PageDown),
+        _ => None,
+    }
+}
+
+fn line_edge_key(keysym: Keysym) -> Option<LineEdgeKey> {
+    match keysym.raw() {
+        key::Home | key::KP_Home => Some(LineEdgeKey::Home),
+        key::End | key::KP_End => Some(LineEdgeKey::End),
         _ => None,
     }
 }
@@ -320,6 +329,12 @@ mod tests {
         let home = press(key::Home, 110, 0).unwrap();
         assert!(home.is_named_special_key);
         assert_eq!(home.navigation_key, None);
+        assert_eq!(home.line_edge_key, Some(LineEdgeKey::Home));
+        assert_eq!(
+            press(key::KP_End, 87, 0).unwrap().line_edge_key,
+            Some(LineEdgeKey::End)
+        );
+        assert_eq!(left.line_edge_key, None);
         assert!(press(key::F5, 71, 0).unwrap().is_named_special_key);
     }
 

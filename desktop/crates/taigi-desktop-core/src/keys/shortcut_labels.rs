@@ -28,17 +28,27 @@ pub fn cancel_key_label(platform: DesktopPlatform) -> &'static str {
     }
 }
 
-/// `Ctrl+←  Ctrl+→` (the Mac's `⌥←  ⌥→`), named by the same modifier
-/// labels the recorder rows use, from the modifier the classifier reads.
+/// `Ctrl+←  Ctrl+→  Ctrl+↑  Ctrl+↓  Home  End` (the Mac's
+/// `⌥←  ⌥→  ⌥↑  ⌥↓  ↖  ↘`): the chords named by the same modifier labels the
+/// recorder rows use, from the modifier the classifier reads, then the bare
+/// Home / End keycap legends.
 pub fn caret_chords_label(platform: DesktopPlatform) -> String {
-    ["←", "→"]
-        .map(|arrow| {
-            ComposingKeyChord {
-                key: arrow.to_owned(),
-                modifiers: caret_chord_modifiers(platform),
-            }
-            .display(platform)
-        })
+    let chords = ["←", "→", "↑", "↓"].map(|arrow| {
+        ComposingKeyChord {
+            key: arrow.to_owned(),
+            modifiers: caret_chord_modifiers(platform),
+        }
+        .display(platform)
+    });
+    let edges = match platform {
+        DesktopPlatform::Windows | DesktopPlatform::Linux => ["Home", "End"],
+        DesktopPlatform::MacOS => ["↖", "↘"],
+    };
+    chords
+        .iter()
+        .map(String::as_str)
+        .chain(edges)
+        .collect::<Vec<_>>()
         .join("  ")
 }
 
@@ -113,7 +123,10 @@ mod tests {
         // Windows and Linux, whose label is "Ctrl"; `display` joins with "+"
         // (read by running the functions, 2026-09-30).
         for platform in WINDOWS_AND_LINUX {
-            assert_eq!(caret_chords_label(platform), "Ctrl+←  Ctrl+→");
+            assert_eq!(
+                caret_chords_label(platform),
+                "Ctrl+←  Ctrl+→  Ctrl+↑  Ctrl+↓  Home  End"
+            );
             assert_eq!(width_flip_chords_label(platform), "Ctrl+,  Ctrl+.  Ctrl+;");
             assert_eq!(navigation_keys_label(platform), "←  →  ↑  ↓  PgUp  PgDn");
             assert_eq!(cancel_key_label(platform), "Esc");
@@ -125,7 +138,7 @@ mod tests {
         // trace: caret ⌥ (`caret_chord_modifiers`), width flip ⌃
         // (`WIDTH_FLIP_MODIFIERS`), the Mac's ⇞ ⇟ ⎋ legends, no separator.
         let mac = DesktopPlatform::MacOS;
-        assert_eq!(caret_chords_label(mac), "⌥←  ⌥→");
+        assert_eq!(caret_chords_label(mac), "⌥←  ⌥→  ⌥↑  ⌥↓  ↖  ↘");
         assert_eq!(width_flip_chords_label(mac), "⌃,  ⌃.  ⌃;");
         assert_eq!(navigation_keys_label(mac), "←  →  ↑  ↓  ⇞  ⇟");
         assert_eq!(cancel_key_label(mac), "⎋");

@@ -99,6 +99,34 @@ fn move_caret_steps_one_char_emits_only_update_preedit() {
 }
 
 #[test]
+fn move_caret_jumps_to_the_start_and_end_of_the_tail() {
+    // trace: "ka2" → display "ká", caret 3 (end, display 2). End at the end:
+    // no move, no effect. Start → 0 (display 0), one UpdatePreedit; Start
+    // again → no effect. End → 3; the folded tone digit draws it at 2.
+    let mut engine = start("ka2");
+    let resp = move_caret(&mut engine, CaretDirection::End);
+    assert!(resp.effect.is_empty());
+    assert_eq!(caret_of(&engine), 3);
+
+    let resp = move_caret(&mut engine, CaretDirection::Start);
+    assert_eq!(kinds(&resp), vec!["UpdatePreedit"]);
+    assert_eq!(caret_of(&engine), 0);
+    assert_eq!(preedit(&resp).caret_utf16, 0);
+    assert!(move_caret(&mut engine, CaretDirection::Start)
+        .effect
+        .is_empty());
+
+    // From the middle (← once from the end: caret 2) End goes to 3.
+    move_caret(&mut engine, CaretDirection::End);
+    move_caret(&mut engine, CaretDirection::Left);
+    assert_eq!(caret_of(&engine), 2);
+    let resp = move_caret(&mut engine, CaretDirection::End);
+    assert_eq!(kinds(&resp), vec!["UpdatePreedit"]);
+    assert_eq!(caret_of(&engine), 3);
+    assert_eq!(preedit(&resp).caret_utf16, 2);
+}
+
+#[test]
 fn move_caret_when_idle_is_a_snapshot() {
     let mut engine = Engine::new();
     let resp = move_caret(&mut engine, CaretDirection::Left);
@@ -349,6 +377,57 @@ fn hanji_first_prefix_has_no_space_before_the_tail() {
         &config,
     );
     assert_eq!(preedit(&resp).caret_utf16, 1);
+}
+
+#[test]
+fn start_stops_at_the_tail_after_a_nailed_segment() {
+    // trace: "tsua", nail 珠 over "tsu" → pending "a", display "珠 a"
+    // (prefix 2 units). Start → raw caret 0 = display 2, right after the
+    // prefix; Start again: no effect, still one segment nailed (Start never
+    // re-opens). End → back to 1 (display 3).
+    let mut engine = start("tsua");
+    engine.apply(
+        Intent::CommitContinuous {
+            canonical_text: "珠".to_string(),
+            association_tl: String::new(),
+            hanji: None,
+            consumed_bytes: 3,
+            syllable_count: 1,
+            script: Some(CommitScript::Roman),
+            roman: "珠".to_string(),
+        },
+        &config_tl(),
+    );
+    let resp = move_caret(&mut engine, CaretDirection::Start);
+    assert_eq!(kinds(&resp), vec!["UpdatePreedit"]);
+    assert_eq!(caret_of(&engine), 0);
+    assert_eq!(preedit(&resp).caret_utf16, 2);
+    let resp = move_caret(&mut engine, CaretDirection::Start);
+    assert!(resp.effect.is_empty());
+    assert_eq!(preedit(&resp).display_text, "珠 a");
+
+    let resp = move_caret(&mut engine, CaretDirection::End);
+    assert_eq!(caret_of(&engine), 1);
+    assert_eq!(preedit(&resp).caret_utf16, 3);
+}
+
+#[test]
+fn move_caret_on_the_wire_decodes_start_and_end() {
+    let mut engine = start("ka2");
+    let apply = |engine: &mut Engine, direction: protos::engine::CaretDirection| {
+        requests::handle(
+            &req(Method::MoveCaret(MoveCaret {
+                direction: direction as i32,
+            })),
+            engine,
+            &config_tl(),
+        )
+        .expect("dispatch ok")
+    };
+    apply(&mut engine, protos::engine::CaretDirection::Start);
+    assert_eq!(caret_of(&engine), 0);
+    apply(&mut engine, protos::engine::CaretDirection::End);
+    assert_eq!(caret_of(&engine), 3);
 }
 
 #[test]

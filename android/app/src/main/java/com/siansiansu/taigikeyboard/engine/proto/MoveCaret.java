@@ -7,12 +7,15 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * Desktop only — step the caret inside the pending tail one Unicode scalar
- * value left or right (`⌥←` / `⌥→` on macOS, `Ctrl+←` / `Ctrl+→` on Windows). The
- * buffer does not change, so the response carries `UpdatePreedit` (with the
- * new `caret_utf16`) and NO `RefreshCandidates`: candidates, highlight and
- * page stay. At either edge of the pending tail — the caret never enters a
- * nailed segment — the request is a no-op with no effects. Every mutator
+ * Desktop only — move the caret inside the pending tail: LEFT / RIGHT step
+ * one Unicode scalar value (`⌥←` / `⌥→` on macOS, `Ctrl+←` / `Ctrl+→` on
+ * Windows and Linux), START / END jump to the tail's first / last position
+ * (`⌥↑` / `⌥↓`, `Ctrl+↑` / `Ctrl+↓`). The buffer does not change, so the
+ * response carries `UpdatePreedit` (with the new `caret_utf16`) and NO
+ * `RefreshCandidates`: candidates, highlight and page stay. A move the caret
+ * cannot make — a step past an edge of the pending tail (the caret never
+ * enters a nailed segment), a jump to the edge it already sits at — leaves it
+ * where it is, with no effects unless a conversion is rebuilt (below). Every mutator
  * then edits at the caret: `Append` inserts there, `DeleteBackward` /
  * `ReplaceLast` act on the character before it, `TelexKey` and `TpsKey` on
  * the chunk before it. Mobile never sends this, so its caret stays at the end and
@@ -22,7 +25,10 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * step left from the start of the tail with a segment nailed re-opens that
  * segment — its glyphs go back in front of the tail, the caret before them —
  * answering as `DeleteBackward`'s un-nail does (NextWord handshake,
- * `UpdatePreedit`, `RefreshCandidates`).
+ * `UpdatePreedit`, `RefreshCandidates`). START never re-opens: it stops at the
+ * tail's start. A tail the request converts and the phase holds no conversion
+ * for is walked first, and that new conversion is answered with
+ * `UpdatePreedit` even when the caret does not move.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.MoveCaret}
@@ -163,12 +169,15 @@ public  final class MoveCaret extends
 
   /**
    * <pre>
-   * Desktop only — step the caret inside the pending tail one Unicode scalar
-   * value left or right (`⌥←` / `⌥→` on macOS, `Ctrl+←` / `Ctrl+→` on Windows). The
-   * buffer does not change, so the response carries `UpdatePreedit` (with the
-   * new `caret_utf16`) and NO `RefreshCandidates`: candidates, highlight and
-   * page stay. At either edge of the pending tail — the caret never enters a
-   * nailed segment — the request is a no-op with no effects. Every mutator
+   * Desktop only — move the caret inside the pending tail: LEFT / RIGHT step
+   * one Unicode scalar value (`⌥←` / `⌥→` on macOS, `Ctrl+←` / `Ctrl+→` on
+   * Windows and Linux), START / END jump to the tail's first / last position
+   * (`⌥↑` / `⌥↓`, `Ctrl+↑` / `Ctrl+↓`). The buffer does not change, so the
+   * response carries `UpdatePreedit` (with the new `caret_utf16`) and NO
+   * `RefreshCandidates`: candidates, highlight and page stay. A move the caret
+   * cannot make — a step past an edge of the pending tail (the caret never
+   * enters a nailed segment), a jump to the edge it already sits at — leaves it
+   * where it is, with no effects unless a conversion is rebuilt (below). Every mutator
    * then edits at the caret: `Append` inserts there, `DeleteBackward` /
    * `ReplaceLast` act on the character before it, `TelexKey` and `TpsKey` on
    * the chunk before it. Mobile never sends this, so its caret stays at the end and
@@ -178,7 +187,10 @@ public  final class MoveCaret extends
    * step left from the start of the tail with a segment nailed re-opens that
    * segment — its glyphs go back in front of the tail, the caret before them —
    * answering as `DeleteBackward`'s un-nail does (NextWord handshake,
-   * `UpdatePreedit`, `RefreshCandidates`).
+   * `UpdatePreedit`, `RefreshCandidates`). START never re-opens: it stops at the
+   * tail's start. A tail the request converts and the phase holds no conversion
+   * for is walked first, and that new conversion is answered with
+   * `UpdatePreedit` even when the caret does not move.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.MoveCaret}

@@ -185,15 +185,17 @@ impl Conversion {
         pieces
     }
 
-    /// Where the caret goes from `caret` when a word lies on the side it
-    /// steps to: the far edge of that word. `None` when the next step is a
-    /// glyph between the words, or the edge of the tail.
+    /// Where a step from `caret` goes when a word lies on the side it steps
+    /// to: the far edge of that word. `None` when the next step is a glyph
+    /// between the words, or the edge of the tail. A jump to the tail's
+    /// start / end steps over no word (`move_caret` never asks).
     pub(crate) fn step_over_word(&self, caret: usize, direction: CaretDirection) -> Option<usize> {
         self.segments.iter().find_map(|segment| {
             let (start, end) = segment.raw_span;
             match direction {
                 CaretDirection::Left => (end == caret).then_some(start),
                 CaretDirection::Right => (start == caret).then_some(end),
+                CaretDirection::Start | CaretDirection::End => None,
             }
         })
     }

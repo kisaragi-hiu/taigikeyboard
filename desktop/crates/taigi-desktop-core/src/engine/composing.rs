@@ -112,8 +112,9 @@ pub fn delete_backward(
 
 /// Steps the caret one character inside the pending tail — under a TPS
 /// Hanji conversion, one converted word, and left from the start of the tail
-/// it re-opens the last nailed segment (`composing.proto` `MoveCaret`). A
-/// plain step leaves the buffer untouched, so the engine answers with an
+/// it re-opens the last nailed segment — or jumps it to the tail's start /
+/// end, which never re-opens (`composing.proto` `MoveCaret`). A plain move
+/// leaves the buffer untouched, so the engine answers with an
 /// `UpdatePreedit` carrying the new caret and nothing else — no fetch is
 /// requested. Same config as `append`: the answer re-renders the
 /// composition the way the last keystroke did, so a step never changes the
@@ -127,6 +128,8 @@ pub fn move_caret(
     let wire = match direction {
         CaretDirection::Left => WireCaretDirection::Left,
         CaretDirection::Right => WireCaretDirection::Right,
+        CaretDirection::Start => WireCaretDirection::Start,
+        CaretDirection::End => WireCaretDirection::End,
     };
     dispatch(
         composing_request::Method::MoveCaret(MoveCaret {

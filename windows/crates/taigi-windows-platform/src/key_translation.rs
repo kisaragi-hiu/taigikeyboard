@@ -21,8 +21,8 @@
 
 use crate::os_out_buffer;
 use taigi_desktop_core::keys::{
-    KeyEventSnapshot, KeyModifiers, NavigationKey, RecordedPress, LEFT_SHIFT_SCAN_CODE,
-    RIGHT_SHIFT_SCAN_CODE,
+    KeyEventSnapshot, KeyModifiers, LineEdgeKey, NavigationKey, RecordedPress,
+    LEFT_SHIFT_SCAN_CODE, RIGHT_SHIFT_SCAN_CODE,
 };
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     GetKeyboardLayout, VIRTUAL_KEY, VK_BACK, VK_CAPITAL, VK_CONTROL, VK_DELETE, VK_DOWN, VK_END,
@@ -118,6 +118,14 @@ fn navigation_key(virtual_key: u16) -> Option<NavigationKey> {
     }
 }
 
+fn line_edge_key(virtual_key: u16) -> Option<LineEdgeKey> {
+    match virtual_key {
+        code if code == VK_HOME.0 => Some(LineEdgeKey::Home),
+        code if code == VK_END.0 => Some(LineEdgeKey::End),
+        _ => None,
+    }
+}
+
 /// Keys the platform names rather than types: the navigation keys, Home /
 /// End / Insert / forward Delete and the function keys. Return, Tab,
 /// Escape and Backspace are NOT named here — they type a control
@@ -194,6 +202,7 @@ pub fn snapshot(virtual_key: u16, scan_code: u32) -> Option<KeyEventSnapshot> {
         modifiers,
         is_named_special_key: is_named_special_key(virtual_key),
         navigation_key: navigation_key(virtual_key),
+        line_edge_key: line_edge_key(virtual_key),
     })
 }
 
