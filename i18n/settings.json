@@ -197,14 +197,19 @@
       "values": { "hanji": "連紲拍 nn → ⁿ", "tailo": "Liân-suà phah nn -> ⁿ", "poj": "Liân-sòa phah nn -> ⁿ", "en": "Double-tap nn → ⁿ", "ja": "nn を続けて入力 → ⁿ" }
     },
     "nasalMarkerUppercase": {
-      "comment": "Toggle label: the POJ nasal marker follows the case of the letters before it (SIÂᴺ); off, it is always ⁿ (SIÂⁿ). Default ON. All four platforms, host settings only.",
+      "comment": "Picker label: how the POJ nasal marker is written in capitals — the stored switch, true = ᴺ (nasalMarkerUppercaseCapital, the default), false = ⁿ (nasalMarkerUppercaseSmall). All five platforms, host settings only.",
       "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host"] },
-      "values": { "hanji": "大本字時 ⁿ 轉做 ᴺ", "tailo": "Tuā-pún-jī sî ⁿ tsuán tsò ᴺ", "poj": "Tōa-pún-jī sî ⁿ choán chò ᴺ", "en": "ⁿ becomes ᴺ in capitals", "ja": "大文字では ⁿ を ᴺ に" }
+      "values": { "hanji": "白話字大本字的鼻音符號輸出", "tailo": "Pe̍h-uē-jī tuā-pún-jī ê phīnn-im hû-hō su-tshut", "poj": "Pe̍h-ōe-jī tōa-pún-jī ê phīⁿ-im hû-hō su-chhut", "en": "Nasal mark in POJ capitals", "ja": "白話字の大文字での鼻音記号" }
     },
-    "nasalMarkerUppercaseInfo": {
-      "comment": "Help text for the ⁿ becomes ᴺ in capitals toggle (mobile host app).",
-      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "拍大本字的時陣，鼻音記號 ⁿ 嘛寫做大本字 ᴺ（SIÂᴺ）。關掉了後永遠寫小本字 ⁿ（SIÂⁿ）。", "tailo": "Phah tuā-pún-jī ê sî-tsūn, phīnn-im kì-hō ⁿ mā siá tsò tuā-pún-jī ᴺ (SIÂᴺ). Kuainn tiāu liáu-āu íng-uán siá sió-pún-jī ⁿ (SIÂⁿ).", "poj": "Phah tōa-pún-jī ê sî-chūn, phīⁿ-im kì-hō ⁿ mā siá chò tōa-pún-jī ᴺ (SIÂᴺ). Koaiⁿ tiāu liáu-āu éng-oán siá sió-pún-jī ⁿ (SIÂⁿ).", "en": "When you type in capitals, the nasal marker ⁿ is written as its capital ᴺ (SIÂᴺ). Off, it is always ⁿ (SIÂⁿ).", "ja": "大文字で入力すると鼻音記号 ⁿ も大文字の ᴺ になります（SIÂᴺ）。オフにすると常に ⁿ になります（SIÂⁿ）。" }
+    "nasalMarkerUppercaseCapital": {
+      "comment": "Picker value (default): in capitals the nasal marker follows the letters before it, ᴺ (SIÂᴺ).",
+      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host"] },
+      "values": { "hanji": "ᴺ（SIÂᴺ）", "tailo": "ᴺ (SIÂᴺ)", "poj": "ᴺ (SIÂᴺ)", "en": "ᴺ (SIÂᴺ)", "ja": "ᴺ（SIÂᴺ）" }
+    },
+    "nasalMarkerUppercaseSmall": {
+      "comment": "Picker value: the nasal marker is always the small ⁿ, even in capitals (SIÂⁿ).",
+      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host"] },
+      "values": { "hanji": "ⁿ（SIÂⁿ）", "tailo": "ⁿ (SIÂⁿ)", "poj": "ⁿ (SIÂⁿ)", "en": "ⁿ (SIÂⁿ)", "ja": "ⁿ（SIÂⁿ）" }
     },
     "tpsOrMapsToER": {
       "comment": "Toggle label: render TL 'or' final as TPS ㄜ.",

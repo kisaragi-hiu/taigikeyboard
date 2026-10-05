@@ -134,9 +134,12 @@ struct GeneralSettingsView: View {
                 // output's shape.
                 Toggle(language.string(.settingsHyphenlessRoman), isOn: $isHyphenlessRomanEnabled)
 
-                // ⁿ becomes ᴺ in capitals (§53): the other switch that shapes the output's
-                // romanization.
-                Toggle(language.string(.settingsNasalMarkerUppercase), isOn: $isNasalMarkerUppercaseEnabled)
+                // Nasal mark in POJ capitals (§53): the other setting that shapes the
+                // output's romanization — a pop-up over the stored switch, ᴺ or ⁿ.
+                Picker(language.string(.settingsNasalMarkerUppercase), selection: $isNasalMarkerUppercaseEnabled) {
+                    Text(language.string(.settingsNasalMarkerUppercaseCapital)).tag(true)
+                    Text(language.string(.settingsNasalMarkerUppercaseSmall)).tag(false)
+                }
 
                 // The space after a commit: the last thing the output stage
                 // does.

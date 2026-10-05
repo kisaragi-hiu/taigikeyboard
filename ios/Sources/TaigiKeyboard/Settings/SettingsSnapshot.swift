@@ -9,7 +9,7 @@ struct SettingsSnapshot {
     let keyboardLayoutType: KeyboardLayoutType
     let isHanjiFirst: Bool
     let isTpsOrMappedToER: Bool
-    /// ⁿ becomes ᴺ in capitals (§53): the `nn` key label and the suggestion case transform read it.
+    /// Nasal mark in POJ capitals (§53): the `nn` key label and the suggestion case transform read it.
     let isNasalMarkerUppercaseEnabled: Bool
     let keyFontSizeScale: CGFloat
     let keyCornerRadius: CGFloat

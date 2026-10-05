@@ -39,7 +39,7 @@ final class SharedSettings {
 
     private static let isDoubleTapOOEnabledKey: SettingsKey<Bool> = .bool("enableDoubleTapOO", default: true)
     private static let isDoubleTapNNEnabledKey: SettingsKey<Bool> = .bool("enableDoubleTapNN", default: true)
-    /// ⁿ becomes ᴺ in capitals ships ON on all four platforms (USER 2026-09-22).
+    /// Nasal mark in POJ capitals ships ᴺ on every platform (USER 2026-09-22).
     private static let isNasalMarkerUppercaseEnabledKey: SettingsKey<Bool> = .bool("nasalMarkerUppercaseEnabled", default: true)
     /// Hanji-first out of the box (USER 2026-09-18): the hanji is the title,
     /// the romanization the subtitle, and a commit writes the hanji. Same
@@ -165,7 +165,7 @@ final class SharedSettings {
         set { userDefaults.set(newValue, for: Self.isDoubleTapNNEnabledKey) }
     }
 
-    /// ⁿ becomes ᴺ in capitals (§53): the POJ nasal marker follows the case of the letters
+    /// Nasal mark in POJ capitals (§53): the POJ nasal marker follows the case of the letters
     /// before it (`SIÂᴺ`); off, always `ⁿ`. Reaches the engine through
     /// `pojMarkerOptions` (inverted as `AppConfig.force_lowercase_nasal_marker`)
     /// and the case ops; the `nn` key label reads it off `SettingsSnapshot`.

@@ -8,7 +8,8 @@ use super::PageContext;
 use adw::prelude::*;
 use taigi_desktop_core::keys::ToneInputScheme;
 use taigi_desktop_core::settings::presentation::{
-    display_language_label, output_script_label, OUTPUT_SCRIPTS, WEBSITE_URL,
+    display_language_label, nasal_marker_style_label, output_script_label, NASAL_MARKER_STYLES,
+    OUTPUT_SCRIPTS, WEBSITE_URL,
 };
 use taigi_desktop_core::settings::{
     keys, InputMode, InputModeRequest, SettingChoice, SettingsDocument,
@@ -80,10 +81,30 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
         StringKey::SettingsHyphenlessRoman,
         keys::IS_HYPHENLESS_ROMAN_ENABLED,
     );
-    context.switch_row(
+    // Nasal mark in POJ capitals (§53): a pop-up over the stored switch, ᴺ or ⁿ.
+    let nasal_marker_labels = NASAL_MARKER_STYLES
+        .iter()
+        .map(|is_uppercase| {
+            context
+                .strings
+                .resolve(nasal_marker_style_label(*is_uppercase))
+                .to_owned()
+        })
+        .collect();
+    context.picker_row(
         &group,
-        StringKey::SettingsNasalMarkerUppercase,
-        keys::IS_NASAL_MARKER_UPPERCASE_ENABLED,
+        context
+            .strings
+            .resolve(StringKey::SettingsNasalMarkerUppercase),
+        nasal_marker_labels,
+        NASAL_MARKER_STYLES,
+        context
+            .document
+            .bool(&keys::IS_NASAL_MARKER_UPPERCASE_ENABLED),
+        |is_uppercase, document| {
+            document.set_bool(&keys::IS_NASAL_MARKER_UPPERCASE_ENABLED, is_uppercase)
+        },
+        |document| document.bool(&keys::IS_NASAL_MARKER_UPPERCASE_ENABLED),
     );
     context.switch_row(
         &group,

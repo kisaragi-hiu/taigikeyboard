@@ -342,7 +342,7 @@ class PrefHelper(
 
     var enableDoubleTapNN: Boolean by preference(PreferenceKeys.ENABLE_DOUBLE_TAP_NN, true)
 
-    // ⁿ becomes ᴺ in capitals (§53): the POJ nasal marker follows the case of the letters before
+    // Nasal mark in POJ capitals (§53): the POJ nasal marker follows the case of the letters before
     // it (`SIÂᴺ`); off, always `ⁿ`. Reaches the engine through `pojMarkerOptions`
     // (inverted as `AppConfig.force_lowercase_nasal_marker`) and the case ops.
     // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift:isNasalMarkerUppercaseEnabled (ON).

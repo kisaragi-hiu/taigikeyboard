@@ -45,7 +45,7 @@ protocol EngineSettings {
     // Drift causes silent divergence (one platform still shows hyphens).
     var isHyphenlessRomanEnabled: Bool { get }
 
-    /// The POJ marker options (double-tap folds + ⁿ becomes ᴺ in capitals, §53) bundled as a
+    /// The POJ marker options (double-tap folds + Nasal mark in POJ capitals, §53) bundled as a
     /// live-read value so `ComposingState` / `ToneConverter` can stay
     /// Foundation-pure.
     var pojMarkerOptions: PojMarkerOptions { get }
