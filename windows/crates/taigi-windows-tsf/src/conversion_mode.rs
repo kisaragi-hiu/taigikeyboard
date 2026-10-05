@@ -5,7 +5,7 @@
 //! `TF_CONVERSIONMODE_NATIVE` set means the service is composing in its own
 //! script, cleared means it is passing alphanumeric text through
 //! (<https://learn.microsoft.com/en-us/windows/win32/tsf/flags-for-conversion-mode>).
-//! Our own tray letter and mode flash tell the USER which mode is on; this is
+//! Our own tray icon and mode flash tell the USER which mode is on; this is
 //! what tells an application, a framework or an accessibility client, which
 //! ask TSF rather than look at our window.
 //!

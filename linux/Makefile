@@ -166,6 +166,11 @@ install: build component install-fcitx5
 	for size in 16 22 24 32 48 64 128 256; do \
 	  install -Dm644 data/icons/hicolor/$${size}x$${size}/apps/taigikeyboard.png $(DESTDIR)$(PREFIX)/share/icons/hicolor/$${size}x$${size}/apps/taigikeyboard.png || exit 1; \
 	done
+	# The tray / panel mode indicator, one icon per state
+	# (`ModeIndicator::icon_name`, drawn by tools/desktop/make-app-icon.swift).
+	for icon in data/icons/hicolor/*/apps/taigikeyboard-*.png; do \
+	  install -Dm644 "$$icon" "$(DESTDIR)$(PREFIX)/share/$${icon#data/}" || exit 1; \
+	done
 	# The bundled typefaces (the ones macOS and Windows ship), as fontconfig
 	# fallbacks for the Han characters the desktop's fonts lack (roadmap L4);
 	# users pick them in Fcitx5 / IBus (L7).
@@ -204,7 +209,7 @@ uninstall:
 	rm -f $(DESTDIR)$(PREFIX)/share/ibus/component/taigikeyboard.xml
 	rm -rf $(DESTDIR)$(PREFIX)/share/taigikeyboard
 	rm -f $(DESTDIR)$(PREFIX)/share/applications/tw.taigikeyboard.Settings.desktop
-	rm -f $(DESTDIR)$(PREFIX)/share/icons/hicolor/*/apps/taigikeyboard.png
+	rm -f $(DESTDIR)$(PREFIX)/share/icons/hicolor/*/apps/taigikeyboard.png $(DESTDIR)$(PREFIX)/share/icons/hicolor/*/apps/taigikeyboard-*.png
 	rm -rf $(DESTDIR)$(FONTDIR_TTF) $(DESTDIR)$(FONTDIR_OTF)
 	rm -rf $(DESTDIR)$(LICENSEDIR)
 	$(if $(DESTDIR),,-fc-cache $(PREFIX)/share/fonts)

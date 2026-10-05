@@ -90,7 +90,7 @@ const _: () = assert!(!IS_AUTO_SPACE_ENABLED.default);
 
 // RETIRED 2026-09-05 (USER): `shiftTogglesEnglishEnabled`. The Shift tap now
 // switches Chinese/English unconditionally — the General pane is a 1:1 mirror of the Mac's,
-// which has no such row, and the tray letter plus the mode flash already say
+// which has no such row, and the tray icon plus the mode flash already say
 // which mode is on. The spelling is permanently reserved: a stored `false`
 // still sits in existing `settings.json` files (Windows has no retired-key
 // sweep), so a future configurable feature must use a NEW key rather than

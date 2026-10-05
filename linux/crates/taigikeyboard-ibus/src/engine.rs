@@ -32,11 +32,12 @@ const PREEDIT_MODE_COMMIT: u32 = 1;
 /// shells must agree.
 const HIDDEN_INPUT_PURPOSES: [u32; 2] = [8, 9];
 
-/// The panel menu's root property (roadmap L6): its `symbol` is what the
-/// panel indicator shows for this engine, its sub-properties the rows. The
-/// key is the one GNOME Shell reads the indicator text from
+/// The panel menu's root property (roadmap L6): its `symbol` and `icon` are
+/// what the panel indicator shows for this engine, its sub-properties the
+/// rows. The key is the one GNOME Shell reads the indicator text from
 /// (`js/ui/status/keyboard.js`, GNOME 46: only `InputMode`, and only a
-/// symbol of one or two characters).
+/// symbol of one or two characters) and the one the component file names
+/// as `<icon_prop_key>` for the other panels (ibus `ui/gtk3/panel.vala`).
 const MENU_ROOT_KEY: &str = "InputMode";
 
 pub struct Engine {
@@ -167,12 +168,16 @@ fn table_value(content: &LookupTableContent) -> Value<'static> {
     .to_value()
 }
 
-/// The menu root: a `PROP_TYPE_MENU` whose symbol is the mode label and
-/// whose sub-properties mirror `chrome::menu_items` row for row — the
-/// recorded chord rides in the tooltip, the one text column the panel
-/// draws beside a row.
+/// The menu root: a `PROP_TYPE_MENU` whose symbol and icon are the mode
+/// indicator and whose sub-properties mirror `chrome::menu_items` row for
+/// row — the recorded chord rides in the tooltip, the one text column the
+/// panel draws beside a row. Label, symbol and icon come from one settings
+/// snapshot, so a change made in the settings window between two reads
+/// cannot split them.
 fn menu_root_value(runtime: &Runtime) -> Value<'static> {
-    let label = chrome::mode_label(runtime);
+    let settings = runtime.settings.current();
+    let label = chrome::mode_label(runtime, &settings);
+    let indicator = chrome::mode_indicator(&settings);
     let rows = chrome::menu_items(runtime);
     let sub_props = rows
         .iter()
@@ -183,6 +188,7 @@ fn menu_root_value(runtime: &Runtime) -> Value<'static> {
                 kind: PropType::Separator,
                 label: "",
                 tooltip: "",
+                icon: "",
                 symbol: "",
                 sub_props: Vec::new(),
             }
@@ -192,6 +198,7 @@ fn menu_root_value(runtime: &Runtime) -> Value<'static> {
                 kind: PropType::Normal,
                 label: title,
                 tooltip: detail.as_deref().unwrap_or(""),
+                icon: "",
                 symbol: "",
                 sub_props: Vec::new(),
             }
@@ -203,7 +210,8 @@ fn menu_root_value(runtime: &Runtime) -> Value<'static> {
         kind: PropType::Menu,
         label: &label,
         tooltip: "",
-        symbol: chrome::mode_symbol(runtime),
+        icon: indicator.icon_name(),
+        symbol: indicator.symbol(),
         sub_props,
     }
     .to_value()

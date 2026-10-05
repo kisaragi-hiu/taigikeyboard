@@ -35,8 +35,8 @@ const PRODUCT_NAME: &str = "TaigiKeyboard";
 pub const PRODUCT_NAME_STRING_ID: u16 = 100;
 const COMPANY_NAME: &str = "Soo Bîn-hiân 蘇民弦 <info@taigikeyboard.tw>";
 const COPYRIGHT: &str = "Copyright (c) 2025-2026 Soo Bîn-hiân 蘇民弦. Apache License 2.0.";
-/// `lang_bar::ICON_RESOURCE_ID` and `RegisterProfile`'s icon index 0 both
-/// name the first (only) icon resource.
+/// The app icon: `RegisterProfile`'s icon index 0 names the first icon
+/// resource, and 1 sorts before every mode icon (`mode_icons.rs`).
 const ICON_RESOURCE_ID: u16 = 1;
 
 /// VERSIONINFO `FILETYPE`. Each build script that includes this file uses
@@ -54,6 +54,10 @@ pub struct Resources<'a> {
     pub original_filename: &'a str,
     pub file_type: FileType,
     pub with_icon: bool,
+    /// Extra ICON resources as (id, file stem under `resources/mode/`):
+    /// the text service's tray icons (`taigi-windows-tsf/src/mode_icons.rs`).
+    /// Empty for the settings exe.
+    pub mode_icons: &'a [(u16, &'a str)],
 }
 
 pub fn embed(resources: Resources<'_>) {
@@ -61,6 +65,15 @@ pub fn embed(resources: Resources<'_>) {
     let icon = manifest_dir.join("../../resources/TaigiKeyboard.ico");
     let shared = manifest_dir.join("../../build-support/resource.rs");
     println!("cargo:rerun-if-changed={}", icon.display());
+    let mode_icons: Vec<(u16, PathBuf)> = resources
+        .mode_icons
+        .iter()
+        .map(|(id, name)| {
+            let path = manifest_dir.join(format!("../../resources/mode/{name}.ico"));
+            println!("cargo:rerun-if-changed={}", path.display());
+            (*id, path)
+        })
+        .collect();
     println!("cargo:rerun-if-changed={}", shared.display());
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-env-changed=RC");
@@ -72,7 +85,7 @@ pub fn embed(resources: Resources<'_>) {
     }
     let out_dir = PathBuf::from(env::var("OUT_DIR").expect("out dir"));
     let script = out_dir.join("resources.rc");
-    std::fs::write(&script, render(&resources, &icon)).expect("write resources.rc");
+    std::fs::write(&script, render(&resources, &icon, &mode_icons)).expect("write resources.rc");
     let required = env::var("TAIGI_REQUIRE_RESOURCES").as_deref() == Ok("1");
     match compile(&script, &out_dir, required) {
         Some(object) => println!("cargo:rustc-link-arg={}", object.display()),
@@ -87,7 +100,7 @@ pub fn embed(resources: Resources<'_>) {
     }
 }
 
-fn render(resources: &Resources<'_>, icon: &Path) -> String {
+fn render(resources: &Resources<'_>, icon: &Path, mode_icons: &[(u16, PathBuf)]) -> String {
     let version = env::var("CARGO_PKG_VERSION").expect("version");
     let mut parts = version
         .split('.')
@@ -97,14 +110,20 @@ fn render(resources: &Resources<'_>, icon: &Path) -> String {
         parts.next().unwrap_or(0),
         parts.next().unwrap_or(0),
     );
-    let icon_line = if resources.with_icon {
+    let icon_entry = |id: u16, path: &Path| {
         format!(
-            "{ICON_RESOURCE_ID} ICON \"{}\"\n",
-            icon.display().to_string().replace('\\', "\\\\")
+            "{id} ICON \"{}\"\n",
+            path.display().to_string().replace('\\', "\\\\")
         )
+    };
+    let mut icon_line = if resources.with_icon {
+        icon_entry(ICON_RESOURCE_ID, icon)
     } else {
         String::new()
     };
+    for (id, path) in mode_icons {
+        icon_line.push_str(&icon_entry(*id, path));
+    }
     format!(
         r#"#pragma code_page(65001)
 {icon_line}{string_tables}

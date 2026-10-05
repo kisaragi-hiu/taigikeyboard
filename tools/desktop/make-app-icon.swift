@@ -1,20 +1,27 @@
-// Generates the desktop app icon — macos/App/AppIcon.icns,
-// windows/resources/TaigiKeyboard.ico and the Linux hicolor PNG set under
-// linux/data/icons — from one 台 outline, so the three desktop platforms
-// cannot drift apart. Run it by hand after changing anything below:
+// Generates the desktop icons from glyph outlines on one tile, so the three
+// desktop platforms cannot drift apart:
+//
+// - the app icon — macos/App/AppIcon.icns, windows/resources/TaigiKeyboard.ico
+//   and the Linux hicolor PNG set under linux/data/icons — from one 台;
+// - the input-mode indicator icons, one per `ModeIndicator`
+//   (desktop/crates/taigi-desktop-core/src/mode_indicator.rs): Windows
+//   windows/resources/mode/<name>.ico and Linux hicolor <name>.png, drawn from
+//   that mode's symbol (台 / Ts / 白 / Ch / 方 / 英).
+//
+// Run it by hand after changing anything below:
 //
 //     swift tools/desktop/make-app-icon.swift
 //     swift tools/desktop/make-app-icon.swift --check   (verify, write nothing)
 //
 // Requires macOS: it rasterises through CoreText and packs the .icns with
-// `iconutil`. That is fine because BOTH outputs are committed artefacts —
-// the Windows release build consumes the .ico and never regenerates it. Do
-// NOT wire this into bundle-app.sh, release-app.sh, a Cargo build script or
-// a Makefile release prerequisite: generating during a build would let the
-// build machine's font version and rasteriser decide what ships.
+// `iconutil`. That is fine because every output is a committed artefact —
+// the Windows release build consumes the .ico files and never regenerates
+// them. Do NOT wire this into bundle-app.sh, release-app.sh, a Cargo build
+// script or a Makefile release prerequisite: generating during a build would
+// let the build machine's font version and rasteriser decide what ships.
 //
 // iOS and Android keep the "Tâi" wordmark and are not touched here. This
-// script reads nothing under ios/ or android/ and writes only the two paths
+// script reads nothing under ios/ or android/ and writes only the paths
 // named above.
 //
 // The mark is the one the Mac menu bar already wears (scripts/
@@ -30,14 +37,34 @@ import ImageIO
 
 // MARK: - The design
 
-let glyph = "台"
+let appGlyph = "台"
 let fontPostScriptName = "PingFangTC-Semibold"
-/// The outline this icon was approved with. `NSFont(name:)` substitutes rather
+/// The outline each mark was approved with. `NSFont(name:)` substitutes rather
 /// than fails for some names, and Apple can change a glyph under a stable
 /// PostScript name in an OS update — either would silently reshape a committed
 /// artefact. Regenerating then fails loudly instead of producing a diff nobody
-/// can read. Update this ONLY together with a reviewed icon change.
-let approvedOutlineFingerprint = "4a24567095da319efa0f0284986163581c459b300822c1b7fadc9efbb5c76f81"
+/// can read. Update an entry ONLY together with a reviewed icon change.
+let approvedOutlineFingerprints: [String: String] = [
+    "台": "4a24567095da319efa0f0284986163581c459b300822c1b7fadc9efbb5c76f81",
+    "Ts": "9a97aba6cd4cfbf3ef297d6876ee3f061ffd1fb41225ebbb96038819cd9d77d5",
+    "白": "da4bd709899fd47e2bc9e32706953bbe3fc95c8a9ce873865d9605022544dd1c",
+    "Ch": "e5fadb42e65c852e203556d85083999b014c77ed76d6a290ac3349eed9d1cca2",
+    "方": "b16abbf1b83c244ff77939f4f4bfd8d6c5118c7b06a54b60fa831b75cb66989d",
+    "英": "d7ab35ffc69e292455c3911dcd9ca2406e680557b1f5145bca890cbbeff465db",
+]
+
+/// `ModeIndicator::icon_name` → `ModeIndicator::symbol`, in the Rust order.
+/// The Rust test `icon_assets_exist_for_every_indicator` fails when a
+/// variant has no committed file here. English is Windows' Shift-tap mode
+/// alone; Linux has none, so it gets no Linux icon.
+let modeIcons: [(name: String, symbol: String, linux: Bool)] = [
+    ("taigikeyboard-tl-hanji", "台", true),
+    ("taigikeyboard-tl-romanization", "Ts", true),
+    ("taigikeyboard-poj-hanji", "白", true),
+    ("taigikeyboard-poj-romanization", "Ch", true),
+    ("taigikeyboard-tps", "方", true),
+    ("taigikeyboard-english", "英", false),
+]
 
 /// Sampled from the icon this replaces, so the new mark stays in the family:
 /// a pure white tile with Apple's near-black ink.
@@ -63,10 +90,15 @@ let iconsetMembers: [(name: String, pixels: Int)] = [
 /// tray, title bar and menus, 24 upward for the taskbar across DPI settings,
 /// and 256 as the largest an .ico can carry.
 let windowsSizes = [16, 20, 24, 32, 40, 48, 64, 96, 256]
+/// The taskbar input indicator only: 16 at 100% up to 32 at 200%, with room
+/// for the 250–300% steps.
+let windowsModeSizes = [16, 20, 24, 32, 40, 48, 64]
 /// The freedesktop hicolor sizes a desktop looks an application icon up at
 /// (`linux/data/icons/hicolor/<size>x<size>/apps/taigikeyboard.png`): the
 /// settings window's own icon and the input method's in the panel menus.
 let linuxSizes = [16, 22, 24, 32, 48, 64, 128, 256]
+/// A tray or panel indicator: 16–24 at 1×, up to 48 at 2×.
+let linuxModeSizes = [16, 22, 24, 32, 48, 64]
 
 // MARK: - Paths
 
@@ -77,8 +109,11 @@ let repositoryRoot = URL(fileURLWithPath: #filePath)
 let icnsURL = repositoryRoot.appendingPathComponent("macos/App/AppIcon.icns")
 let icoURL = repositoryRoot.appendingPathComponent("windows/resources/TaigiKeyboard.ico")
 let icoPacker = repositoryRoot.appendingPathComponent("tools/windows/make-ico.py")
-func linuxIconURL(_ size: Int) -> URL {
-    repositoryRoot.appendingPathComponent("linux/data/icons/hicolor/\(size)x\(size)/apps/taigikeyboard.png")
+func linuxIconURL(_ size: Int, name: String = "taigikeyboard") -> URL {
+    repositoryRoot.appendingPathComponent("linux/data/icons/hicolor/\(size)x\(size)/apps/\(name).png")
+}
+func windowsModeIconURL(_ name: String) -> URL {
+    repositoryRoot.appendingPathComponent("windows/resources/mode/\(name).ico")
 }
 
 let isCheckOnly = CommandLine.arguments.contains("--check")
@@ -88,28 +123,47 @@ func fail(_ message: String) -> Never {
     exit(1)
 }
 
-// MARK: - The glyph
+// MARK: - The glyphs
 
-/// The glyph as an outline, so it centres on its own ink rather than on a text
+/// The text as one outline, so it centres on its own ink rather than on a text
 /// line box — a CJK glyph's line box carries ascender and descender slack that
-/// would push it visibly off centre at 16 px.
-func glyphOutline() -> CGPath {
+/// would push it visibly off centre at 16 px. Laid out by CoreText, so a
+/// two-letter mark keeps the font's own advances and kerning; a single glyph
+/// sits at the origin, so its outline is the bare glyph path.
+func textOutline(_ text: String) -> CGPath {
     guard let font = NSFont(name: fontPostScriptName, size: 100) else {
         fail("font '\(fontPostScriptName)' is not installed")
     }
     guard font.fontName == fontPostScriptName else {
         fail("font '\(fontPostScriptName)' resolved to '\(font.fontName)'")
     }
-    var characters = Array(glyph.utf16)
-    var glyphID = CGGlyph()
     let ctFont = font as CTFont
-    guard characters.count == 1,
-          CTFontGetGlyphsForCharacters(ctFont, &characters, &glyphID, 1),
-          let path = CTFontCreatePathForGlyph(ctFont, glyphID, nil)
-    else {
-        fail("'\(glyph)' has no outline in \(fontPostScriptName)")
+    let attributed = NSAttributedString(string: text, attributes: [.font: font])
+    let line = CTLineCreateWithAttributedString(attributed)
+    let outline = CGMutablePath()
+    var glyphCount = 0
+    for run in CTLineGetGlyphRuns(line) as! [CTRun] {
+        let runFont = (CTRunGetAttributes(run) as NSDictionary)[kCTFontAttributeName] as! CTFont
+        guard CTFontCopyPostScriptName(runFont) as String == fontPostScriptName else {
+            fail("'\(text)' fell back to \(CTFontCopyPostScriptName(runFont))")
+        }
+        let count = CTRunGetGlyphCount(run)
+        var glyphs = [CGGlyph](repeating: 0, count: count)
+        var positions = [CGPoint](repeating: .zero, count: count)
+        CTRunGetGlyphs(run, CFRange(location: 0, length: count), &glyphs)
+        CTRunGetPositions(run, CFRange(location: 0, length: count), &positions)
+        for (glyph, position) in zip(glyphs, positions) {
+            guard let path = CTFontCreatePathForGlyph(ctFont, glyph, nil) else {
+                fail("'\(text)' has a glyph with no outline in \(fontPostScriptName)")
+            }
+            outline.addPath(path, transform: CGAffineTransform(translationX: position.x, y: position.y))
+            glyphCount += 1
+        }
     }
-    return path
+    guard glyphCount == text.count else {
+        fail("'\(text)' laid out as \(glyphCount) glyphs")
+    }
+    return outline
 }
 
 /// A stable serialisation of the outline's own segments — not of the file it
@@ -137,6 +191,32 @@ func fingerprint(of path: CGPath) -> String {
     }
     let digest = SHA256.hash(data: Data(text.utf8))
     return digest.map { String(format: "%02x", $0) }.joined()
+}
+
+/// The outline of `text`, checked against its approved fingerprint.
+func approvedOutline(_ text: String) -> CGPath {
+    let outline = textOutline(text)
+    let found = fingerprint(of: outline)
+    guard let approved = approvedOutlineFingerprints[text] else {
+        fail("'\(text)' has no entry in `approvedOutlineFingerprints`")
+    }
+    if approved == "PLACEHOLDER" {
+        FileHandle.standardError.write(Data("""
+            note: no approved outline fingerprint recorded yet for '\(text)'. This run's outline is
+                  \(found)
+                  Put it in `approvedOutlineFingerprints` once the icon is reviewed.
+
+            """.utf8))
+    } else if found != approved {
+        fail("""
+            '\(text)' in \(fontPostScriptName) no longer matches the approved outline.
+              approved: \(approved)
+              this Mac: \(found)
+            The font changed under a stable name. Review the rendered icon before
+            updating `approvedOutlineFingerprints`.
+            """)
+    }
+    return outline
 }
 
 // MARK: - Rasterising
@@ -214,79 +294,72 @@ func run(_ launchPath: String, _ arguments: [String]) -> Int32 {
 
 // MARK: - Main
 
-let outline = glyphOutline()
-let outlineFingerprint = fingerprint(of: outline)
-if approvedOutlineFingerprint == "PLACEHOLDER" {
-    FileHandle.standardError.write(Data("""
-        note: no approved outline fingerprint recorded yet. This run's outline is
-              \(outlineFingerprint)
-              Put it in `approvedOutlineFingerprint` once the icon is reviewed.
-
-        """.utf8))
-} else if outlineFingerprint != approvedOutlineFingerprint {
-    fail("""
-        '\(glyph)' in \(fontPostScriptName) no longer matches the approved outline.
-          approved: \(approvedOutlineFingerprint)
-          this Mac: \(outlineFingerprint)
-        The font changed under a stable name. Review the rendered icon before
-        updating `approvedOutlineFingerprint`.
-        """)
-}
-
 let staging = URL(fileURLWithPath: NSTemporaryDirectory())
     .appendingPathComponent("taigi-app-icon-\(ProcessInfo.processInfo.processIdentifier)")
 let iconset = staging.appendingPathComponent("AppIcon.iconset")
 try? FileManager.default.createDirectory(at: iconset, withIntermediateDirectories: true)
 defer { try? FileManager.default.removeItem(at: staging) }
 
+func stage(_ png: Data, as name: String, in directory: URL = staging) -> URL {
+    let url = directory.appendingPathComponent(name)
+    do { try png.write(to: url) } catch { fail("could not write \(url.path): \(error)") }
+    return url
+}
+
+/// Every output as (staged file, committed path), in the order they are
+/// written and reported.
+var outputs: [(staged: URL, committed: URL)] = []
+
+let appOutline = approvedOutline(appGlyph)
 for member in iconsetMembers {
-    let png = render(pixels: member.pixels, outline: outline)
-    let url = iconset.appendingPathComponent("\(member.name).png")
-    do { try png.write(to: url) } catch { fail("could not write \(url.path): \(error)") }
+    _ = stage(render(pixels: member.pixels, outline: appOutline), as: "\(member.name).png", in: iconset)
 }
-
-var linuxPages: [(staged: URL, committed: URL)] = []
-for size in linuxSizes {
-    let png = render(pixels: size, outline: outline)
-    let url = staging.appendingPathComponent("linux-\(size).png")
-    do { try png.write(to: url) } catch { fail("could not write \(url.path): \(error)") }
-    linuxPages.append((url, linuxIconURL(size)))
-}
-
-var windowsPages: [String] = []
-for size in windowsSizes {
-    let png = render(pixels: size, outline: outline)
-    let url = staging.appendingPathComponent("win-\(size).png")
-    do { try png.write(to: url) } catch { fail("could not write \(url.path): \(error)") }
-    windowsPages.append(url.path)
-}
-
-// Everything is rendered and packed into staging first, so a font, rasteriser,
-// `iconutil` or packer failure leaves BOTH committed artefacts untouched. The
-// two replacements below are then sequential, not transactional: a failure
-// between them (a full disk, a read-only checkout) can leave the .icns updated
-// and the .ico not. `git status` shows that immediately and a re-run fixes it,
-// which is proportionate for a generator run by hand.
 let stagedIcns = staging.appendingPathComponent("AppIcon.icns")
-let stagedIco = staging.appendingPathComponent("TaigiKeyboard.ico")
 guard run("/usr/bin/iconutil", ["--convert", "icns", iconset.path, "--output", stagedIcns.path]) == 0 else {
     fail("iconutil could not pack the iconset")
 }
-guard run("/usr/bin/env", ["python3", icoPacker.path, stagedIco.path] + windowsPages) == 0 else {
-    fail("make-ico.py could not pack the Windows icon")
+outputs.append((stagedIcns, icnsURL))
+
+/// Packs one .ico from `sizes` pages of `outline` into staging.
+func stageIco(_ outline: CGPath, sizes: [Int], name: String) -> URL {
+    let pages = sizes.map { stage(render(pixels: $0, outline: outline), as: "\(name)-win-\($0).png").path }
+    let ico = staging.appendingPathComponent("\(name).ico")
+    guard run("/usr/bin/env", ["python3", icoPacker.path, ico.path] + pages) == 0 else {
+        fail("make-ico.py could not pack \(name).ico")
+    }
+    return ico
 }
 
+outputs.append((stageIco(appOutline, sizes: windowsSizes, name: "TaigiKeyboard"), icoURL))
+for size in linuxSizes {
+    outputs.append((stage(render(pixels: size, outline: appOutline), as: "linux-\(size).png"), linuxIconURL(size)))
+}
+
+for mode in modeIcons {
+    let outline = approvedOutline(mode.symbol)
+    outputs.append((stageIco(outline, sizes: windowsModeSizes, name: mode.name), windowsModeIconURL(mode.name)))
+    for size in linuxModeSizes where mode.linux {
+        let png = render(pixels: size, outline: outline)
+        outputs.append((stage(png, as: "\(mode.name)-linux-\(size).png"), linuxIconURL(size, name: mode.name)))
+    }
+}
+
+// Everything is rendered and packed into staging first, so a font, rasteriser,
+// `iconutil` or packer failure leaves every committed artefact untouched. The
+// replacements below are then sequential, not transactional: a failure
+// between them (a full disk, a read-only checkout) can leave some outputs
+// updated and others not. `git status` shows that immediately and a re-run
+// fixes it, which is proportionate for a generator run by hand.
 if isCheckOnly {
-    let sameIcns = (try? Data(contentsOf: stagedIcns)) == (try? Data(contentsOf: icnsURL))
-    let sameIco = (try? Data(contentsOf: stagedIco)) == (try? Data(contentsOf: icoURL))
-    let sameLinux = linuxPages.allSatisfy { (try? Data(contentsOf: $0.staged)) == (try? Data(contentsOf: $0.committed)) }
-    print("AppIcon.icns        \(sameIcns ? "up to date" : "STALE")")
-    print("TaigiKeyboard.ico   \(sameIco ? "up to date" : "STALE")")
-    print("linux hicolor PNGs  \(sameLinux ? "up to date" : "STALE")")
-    exit(sameIcns && sameIco && sameLinux ? 0 : 1)
+    let stale = outputs.filter { (try? Data(contentsOf: $0.staged)) != (try? Data(contentsOf: $0.committed)) }
+    for output in stale {
+        print("STALE  \(output.committed.path.replacingOccurrences(of: repositoryRoot.path + "/", with: ""))")
+    }
+    print("\(outputs.count - stale.count) of \(outputs.count) outputs up to date")
+    exit(stale.isEmpty ? 0 : 1)
 }
 
-for (staged, committed) in [(stagedIcns, icnsURL), (stagedIco, icoURL)] + linuxPages.map { ($0.staged, $0.committed) } {
+for (staged, committed) in outputs {
     do {
         try FileManager.default.createDirectory(
             at: committed.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -299,6 +372,4 @@ for (staged, committed) in [(stagedIcns, icnsURL), (stagedIco, icoURL)] + linuxP
         fail("could not replace \(committed.path): \(error)")
     }
 }
-print("wrote \(icnsURL.path)")
-print("wrote \(icoURL.path)")
-print("wrote \(linuxPages.count) linux hicolor PNGs")
+print("wrote \(outputs.count) outputs")

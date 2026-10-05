@@ -18,7 +18,7 @@ pub mod session;
 mod trace;
 
 pub use chrome::{
-    activate_menu, menu_items, mode_label, mode_symbol, MenuItem, MENU_ABOUT, MENU_SETTINGS,
+    activate_menu, menu_items, mode_indicator, mode_label, MenuItem, MENU_ABOUT, MENU_SETTINGS,
 };
 pub use executor::{Emit, LookupTableContent};
 pub use runtime::{dictionary_version, FirstKeySetup, Runtime};

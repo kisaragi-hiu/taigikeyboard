@@ -145,12 +145,15 @@ final class TaigiInputControllerShortcutTests: XCTestCase {
         XCTAssertEqual(flashes, ["白話字", "台羅"])
     }
 
-    /// The Hanji/romanization swap does not announce itself: it changes how the candidates on
-    /// screen render, and they re-render where the user is already looking.
-    func testTheTranslateSwap_raisesNoFlash() {
+    /// With no list on screen the swap names what a commit now writes: the
+    /// menu-bar icon is one static mark (D5), so nothing else would. (Over an
+    /// open list it stays silent — `TaigiInputControllerCandidateTests`.)
+    func testTheTranslateSwap_withNoList_announcesWhatACommitNowWrites() {
         controller.performShortcutAction(.toggleTranslateSwapped)
+        XCTAssertEqual(flashes, ["羅馬字"])
 
-        XCTAssertEqual(flashes, [])
+        controller.performShortcutAction(.toggleTranslateSwapped)
+        XCTAssertEqual(flashes, ["羅馬字", "漢字"])
     }
 
     /// Under the romanization-only display the swap has nothing to swap, so

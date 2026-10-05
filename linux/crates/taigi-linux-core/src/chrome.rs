@@ -16,8 +16,10 @@ use crate::selection::LookupSelection;
 use crate::session::{self, EngineState, SymbolPicker, PAGE_SIZE};
 use taigi_desktop_core::composing::{insert_symbol, represent_list, ContextToken};
 use taigi_desktop_core::keys::{
-    menu_rows, telex_guide_rows, ComposingKeyBindings, MenuCommand, ShortcutAction, MENU,
+    menu_rows, telex_guide_rows, ComposingKeyBindings, LanguageMode, MenuCommand, ShortcutAction,
+    MENU,
 };
+use taigi_desktop_core::mode_indicator::ModeIndicator;
 use taigi_desktop_core::settings::{keys, InputMode, InputModeRequest, SettingsDocument};
 use taigi_desktop_core::strings::StringKey;
 use taigi_desktop_core::symbols::SymbolTable;
@@ -73,13 +75,14 @@ fn menu_id(command: MenuCommand) -> Option<&'static str> {
     }
 }
 
-/// The label the panel shows beside the icon: the romanization and the
-/// candidate display mode, the two states the global chords switch and the
-/// mode flash names on the other desktops (`台羅 · 漢字優先`). TPS alone
-/// under TPS, where the display mode switches nothing.
-pub fn mode_label(runtime: &Runtime) -> String {
+/// The full mode text — the Fcitx5 notice and the IBus menu root's label:
+/// the romanization and the candidate display mode, the two states the
+/// global chords switch and the mode flash names on the other desktops
+/// (`台羅 · 漢羅對應`). TPS alone under TPS, where the display mode switches
+/// nothing. Not the whole indicator state: under side by side, what a commit
+/// writes is the swap's, which [`mode_indicator`] carries.
+pub fn mode_label(runtime: &Runtime, settings: &SettingsDocument) -> String {
     let strings = runtime.strings();
-    let settings = runtime.settings.current();
     let input_mode: InputMode = settings.choice(&keys::INPUT_MODE);
     if input_mode == InputMode::Tps {
         return strings.resolve(input_mode.label_key()).to_owned();
@@ -93,16 +96,12 @@ pub fn mode_label(runtime: &Runtime) -> String {
     )
 }
 
-/// The indicator text for a panel that draws at most two characters: GNOME
-/// Shell shows an IBus engine's `InputMode` property symbol in the top bar
-/// only when it is one or two characters long (`js/ui/status/keyboard.js`,
-/// GNOME 46). The input mode alone, as two hanji.
-pub fn mode_symbol(runtime: &Runtime) -> &'static str {
-    match runtime.settings.current().choice(&keys::INPUT_MODE) {
-        InputMode::Tl => "台羅",
-        InputMode::Poj => "白話",
-        InputMode::Tps => "方音",
-    }
+/// The tray / panel indicator: its symbol is the IBus `InputMode` text and
+/// the Fcitx5 label, its icon name the Fcitx5 sub-mode icon and the IBus
+/// property icon. Linux has no English mode — switching engines is the
+/// desktop's (roadmap L6).
+pub fn mode_indicator(settings: &SettingsDocument) -> ModeIndicator {
+    ModeIndicator::of(&settings.engine_settings(), LanguageMode::Taigi)
 }
 
 /// A menu row was activated (`PropertyActivate` / `SimpleAction::Activated`).
@@ -200,6 +199,9 @@ pub fn perform_global(
             let settings = runtime.settings.current();
             represent_open_list(runtime, token, state, &settings, false);
             session::present_table(state, &settings, &bindings, &mut emits);
+            // What a commit writes is on the indicator (`mode_indicator`).
+            // Not announced: the list, when open, already shows the change.
+            emits.push(Emit::ModeChanged);
         }
         ShortcutAction::CycleCandidateDisplayMode => {
             if !runtime.update_settings("cycle_candidate_display_mode", |document| {
@@ -441,7 +443,7 @@ pub(crate) fn pick_symbol(
 mod tests {
     use super::*;
     use crate::session::process_raw_key;
-    use taigi_desktop_core::settings::SettingChoice;
+    use taigi_desktop_core::settings::{CandidateDisplayMode, SettingChoice};
     use taigi_linux_platform::key_translation::state;
     use taigi_linux_platform::RawKeyEvent;
 
@@ -561,18 +563,22 @@ mod tests {
                 MENU_ABOUT
             ]
         );
-        assert!(mode_label(&runtime).contains(" · "));
+        assert!(mode_label(&runtime, &runtime.settings.current()).contains(" · "));
         let mut engine = EngineState::default();
         let before: InputMode = runtime.settings.current().choice(&keys::INPUT_MODE);
         let emits = activate_menu(&runtime, ContextToken(1), &mut engine, "toggleRomanization");
         let after: InputMode = runtime.settings.current().choice(&keys::INPUT_MODE);
         assert_ne!(before.raw(), after.raw());
         assert_eq!(emits, vec![Emit::ModeChanged, Emit::AnnounceMode]);
-        assert_eq!(mode_symbol(&runtime).chars().count(), 2);
+        // trace: default TL side by side, hanji first → toggle → POJ → 白
+        assert_eq!(
+            mode_indicator(&runtime.settings.current()),
+            ModeIndicator::PojHanji
+        );
 
         // The third row cycles the candidate display mode (`keys::MENU`),
         // which the label's second half names.
-        let label_before = mode_label(&runtime);
+        let label_before = mode_label(&runtime, &runtime.settings.current());
         let emits = activate_menu(
             &runtime,
             ContextToken(1),
@@ -580,7 +586,10 @@ mod tests {
             ShortcutAction::CycleCandidateDisplayMode.raw(),
         );
         assert_eq!(emits, vec![Emit::ModeChanged, Emit::AnnounceMode]);
-        assert_ne!(mode_label(&runtime), label_before);
+        assert_ne!(
+            mode_label(&runtime, &runtime.settings.current()),
+            label_before
+        );
     }
 
     #[test]
@@ -598,6 +607,41 @@ mod tests {
         );
         assert!(emits.is_empty());
         assert_eq!(runtime.settings.current().revision, revision);
+    }
+
+    #[test]
+    fn the_swap_redraws_the_indicator_and_is_inert_under_roman_only() {
+        // trace: default TL, side by side, hanji first = 台; the swap writes
+        // the stored flag → Ts, no announce. Romanization Only: the swap
+        // writes nothing (`allows_swap_toggle`) and the indicator stays Ts.
+        let (_directory, runtime) = runtime();
+        let mut engine = EngineState::default();
+        let indicator = || mode_indicator(&runtime.settings.current());
+        assert_eq!(indicator(), ModeIndicator::TlHanji);
+        let emits = perform_global(
+            &runtime,
+            ContextToken(1),
+            &mut engine,
+            ShortcutAction::ToggleTranslateSwapped,
+        );
+        assert_eq!(emits.last(), Some(&Emit::ModeChanged));
+        assert!(!emits.contains(&Emit::AnnounceMode));
+        assert_eq!(indicator(), ModeIndicator::TlRomanization);
+
+        assert!(runtime.update_settings("test", |document| {
+            document.set_choice(
+                &keys::CANDIDATE_DISPLAY_MODE,
+                CandidateDisplayMode::RomanOnly,
+            );
+        }));
+        let emits = perform_global(
+            &runtime,
+            ContextToken(1),
+            &mut engine,
+            ShortcutAction::ToggleTranslateSwapped,
+        );
+        assert!(emits.is_empty());
+        assert_eq!(indicator(), ModeIndicator::TlRomanization);
     }
 
     #[test]

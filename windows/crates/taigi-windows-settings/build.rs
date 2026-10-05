@@ -11,6 +11,7 @@ fn main() {
         original_filename: "TaigiKeyboardSettings.exe",
         file_type: resource::FileType::Application,
         with_icon: true,
+        mode_icons: &[],
     });
     // W17: the Windows App Runtime the WinUI window runs on, staged beside
     // the exe (self-contained — no runtime install on the user's machine)

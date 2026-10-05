@@ -17,11 +17,13 @@
 //! Windows 11.
 
 use crate::guids::CLSID_TEXT_SERVICE;
+use crate::mode_icons::MODE_ICON_RESOURCES;
 use crate::module::instance;
 use crate::product_name;
 use crate::ui::window;
 use crate::wide::{fill_fixed, to_wide_nul};
-use taigi_desktop_core::keys::{menu_rows, LanguageMode, MenuCommand, MENU};
+use taigi_desktop_core::keys::{menu_rows, MenuCommand, MENU};
+use taigi_desktop_core::mode_indicator::ModeIndicator;
 use taigi_desktop_core::settings::SettingsDocument;
 use taigi_desktop_core::strings::StringResolver;
 use taigi_windows_platform::DESKTOP_PLATFORM;
@@ -32,9 +34,9 @@ use windows::Win32::UI::TextServices::{
     GUID_LBI_INPUTMODE, TF_LANGBARITEMINFO, TF_LBI_STYLE_BTN_BUTTON, TF_LBI_STYLE_SHOWNINTRAY,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
-    AppendMenuW, CopyIcon, CreatePopupMenu, DestroyMenu, LoadIconW, LoadImageW, TrackPopupMenuEx,
-    HICON, HMENU, IDI_APPLICATION, IMAGE_ICON, LR_DEFAULTSIZE, MF_SEPARATOR, MF_STRING,
-    TPM_NONOTIFY, TPM_RETURNCMD,
+    AppendMenuW, CopyIcon, CreatePopupMenu, DestroyMenu, GetSystemMetrics, LoadIconW, LoadImageW,
+    TrackPopupMenuEx, HICON, HMENU, IDI_APPLICATION, IMAGE_ICON, LR_DEFAULTCOLOR, MF_SEPARATOR,
+    MF_STRING, SM_CXSMICON, SM_CYSMICON, TPM_NONOTIFY, TPM_RETURNCMD,
 };
 
 /// A popup row's command id is its position in the shared list, from 1:
@@ -55,17 +57,12 @@ pub fn menu_command(id: u32) -> Option<MenuCommand> {
 
 /// The one cookie `ITfSource::AdviseSink` hands out for the lang-bar sink.
 pub const LANG_BAR_SINK_COOKIE: u32 = 0x5461_6967;
-/// The DLL icon resource the installer build adds (PR10); index 1.
-const ICON_RESOURCE_ID: u16 = 1;
-/// What the tray shows when it draws text instead of the icon: the script
-/// being typed, in one character, as 微軟注音 (Microsoft Bopomofo) spells its own 中/英 state.
-/// Not an i18n string — it names the script, so it reads the same in every UI
-/// language.
-pub fn tray_text(mode: LanguageMode) -> &'static str {
-    match mode {
-        LanguageMode::Taigi => "台",
-        LanguageMode::English => "英",
-    }
+/// The DLL ICON resource drawn for `indicator` (`mode_icons.rs`).
+fn icon_resource_id(indicator: ModeIndicator) -> Option<u16> {
+    MODE_ICON_RESOURCES
+        .iter()
+        .find(|(_, name)| *name == indicator.icon_name())
+        .map(|(id, _)| *id)
 }
 
 pub fn item_info() -> TF_LANGBARITEMINFO {
@@ -205,25 +202,31 @@ impl Drop for OwnedMenu {
 
 /// A CALLER-OWNED icon — `ITfLangBarItemButton::GetIcon`'s contract is
 /// that TSF destroys what it is handed, so nothing shared may be returned:
-/// the DLL's own resource loaded without `LR_SHARED`, or — in a build whose
-/// resource is missing — a `CopyIcon` of the stock application icon.
-pub fn owned_icon() -> Result<HICON> {
-    // SAFETY: LoadImageW with a resource id from this DLL's own instance,
-    // no LR_SHARED, so the handle is the caller's to destroy.
-    let own = unsafe {
-        LoadImageW(
-            Some(instance()),
-            PCWSTR(ICON_RESOURCE_ID as usize as *const u16),
-            IMAGE_ICON,
-            0,
-            0,
-            LR_DEFAULTSIZE,
-        )
-    };
+/// the mode's own resource loaded without `LR_SHARED` at the small-icon
+/// size (mozc `tip_lang_bar_menu.cc:98-111`), or — in a build whose
+/// resources are missing — a `CopyIcon` of the stock application icon.
+pub fn owned_icon(indicator: ModeIndicator) -> Result<HICON> {
+    // SAFETY: plain metric reads.
+    let (width, height) = unsafe { (GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON)) };
+    let own = icon_resource_id(indicator).and_then(|id| {
+        // SAFETY: LoadImageW with a resource id from this DLL's own
+        // instance, no LR_SHARED, so the handle is the caller's to destroy.
+        unsafe {
+            LoadImageW(
+                Some(instance()),
+                PCWSTR(usize::from(id) as *const u16),
+                IMAGE_ICON,
+                width,
+                height,
+                LR_DEFAULTCOLOR,
+            )
+        }
+        .ok()
+    });
     match own {
-        Ok(handle) => Ok(HICON(handle.0)),
+        Some(handle) => Ok(HICON(handle.0)),
         // SAFETY: a stock system icon is shared; the copy is ours to hand over.
-        Err(_) => unsafe { CopyIcon(LoadIconW(None, IDI_APPLICATION)?) },
+        None => unsafe { CopyIcon(LoadIconW(None, IDI_APPLICATION)?) },
     }
 }
 
@@ -232,6 +235,18 @@ mod tests {
     use super::*;
     use taigi_desktop_core::keys::ShortcutAction;
     use taigi_desktop_core::strings::DisplayLanguage;
+
+    #[test]
+    fn every_indicator_has_its_own_icon_resource_after_the_app_icon() {
+        let mut ids: Vec<u16> = ModeIndicator::ALL
+            .iter()
+            .map(|indicator| icon_resource_id(*indicator).expect("an icon resource"))
+            .collect();
+        ids.sort_unstable();
+        ids.dedup();
+        assert_eq!(ids.len(), ModeIndicator::ALL.len());
+        assert!(ids.iter().all(|id| *id > 1), "id 1 is the app icon");
+    }
 
     #[test]
     fn every_row_prints_its_chord_after_a_tab_and_its_id_reads_back() {

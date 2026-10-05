@@ -838,7 +838,7 @@ impl TextService_Impl {
     /// outside any session of ours, and in this order: what is half-typed is
     /// written to the document under the mode it was typed in, the state that
     /// mode left behind is spent, and only then does the mode flip and the
-    /// three indicators (compartment, tray letter, flash) follow it.
+    /// three indicators (compartment, tray icon, flash) follow it.
     ///
     /// A busy engine means a host re-entered us from inside our own session;
     /// the switch is skipped entirely rather than half-applied, and the next
@@ -1072,6 +1072,10 @@ impl TextService_Impl {
                 self.sync_tps_keyboard();
             }
         }
+        // The script, the swap and the display mode are all on the tray
+        // icon (`ModeIndicator`); the paths above that changed nothing
+        // returned early.
+        self.notify_lang_bar();
     }
 
     /// The open symbol picker's claim on `snapshot`: TRUE from the test

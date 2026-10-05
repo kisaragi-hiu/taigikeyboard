@@ -22,6 +22,7 @@ mod edit_session;
 mod guids;
 mod key_translation;
 mod lang_bar;
+mod mode_icons;
 mod module;
 mod preserved_keys;
 mod product_name;

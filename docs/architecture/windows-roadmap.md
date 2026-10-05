@@ -225,19 +225,21 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   the switch and answers FALSE, so the host still sees the release and its own Shift state stays
   honest. Switching commits whatever is half-typed, spends the auto-space arm and starts a new
   next-word session (Codex F8: an arm left standing would swap a space typed in the other mode),
-  then publishes the mode three ways — the conversion-mode compartment (W6), the tray letter
-  台/英, and the mode flash. Mode is per activation (per application), never persisted. **No
+  then publishes the mode three ways — the conversion-mode compartment (W6), the tray icon
+  (英, else the script × output, invariants §60), and the mode flash. Mode is per activation (per application), never persisted. **No
   setting**: `shiftTogglesEnglishEnabled` was retired 2026-09-05 (USER) and the tap is
   unconditional — the General pane is a 1:1 mirror of the Mac's, which has no such row, and the tray
-  letter plus the mode flash already say which mode is on. The spelling stays reserved; a stored
+  icon plus the mode flash already say which mode is on. The spelling stays reserved; a stored
   `false` is inert in existing `settings.json` files (Windows has no retired-key sweep), so a
   future configurable feature needs a NEW key. ⚠ DOGFOOD ORACLE OPEN:
   mid-composition the switch commits; 微軟注音 may cancel an incomplete one instead, and nothing
   in the references settles it (Codex F6).
 - **W6 Lang bar / menu** — one `ITfLangBarItemButton` (`GUID_LBI_INPUTMODE`,
-  `TF_LBI_STYLE_BTN_MENU | TF_LBI_STYLE_SHOWNINTRAY`; rakukan `language_bar.rs:21-23`)
-  whose `InitMenu` mirrors the macOS input-source menu exactly: Settings / separator /
-  Check for Updates (`TaigiInputController.swift:264-329`). **Codex: REFUTE the category list**
+  `TF_LBI_STYLE_BTN_BUTTON | TF_LBI_STYLE_SHOWNINTRAY`; rakukan `language_bar.rs:21-23`)
+  whose `OnClick` draws a Win32 popup of the shared menu rows (`keys::MENU`, the macOS
+  input-source menu's; `lang_bar.rs` header — the taskbar indicator never drives
+  `InitMenu`, § below). Its icon is the mode indicator (`ModeIndicator`, invariants §60): one
+  DLL icon per state (`mode_icons.rs`), loaded at the small-icon size. **Codex: REFUTE the category list**
   — declared categories are ONLY what is true: `GUID_TFCAT_TIP_KEYBOARD`,
   `GUID_TFCAT_DISPLAYATTRIBUTEPROVIDER`, `GUID_TFCAT_TIPCAP_SYSTRAYSUPPORT` (rakukan
   `registration.rs:118`), `GUID_TFCAT_TIPCAP_UIELEMENTENABLED` (W4). NOT `COMLESS`
