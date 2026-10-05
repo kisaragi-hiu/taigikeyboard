@@ -18,9 +18,9 @@
 
 ## Active / In-flight items
 
-- **Desktop TPS — Hanji conversion in the preedit** (arm B of U8): H-P1 (engine: conversion state, the walk when a reading closes, the converted preedit) merged (#398); H-P2 (engine: the caret by word, a reading typed inside the tail, re-opening a nailed segment) merged (#401); H-P3 (engine: the word's list, the pick that keeps composing, commit as shown / as typed) merged (#402); H-P4 (desktop core and the three shells) merged (#403); H-P5 (the macOS window under the word, invariant §59, dogfood S95) merged (#404) — all phases merged. Under TPS the preedit shows the predicted Hanji and ↓ opens the candidates of the word at the caret; TL and POJ unchanged. Design: [`architecture/desktop-tps-hanji-conversion-roadmap.md`](architecture/desktop-tps-hanji-conversion-roadmap.md).
+None.
 
-Everything else scoped through 2026-10-03 has merged (see Closed phases). Pending dogfood: `docs/architecture/dogfood-checklist.md`.
+Everything scoped through 2026-10-05 has merged (see Closed phases). Pending dogfood: `docs/architecture/dogfood-checklist.md`.
 
 ---
 
@@ -92,6 +92,7 @@ Apply to every change regardless of release:
 
 ## Closed phases / shipped audits
 
+- **Desktop TPS — Hanji conversion in the preedit** (arm B of U8) — COMPLETE 2026-10-05: H-P1–H-P5 MERGED (#398, #401, #402, #403, #404). Under TPS the preedit shows the predicted Hanji and ↓ opens the candidates of the word at the caret; TL and POJ unchanged. Invariant §59, dogfood S94 / S95. Design: [`architecture/desktop-tps-hanji-conversion-roadmap.md`](architecture/desktop-tps-hanji-conversion-roadmap.md).
 - **iOS top-level folder renames** — branch `refactor/ios-folder-renames` (2026-10-04): `Composition/` → `ServiceGraph/`, `Autocomplete/` → `Candidates/`, theme files `Settings/` → `Theme/`, `DebugLogger.swift` → `Logging/`; the maintainer re-pointed the synced groups in Xcode. Source: [`reports/2026-09-30-audit-all.md`](reports/2026-09-30-audit-all.md) Appendix F.
 - **Fedora × IBus e2e** — branch `fix/fedora-ibus-e2e`: the nightly matrix runs all eight cells again. Two stacked causes: Fedora's rpm writes a system registry cache that ibus-daemon's default `--cache auto` takes before reading `IBUS_COMPONENT_PATH` (the driver now passes `--cache none`), and the engine's socket-file lookup skipped an empty `/etc/machine-id` where libibus keeps it (`taigikeyboard-ibus` `bus.rs` now mirrors `ibus_get_local_machine_id`). Detail: [`architecture/e2e-testing-roadmap.md`](architecture/e2e-testing-roadmap.md) § PR table PR4.
 - **Residual platform twins** — branch `refactor/residual-platform-twins` (audit 2026-09-30 Appendix B, callers re-verified 2026-10-04): the engine now owns the auto-space attaching set (`IsAttachingPunctuation`; the iOS / Android / macOS `AutoSpacePunctuation` and desktop-core `ATTACHING` copies are gone, macOS asks the engine directly), the external-lookup digit-tone fold (`ExternalLookupDigitForm`; URL assembly stays per platform; `StripTone` / `NfdPreprocessForLookup` retired) and each search row's sources (`TaigiWord.sources`; `source_bitmask` reserved, `LexiconBitmask` ×2 + desktop `SOURCE_BITS` gone). `SuggestionCaseTransformer` ×2 and the `TransformCandidateCase` op were deleted. Parity-corrections: mobile custom rows `ho͘2` → `hoo2` (+ NFC, ASCII tone digits) in lookup URLs; Android's second NextWord prediction is no longer ALL CAPS under Caps Lock. Found, not changed: mobile `shouldAppendAutoSpace`, macOS `FullWidthPunctuation` vs desktop-core `full_width.rs`, Android lookup URLs encode a space as `+` (iOS / desktop `%20`).
