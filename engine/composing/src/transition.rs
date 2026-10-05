@@ -158,7 +158,9 @@ fn telex_key(state: &mut EngineState, key: &str, config: &AppConfig) -> Composin
 /// edge (the caret never enters a nailed segment) it is a plain snapshot —
 /// except a step left from the start of a tail the request converts, which
 /// re-opens the last nailed segment ([`unnail_last`]) and answers as
-/// Backspace's un-nail does.
+/// Backspace's un-nail does. A tail the request converts and the phase holds
+/// no conversion for is walked first; a new conversion is answered with the
+/// `UpdatePreedit` even when the step meets an edge.
 fn move_caret(
     state: &mut EngineState,
     direction: Option<CaretDirection>,
@@ -176,6 +178,32 @@ fn move_caret(
         if reopens {
             let (nailed, tail) = (nailed.clone(), raw.clone());
             return unnail_last(state, nailed, tail, UnnailedCaret::BeforeIt, config);
+        }
+    }
+    // A tail the request converts that holds no conversion for it (another
+    // source filter, or the switch was off) is walked first, so the step
+    // goes over its words and never the other way.
+    let mut is_newly_converted = false;
+    if let Phase::Continuous {
+        raw,
+        caret,
+        nailed,
+        conversion,
+    } = &state.phase
+    {
+        let is_shown = conversion
+            .as_ref()
+            .is_some_and(|conversion| conversion.is_for(config));
+        if !is_shown && crate::conversion::is_requested(raw, config) {
+            let (raw, caret, nailed) = (raw.clone(), *caret, nailed.clone());
+            set_continuous_walked_afresh(state, raw, caret, nailed, config);
+            is_newly_converted = matches!(
+                state.phase,
+                Phase::Continuous {
+                    conversion: Some(_),
+                    ..
+                }
+            );
         }
     }
     let moved = match &state.phase {
@@ -200,7 +228,7 @@ fn move_caret(
         set_continuous(state, raw, caret, nailed, config);
     }
     let mut resp = snapshot(state, config);
-    if has_moved {
+    if has_moved || is_newly_converted {
         if let Some(preedit) = &resp.preedit {
             resp.effect.push(update_preedit(preedit));
         }

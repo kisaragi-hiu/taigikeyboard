@@ -220,7 +220,10 @@ pub(crate) fn convert(
                     } else {
                         Vec::new()
                     };
-                    if ends.contains(&gap_end) {
+                    // The reading at the caret closes when a reading of the
+                    // gap ends at or after the caret: open text may follow.
+                    let closes_at_caret = caret.max(gap_start + 1)..=gap_end;
+                    if ends.iter().any(|end| closes_at_caret.contains(end)) {
                         walk_closed(ends.into_iter().max())
                     } else {
                         Some(kept)

@@ -368,10 +368,11 @@ fn without_a_converted_tps_tail_the_start_stays_an_edge() {
 }
 
 // A request without the switch is shown the glyphs and steps by glyph; when
-// the switch is back, a walk never leaves the caret inside a word. trace:
-// caret 8 of "ㄒㄧˋㄒㄧ "; off: the glyph preedit, caret after 3 glyphs; a
-// glyph step left → 6 drops the conversion. On: no conversion to step over →
-// glyph step to 3, then the walk makes 死 (0, 8) around it → caret 8.
+// the switch is back, the tail is walked before the step, so the caret never
+// sits inside a word and the step goes the way it was pressed. trace: caret
+// 8 of "ㄒㄧˋㄒㄧ "; off: the glyph preedit, caret after 3 glyphs; a glyph
+// step left → 6 drops the conversion. On: no conversion for this request →
+// the walk makes 死 (0, 8) around 6 → caret 8; then the step over 死 → 0.
 #[test]
 fn a_walk_after_the_switch_returns_keeps_the_caret_out_of_words() {
     let _lock = engine_install_lock();
@@ -388,19 +389,19 @@ fn a_walk_after_the_switch_returns_keeps_the_caret_out_of_words() {
 
     let response = step(&mut engine, CaretDirection::Left, &on);
     assert_eq!(display(&response), "死詩");
-    assert_eq!(raw_caret(&engine), 8);
-    assert_eq!(caret_utf16(&response), 1);
+    assert_eq!((raw_caret(&engine), caret_utf16(&response)), (0, 0));
 }
 
-// A changed source filter walks again and keeps the caret out of a word,
-// both ways. trace: caret 8 of "ㄒㄧˋㄒㄧ " (死 | 詩). Every dictionary off (the
-// filter 0, §57): the held words are not for it → a glyph step to 6; the
-// fresh walk finds no dictionary word, and its path is one glyph edge over
-// both readings, (0, 15) (read by running the walk) → the caret 6 inside it
-// goes to 15. Back to every source: a glyph step to 14, the walk makes 死
-// (0, 8) + 詩 (8, 15), 14 is inside 詩 → 15. Word steps work again from there.
+// A changed source filter walks the tail before the step, both ways. trace:
+// caret 8 of "ㄒㄧˋㄒㄧ " (死 | 詩). Every dictionary off (the filter 0, §57):
+// the held words are not for it → the walk finds no dictionary word, and its
+// path is one glyph edge over both readings, (0, 15) (read by running the
+// walk) → the caret 8 inside it goes to 15, and the step left goes over the
+// whole edge → 0. Back to every source: the walk makes 死 (0, 8) + 詩 (8, 15)
+// with the caret on 0, the step left is an edge, and the answer still
+// carries the new preedit. Right then steps 8, 15.
 #[test]
-fn a_changed_source_filter_walks_again_and_keeps_the_caret_out_of_words() {
+fn a_changed_source_filter_walks_again_before_the_step() {
     let _lock = engine_install_lock();
     install_fixture_with(&[]);
     let every_source = config_converting("tps");
@@ -415,19 +416,90 @@ fn a_changed_source_filter_walks_again_and_keeps_the_caret_out_of_words() {
 
     let response = step(&mut engine, CaretDirection::Left, &every_dictionary_off);
     assert_eq!(display(&response), "ㄒㄧˋㄒㄧ");
-    assert_eq!((raw_caret(&engine), caret_utf16(&response)), (15, 5));
+    assert_eq!((raw_caret(&engine), caret_utf16(&response)), (0, 0));
     assert_eq!(
         converted_words(&engine),
         vec![((0, 15), "ㄒㄧˋㄒㄧ".to_string())]
     );
 
     let response = step(&mut engine, CaretDirection::Left, &every_source);
+    assert_eq!(effect_kinds(&response.effect), vec!["UpdatePreedit"]);
     assert_eq!(display(&response), "死詩");
-    assert_eq!((raw_caret(&engine), caret_utf16(&response)), (15, 2));
-    step(&mut engine, CaretDirection::Left, &every_source);
+    assert_eq!((raw_caret(&engine), caret_utf16(&response)), (0, 0));
+    step(&mut engine, CaretDirection::Right, &every_source);
     assert_eq!(raw_caret(&engine), 8);
     step(&mut engine, CaretDirection::Right, &every_source);
     assert_eq!(raw_caret(&engine), 15);
+}
+
+// A reading closed at the caret converts even with open text after it.
+// trace: "ㄒㄧˋㄒㄧㄒㄧ" → 死 (0, 8) + the open "ㄒㄧㄒㄧ" (8, 20). Left, Left →
+// 14 (between the two open readings). "ˋ" → raw "ㄒㄧˋㄒㄧˋㄒㄧ", caret 16: the
+// gap runs to 22, and a reading of it closes at 16, the caret → the closed
+// part (to 16) is walked: 死 + 死, the open "ㄒㄧ" after it stays glyphs.
+#[test]
+fn a_reading_closed_at_the_caret_converts_with_open_text_after_it() {
+    let _lock = engine_install_lock();
+    install_fixture_with(&[]);
+    let config = config_converting("tps");
+    let (mut engine, response) = composing_engine("ㄒㄧˋㄒㄧㄒㄧ", &config);
+    assert_eq!(display(&response), "死ㄒㄧㄒㄧ");
+    step(&mut engine, CaretDirection::Left, &config);
+    step(&mut engine, CaretDirection::Left, &config);
+    assert_eq!(raw_caret(&engine), 14);
+
+    let response = tps_key(&mut engine, "ˋ", &config);
+    assert_eq!(display(&response), "死死ㄒㄧ");
+    assert_eq!((raw_caret(&engine), caret_utf16(&response)), (16, 2));
+    assert_eq!(
+        converted_words(&engine),
+        vec![((0, 8), "死".to_string()), ((8, 16), "死".to_string())]
+    );
+}
+
+// A pick with the caret inside the tail nails as a pick always does and
+// leaves the caret at the end of what is left. trace: caret 8 of
+// "ㄒㄧˋㄒㄧ "; pick 是 over 8 bytes → nailed 是, tail "ㄒㄧ " → 詩 (0, 7),
+// caret 7 (display 2, after 是詩).
+#[test]
+fn a_pick_with_the_caret_inside_the_tail_leaves_it_at_the_end() {
+    let _lock = engine_install_lock();
+    install_fixture_with(&[]);
+    let config = config_converting("tps");
+    let (mut engine, _) = composing_engine("ㄒㄧˋㄒㄧ ", &config);
+    step(&mut engine, CaretDirection::Left, &config);
+
+    let response = engine.apply(pick("是", "sī", 8), &config);
+    assert_eq!(display(&response), "是詩");
+    assert_eq!((raw_caret(&engine), caret_utf16(&response)), (7, 2));
+    assert_eq!(converted_words(&engine), vec![((0, 7), "詩".to_string())]);
+}
+
+// A re-open whose walk closes nothing shows the glyphs. trace: "ㄒㄧㄒ" (no
+// reading closed) → pick 是 over 6 bytes → tail "ㄒ"; Left → 0; Left → raw
+// "ㄒㄧㄒ", caret 0, no conversion.
+#[test]
+fn a_reopen_that_closes_nothing_shows_the_glyphs() {
+    let _lock = engine_install_lock();
+    install_fixture_with(&[]);
+    let config = config_converting("tps");
+    let (mut engine, _) = composing_engine("ㄒㄧㄒ", &config);
+    engine.apply(pick("是", "sī", 6), &config);
+    step(&mut engine, CaretDirection::Left, &config);
+
+    let response = step(&mut engine, CaretDirection::Left, &config);
+    assert_eq!(
+        effect_kinds(&response.effect),
+        vec![
+            "NextWordClearForNewComposing",
+            "UpdatePreedit",
+            "RefreshCandidates"
+        ]
+    );
+    assert_eq!(display(&response), "ㄒㄧㄒ");
+    assert_eq!((raw_caret(&engine), caret_utf16(&response)), (0, 0));
+    assert_eq!(conversion_of(&engine), None);
+    assert_eq!(nailed_count(&engine), 0);
 }
 
 // A separator typed between two words is a reading's close on its own.
