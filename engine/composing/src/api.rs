@@ -18,7 +18,8 @@ use thiserror::Error;
 /// `caret` is the editing position inside the pending `raw`: a UTF-8 byte
 /// offset on a char boundary, `0..=raw.len()`. Every mutator edits there;
 /// only `Intent::MoveCaret` (desktop) moves it away from `raw.len()`, so on
-/// mobile it is always the end. It lives beside `raw` rather than on
+/// mobile it is always the end. Under a conversion it is never inside a
+/// converted word. It lives beside `raw` rather than on
 /// `EngineState` so replacing the phase can never leave a stale offset.
 ///
 /// `conversion` is the Hanji conversion of the pending `raw`
@@ -623,8 +624,9 @@ pub enum Intent {
     TpsKey {
         key: String,
     },
-    /// Desktop caret — step one char inside the pending tail; see the
-    /// `MoveCaret` proto comment for the contract (no refetch, edge = no-op).
+    /// Desktop caret — step one char inside the pending tail, one word over
+    /// a converted word; see the `MoveCaret` proto comment for the contract
+    /// (no refetch, edge = no-op, re-open under a conversion).
     /// `None` is a wire direction the engine does not know (unspecified or
     /// newer than this build) and steps nowhere.
     MoveCaret {
