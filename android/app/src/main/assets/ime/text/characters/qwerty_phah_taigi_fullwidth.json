@@ -24,7 +24,7 @@
       { "code":   106, "label": "j" },
       { "code":   107, "label": "k" },
       { "code":   108, "label": "l" },
-      { "code":    45, "label": "-" }
+      { "code":    45, "label": "-", "popup": [{"code": 183, "label": "·"}, {"code": 8211, "label": "–"}, {"code": 8212, "label": "—"}, {"code": 65103, "label": "﹏"}] }
     ], [
       { "code": 65292, "label": "，" },
       { "code": 12290, "label": "。" },
