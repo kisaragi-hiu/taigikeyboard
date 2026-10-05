@@ -82,9 +82,9 @@ use crate::shadow::{
 use lexicon::{
     best_candidate_for_key_with_barriers, derive_script_kind,
     fetch_candidates_for_keys_with_barriers, fetch_partial_prefix_candidates,
-    fetch_partial_prefix_candidates_unbounded, CandidateScriptKind, ConsumedSpan,
-    ContinuousFetchCtx, CustomEntry, EngineHandle as LexiconHandle, LearnedEntry, RawCandidate,
-    SyllableInventory, COVERAGE_KIND_FULL, FORM_NOTONE, PARTIAL_PREFIX_OUTPUT_CAP,
+    fetch_partial_prefix_candidates_unbounded, homophone_words_for_key, CandidateScriptKind,
+    ConsumedSpan, ContinuousFetchCtx, CustomEntry, EngineHandle as LexiconHandle, LearnedEntry,
+    RawCandidate, SyllableInventory, COVERAGE_KIND_FULL, FORM_NOTONE, PARTIAL_PREFIX_OUTPUT_CAP,
 };
 use ranking::FrequencyMap;
 
@@ -116,6 +116,10 @@ pub(crate) struct WalkerSlot0 {
     pub user_weight: f64,
     pub coverage_kind: u8,
     pub is_custom: bool,
+    /// How many lattice edges — words — the path takes. A list of one word
+    /// (a Hanji conversion's, `FetchAtPos.word_before_caret`) lists a
+    /// one-edge path only.
+    pub edge_count: usize,
 }
 
 // ============================================================================
@@ -513,6 +517,117 @@ fn learned_edge_key(canonical_tl: &str, mode: phonetics::InputMode) -> Option<St
     custom_toneless_key(&native, mode)
 }
 
+/// The shape of a continuous candidate list.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum ListShape {
+    /// The whole tail's list: the walker's path over it, however many words,
+    /// at slot 0, then the left-anchored words in ranking order.
+    Sentence,
+    /// A Hanji conversion's list of one word (H4): the walker's path only
+    /// when it is one word — so a reading the dictionary has no word for
+    /// keeps its row — and longer words first, each length in ranking order,
+    /// a row covering its reading in full above the prefix extensions and
+    /// abbreviations (`lexicon::COVERAGE_KIND_*` ascend in that order).
+    Word,
+}
+
+/// What one lattice edge `shadow[start..end]` is looked up with: its toneless
+/// body, its raw span, and the span key (key, §35 Final-only restriction,
+/// tone pin). `None` for an edge with nothing to look up.
+struct EdgeLookup {
+    toneless: String,
+    raw_span: ConsumedSpan,
+    span_key: crate::shadow::SpanKey,
+}
+
+/// [`EdgeLookup`] of the edge `start..end` of `continuous_keys`' lattice — the
+/// one derivation the walker resolves an edge with and
+/// [`edge_homophone_words`] enumerates the edge's words with.
+fn edge_lookup(
+    continuous_keys: &crate::shadow::ContinuousKeys,
+    start: usize,
+    end: usize,
+    mode: phonetics::InputMode,
+) -> Option<EdgeLookup> {
+    let crate::shadow::ContinuousKeys {
+        shadow,
+        shadow_to_raw_end,
+        barriers,
+        hyphen_runs,
+        ..
+    } = continuous_keys;
+    // Edges come from the syllabifier-built lattice so they are
+    // well-formed by construction; the guard is defensive
+    // (mirrors the `left_anchored_keys_and_restrictions` projection
+    // guard) and also drops a digit-only / empty toneless span.
+    if start >= end
+        || end > shadow.len()
+        || !shadow.is_char_boundary(start)
+        || !shadow.is_char_boundary(end)
+    {
+        return None;
+    }
+    // v3.5.9 D / C-3b — mode-aware tone strip. TL/POJ/English drop
+    // ASCII digits (byte-identical to legacy `strip_ascii_tone_digits`),
+    // TPS drops the 8 Bopomofo tone marks so the body matches the
+    // `tps:<tps_notone>` family from C-0.
+    let toneless = strip_tones_for_mode(&shadow[start..end], mode);
+    if toneless.is_empty() {
+        return None;
+    }
+    let raw_span = (
+        shadow_to_raw_end[start] as u32,
+        shadow_to_raw_end[end] as u32,
+    );
+    // Explicit-tone fix — the DICT lookup is tone-aware: a fully-toned
+    // edge (`tai5`) looks up the verbatim `tl:tai5` key so slot 0 can
+    // only be synthesized from the typed tone, matching the span-local
+    // list (a split — span-local toned, walker toneless — would let a
+    // wrong-tone word reappear at slot 0). The §35 Final-only
+    // restriction and the §17 / §41 tone pin come from the same
+    // [`crate::shadow::span_key`] derivation the span-local keys use.
+    let span_key = crate::shadow::span_key(shadow, start, end, mode, barriers, hyphen_runs)?;
+    Some(EdgeLookup {
+        toneless,
+        raw_span,
+        span_key,
+    })
+}
+
+/// Every word the dictionary offers any edge of `continuous_keys`' lattice,
+/// deduplicated, in edge order — the words whose user counts can change what
+/// [`walk_buffer`] picks (the homophone it shows, and the user weight that
+/// prices the edge). Custom and learned rows are not looked up: a TPS walk
+/// takes neither.
+pub(crate) fn edge_homophone_words(
+    continuous_keys: &crate::shadow::ContinuousKeys,
+    ctx: &ContinuousFetchCtx<'_>,
+) -> Vec<String> {
+    let mut seen = std::collections::HashSet::new();
+    let mut words = Vec::new();
+    for &(start, end) in continuous_keys.lattice.edges() {
+        let Some(EdgeLookup {
+            raw_span, span_key, ..
+        }) = edge_lookup(continuous_keys, start, end, ctx.mode)
+        else {
+            continue;
+        };
+        let edge_words = homophone_words_for_key(
+            &span_key.key,
+            &span_key.final_only,
+            &span_key.tone_pin,
+            raw_span,
+            ctx,
+        );
+        words.extend(
+            edge_words
+                .into_iter()
+                .filter(|word| seen.insert(word.clone())),
+        );
+    }
+    words
+}
+
 /// The whole-sentence walk over `continuous_keys`' lattice: the minimum-cost
 /// path spanning the shadow, each edge resolved to its custom, dictionary
 /// (with the learned rows competing) or OOV content. `None` when no edge
@@ -526,10 +641,8 @@ pub(crate) fn walk_buffer(
 ) -> Option<crate::lattice::BestPath> {
     let crate::shadow::ContinuousKeys {
         shadow,
-        shadow_to_raw_end,
         lattice,
         barriers,
-        hyphen_runs,
         ..
     } = continuous_keys;
     let ContinuousFetchCtx {
@@ -563,51 +676,26 @@ pub(crate) fn walk_buffer(
     let learned_map = edge_key_map(learned, |entry| learned_edge_key(&entry.canonical_tl, mode));
 
     let path = crate::lattice::walk_best(lattice, shadow.len(), |start, end| {
-        // Edges come from the syllabifier-built lattice so they are
-        // well-formed by construction; the guard is defensive
-        // (mirrors the `left_anchored_keys_and_restrictions` projection
-        // guard) and also drops a digit-only / empty toneless span.
-        if start >= end
-            || end > shadow.len()
-            || !shadow.is_char_boundary(start)
-            || !shadow.is_char_boundary(end)
-        {
-            return None;
-        }
-        // v3.5.9 D / C-3b — mode-aware tone strip. TL/POJ/English drop
-        // ASCII digits (byte-identical to legacy `strip_ascii_tone_digits`),
-        // TPS drops the 8 Bopomofo tone marks so the body matches the
-        // `tps:<tps_notone>` family from C-0.
-        let toneless = strip_tones_for_mode(&shadow[start..end], mode);
-        if toneless.is_empty() {
-            return None;
-        }
-        let raw_span = (
-            shadow_to_raw_end[start] as u32,
-            shadow_to_raw_end[end] as u32,
-        );
-        // v3.5.9 B-2 — walker edge key is mode-aware: the same `mode`
-        // feeding the shadow + lattice (`build_shadow_lattice_with_barriers`) above
-        // also feeds the key prefix here, so the lookup family is
-        // consistent with the inventory family that produced the edge.
-        let key_prefix = phonetics::KeyFamily::for_input_mode(mode).prefix();
-        // Explicit-tone fix — the DICT lookup is tone-aware: a fully-toned
-        // edge (`tai5`) looks up the verbatim `tl:tai5` key so slot 0 can
-        // only be synthesized from the typed tone, matching the span-local
-        // list (a split — span-local toned, walker toneless — would let a
-        // wrong-tone word reappear at slot 0). The §35 Final-only
-        // restriction and the §17 / §41 tone pin come from the same
-        // [`crate::shadow::span_key`] derivation the span-local keys use.
         // The tone pin is computed BEFORE the custom override below so
         // both edge sources answer to the same pin: a custom entry
         // synthesized past the guard would land at slot 0, where no
         // downstream lexicon filter can reach it (Codex post-impl BLOCK,
         // 2026-08-20).
-        let crate::shadow::SpanKey {
-            key: dict_key,
-            final_only: edge_final_only,
-            tone_pin: edge_tone_pin,
-        } = crate::shadow::span_key(shadow, start, end, mode, barriers, hyphen_runs)?;
+        let EdgeLookup {
+            toneless,
+            raw_span,
+            span_key:
+                crate::shadow::SpanKey {
+                    key: dict_key,
+                    final_only: edge_final_only,
+                    tone_pin: edge_tone_pin,
+                },
+        } = edge_lookup(continuous_keys, start, end, mode)?;
+        // v3.5.9 B-2 — walker edge key is mode-aware: the same `mode`
+        // feeding the shadow + lattice (`build_shadow_lattice_with_barriers`) above
+        // also feeds the key prefix here, so the lookup family is
+        // consistent with the inventory family that produced the edge.
+        let key_prefix = phonetics::KeyFamily::for_input_mode(mode).prefix();
         // Custom override matching stays tone-INSENSITIVE: `custom_map` is
         // keyed by `custom_toneless_key` (toneless), so it is queried with
         // the toneless key — a custom word is a specific user entry, matched
@@ -687,6 +775,7 @@ pub(crate) fn walk_buffer(
             return Some(crate::lattice::EdgeChoice {
                 roman: entry.roman.clone(),
                 hanji: entry.hanji.clone(),
+                canonical_tl,
                 // S6 Q7 (Codex BLOCK guard): a custom entry IS a
                 // lexicon-backed hit (not OOV roman synthesis) —
                 // keeps the all-OOV carve-out from firing on a
@@ -747,6 +836,7 @@ pub(crate) fn walk_buffer(
                 Some(crate::lattice::EdgeChoice {
                     roman: c.roman,
                     hanji: c.hanji,
+                    canonical_tl: c.canonical_tl,
                     // S5 (Codex pre-impl Q2 BLOCK): explicit
                     // dict-hit flag — the `Some(c)` branch IS a
                     // dictionary record. The no-dict carve-out must
@@ -809,6 +899,7 @@ pub(crate) fn walk_buffer(
                 Some(crate::lattice::EdgeChoice {
                     roman: toneless,
                     hanji: None,
+                    canonical_tl: String::new(),
                     dict_hit: false,
                     // S6: a synthesized OOV roman edge is not custom.
                     is_custom: false,
@@ -1015,6 +1106,7 @@ fn fetch_walker_slot0_inner(
         // `(roman,hanji,consumed_span)` not `is_custom`), but a
         // truthful flag keeps future ranking/dedupe changes sound.
         is_custom: path.choices.iter().any(|c| c.is_custom),
+        edge_count: path.edges.len(),
     })
 }
 
@@ -1045,6 +1137,9 @@ fn fetch_walker_slot0_inner(
 /// browse path (12 sources + variant + khiin + kautian subcollection).
 /// Output is the unwrapped `Vec<RawCandidate>` the caller maps to
 /// `CandidateMessage` via `raw_to_proto_candidate`.
+///
+/// `shape` is the list's: the whole tail's, or a Hanji conversion's list of
+/// the word before the caret ([`ListShape`]).
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn assemble_candidates(
     raw: &str,
@@ -1057,6 +1152,7 @@ pub(crate) fn assemble_candidates(
     context: &ranking::ContextRanks,
     hyphenless_roman: bool,
     force_lowercase_nasal_marker: bool,
+    shape: ListShape,
 ) -> Vec<RawCandidate> {
     let raw_len = raw.len() as u32;
     // Whole-buffer tone pin (§17 typed digits / §41 space-closed TPS
@@ -1234,6 +1330,7 @@ pub(crate) fn assemble_candidates(
                 {
                     if let Some(slot0) =
                         fetch_walker_slot0_inner(raw, raw_len, continuous_keys, inv, ctx)
+                            .filter(|slot0| shape == ListShape::Sentence || slot0.edge_count == 1)
                     {
                         // R2 identity sidechannel: read the canonical TL the
                         // walker already folded once (`WalkerSlot0.canonical_tl`,
@@ -1564,6 +1661,15 @@ pub(crate) fn assemble_candidates(
         // for the full rationale.
         if mode == phonetics::InputMode::Tps {
             dedupe_display_hanji_for_tps(&mut candidates);
+        }
+        // A word's list: longer words first, each length keeps its ranking.
+        if shape == ListShape::Word {
+            candidates.sort_by_key(|candidate| {
+                (
+                    candidate.coverage_kind,
+                    std::cmp::Reverse(candidate.consumed_span.1),
+                )
+            });
         }
         Ok(candidates)
     })

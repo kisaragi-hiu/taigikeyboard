@@ -1294,6 +1294,7 @@ fn nailed_segment_public_fields_round_trip() {
         hanji: None,
         raw_span: (0, 4),
         syllable_count: 2,
+        is_picked: true,
     };
     assert_eq!(seg.display_text, "珠仔");
     assert_eq!(seg.canonical_text, "珠仔");
@@ -1301,6 +1302,7 @@ fn nailed_segment_public_fields_round_trip() {
     assert_eq!(seg.association_tl, "tsu-á");
     assert_eq!(seg.raw_span, (0, 4));
     assert_eq!(seg.syllable_count, 2);
+    assert!(seg.is_picked);
 }
 
 // ---- v3.5.8 Phase 9 Bug 1 (Option A) — swap-aware commit, Model B ----

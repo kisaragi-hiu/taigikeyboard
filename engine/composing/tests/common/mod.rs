@@ -408,6 +408,7 @@ pub struct Fetch {
     pub custom: Vec<CustomEntry>,
     pub learned: Vec<LearnedEntry>,
     pub context: ranking::ContextRanks,
+    pub word_before_caret: bool,
 }
 
 impl Default for Fetch {
@@ -420,23 +421,27 @@ impl Default for Fetch {
             custom: Vec::new(),
             learned: Vec::new(),
             context: ranking::ContextRanks::default(),
+            word_before_caret: false,
         }
     }
 }
 
+/// `rows` as the frequency map a ranking reads.
+pub fn frequency_map(rows: impl IntoIterator<Item = Selected>) -> ranking::FrequencyMap {
+    rows.into_iter()
+        .map(|row| {
+            let data = FrequencyData {
+                count: row.count,
+                last_used_ms: row.last_used_ms,
+            };
+            (row.hanji, row.canonical_tl, data)
+        })
+        .collect()
+}
+
 impl Fetch {
     pub fn intent(self) -> Intent {
-        let frequency = self
-            .frequency
-            .into_iter()
-            .map(|row| {
-                let data = FrequencyData {
-                    count: row.count,
-                    last_used_ms: row.last_used_ms,
-                };
-                (row.hanji, row.canonical_tl, data)
-            })
-            .collect();
+        let frequency = frequency_map(self.frequency);
         Intent::FetchAtPos {
             now_ms: self.now_ms,
             enabled_sources_bitmask: self.enabled_sources_bitmask,
@@ -447,6 +452,7 @@ impl Fetch {
                 learned: self.learned,
             },
             context: self.context,
+            word_before_caret: self.word_before_caret,
         }
     }
 }

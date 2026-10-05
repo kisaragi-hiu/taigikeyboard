@@ -465,6 +465,7 @@ mod tests {
                 hanji: None,
                 raw_span: (0, 4),
                 syllable_count: 1,
+                is_picked: true,
             }],
             conversion: None,
         };
@@ -484,6 +485,7 @@ mod tests {
                 hanji: None,
                 raw_span: (0, 4),
                 syllable_count: 1,
+                is_picked: true,
             }],
             conversion: None,
         };

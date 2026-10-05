@@ -24,10 +24,10 @@ pub mod telex;
 mod transition;
 
 pub use api::{
-    Applied, CommitScript, ComposingError, Engine, EngineState, Intent, NailedSegment, Phase,
-    Usage, UserRows,
+    Applied, CommitScript, ComposingError, ConversionFrequency, Engine, EngineState, Intent,
+    NailedSegment, Phase, Usage, UserRows,
 };
-pub use handle::{EngineHandle, PendingSnapshot};
+pub use handle::{EngineHandle, ListContext, PendingSnapshot};
 
 // Compile-time guarantee: `Engine` must remain `Send` so the static
 // `OnceCell<EngineHandle>` in dispatch can wrap it in `Mutex<Engine>` and

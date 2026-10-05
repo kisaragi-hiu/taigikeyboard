@@ -166,6 +166,7 @@ fn engine_reads_answer_what_the_same_rows_answer() {
                 enabled_sources_bitmask: u32::MAX,
                 literal_roman_candidate_disabled: false,
                 user_rows: rows,
+                word_before_caret: false,
             },
             &tl_config(true),
             COMPOSING_GENERATION,

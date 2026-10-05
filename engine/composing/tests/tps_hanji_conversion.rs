@@ -10,8 +10,8 @@
 //! body `ㆢㄧ`) under 日 (ji̍t, `ㆢㄧㆵ˙`), 之 (tsi, `ㄐㄧ`) under 這 (tsit,
 //! `ㄐㄧㆵ`).
 
-use composing::api::{CommitScript, Conversion};
-use composing::{requests, Engine, Intent, Phase};
+use composing::api::{CaretDirection, CommitScript, Conversion};
+use composing::{requests, Engine, Intent, NailedSegment, Phase};
 use protos::engine::composing_request::Method;
 use protos::engine::effect::Kind;
 use protos::engine::{
@@ -126,6 +126,41 @@ pub(crate) fn preedit_writes(response: &ComposingResponse) -> Vec<&str> {
         .collect()
 }
 
+/// One `MoveCaret` step.
+pub(crate) fn step(
+    engine: &mut Engine,
+    direction: CaretDirection,
+    config: &AppConfig,
+) -> ComposingResponse {
+    engine.apply(
+        Intent::MoveCaret {
+            direction: Some(direction),
+        },
+        config,
+    )
+}
+
+/// A `CommitContinuous` of the one-syllable `hanji` (TL `tl`) ending at
+/// `consumed_bytes` of the tail.
+pub(crate) fn pick(hanji: &str, tl: &str, consumed_bytes: usize) -> Intent {
+    Intent::CommitContinuous {
+        canonical_text: hanji.into(),
+        association_tl: tl.into(),
+        hanji: Some(hanji.into()),
+        consumed_bytes,
+        syllable_count: 1,
+        script: Some(CommitScript::Lead),
+        roman: tl.into(),
+    }
+}
+
+pub(crate) fn nailed(engine: &Engine) -> Vec<NailedSegment> {
+    match engine.snapshot_state().phase {
+        Phase::Continuous { nailed, .. } => nailed,
+        Phase::Idle => Vec::new(),
+    }
+}
+
 pub(crate) fn conversion_of(engine: &Engine) -> Option<Conversion> {
     match engine.snapshot_state().phase {
         Phase::Continuous { conversion, .. } => conversion,
@@ -238,7 +273,8 @@ fn the_closed_part_converts_in_front_of_an_unspannable_reading() {
 }
 
 // A pick and its un-nail go through the same phase constructor. trace:
-// "ㄒㄧˋㄒㄧ " → 死詩; picking 是 for the first eight bytes nails it and leaves
+// "ㄒㄧˋㄒㄧ " → 死詩; a step left puts the caret after 死 (8), whose list
+// starts at 0 (H4); picking 是 for those eight bytes nails it and leaves
 // "ㄒㄧ " pending, converted again from its own start → 是 + 詩. Backspace
 // takes the separator, then ㄧ and ㄒ; on the empty tail it un-nails and the
 // restored "ㄒㄧˋ" is the walker's 死 again, not the pick.
@@ -248,16 +284,8 @@ fn the_tail_after_a_pick_and_an_unnailed_segment_convert() {
     install_fixture();
     let config = config_converting("tps");
     let (mut engine, _) = composing_engine("ㄒㄧˋㄒㄧ ", &config);
-    let pick = Intent::CommitContinuous {
-        canonical_text: "是".into(),
-        association_tl: "sī".into(),
-        hanji: Some("是".into()),
-        consumed_bytes: 8,
-        syllable_count: 1,
-        script: Some(CommitScript::Lead),
-        roman: "sī".into(),
-    };
-    let response = engine.apply(pick, &config);
+    step(&mut engine, CaretDirection::Left, &config);
+    let response = engine.apply(pick("是", "sī", 8), &config);
     assert_eq!(display(&response), "是詩");
     assert_eq!(converted_words(&engine), vec![((0, 7), "詩".to_string())]);
 

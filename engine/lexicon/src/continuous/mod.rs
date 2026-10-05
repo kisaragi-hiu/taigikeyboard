@@ -1141,6 +1141,32 @@ fn pick_edge_word(
     homophones.into_iter().nth(index)
 }
 
+/// The words [`best_candidate_for_key_with_barriers`] picks the edge's word
+/// among — every dictionary row under `key` that passes the edge's source,
+/// tone-pin and barrier filters — as their `display_text`, the word half of
+/// the `(display_text, canonical_tl)` pair user frequency is keyed on. A
+/// Hanji conversion reads the user's counts for these before its walk.
+pub fn homophone_words_for_key(
+    key: &str,
+    tps_final_only: &[usize],
+    tone_pin: &TonePin,
+    consumed_span: ConsumedSpan,
+    ctx: &ContinuousFetchCtx<'_>,
+) -> Vec<String> {
+    let filter = Filter::from_enabled_bitmask(ctx.enabled_sources_bitmask);
+    let mut words = Vec::new();
+    exact_candidates_for_key(
+        key,
+        tps_final_only,
+        tone_pin,
+        consumed_span,
+        &filter,
+        ctx,
+        |cand| words.push(cand.display_text),
+    );
+    words
+}
+
 /// One lattice edge's word, as picked by
 /// [`best_candidate_for_key_with_barriers`], plus the evidence that the
 /// edge's span IS a dictionary word.
