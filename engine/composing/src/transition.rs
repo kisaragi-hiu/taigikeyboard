@@ -28,6 +28,7 @@ use crate::api::{
     CommitScript, EngineState, Intent, NailedSegment, Phase, Usage,
 };
 use crate::commit_text::{commit_resolution, resolve_commit_text};
+use crate::conversion::PreviousTail;
 use crate::derived::{
     buffer_input_mode, derived_display, display_caret_utf16, strip_tps_separator_markers,
 };
@@ -149,24 +150,77 @@ fn telex_key(state: &mut EngineState, key: &str, config: &AppConfig) -> Composin
     }
 }
 
-/// `Intent::MoveCaret` — step the caret one char inside the pending tail.
-/// The buffer is untouched, so the answer is the snapshot plus one
+/// `Intent::MoveCaret` — step the caret one char inside the pending tail;
+/// under a shown Hanji conversion, one word over a converted word. The
+/// buffer is untouched, so the answer is the snapshot plus one
 /// `UpdatePreedit` carrying the new caret and nothing else: no
 /// `RefreshCandidates`, so candidates, highlight and page stay. At an
-/// edge (the caret never enters a nailed segment) it is a plain snapshot.
-/// A Hanji conversion exists only with the caret at the end of the tail, so
-/// a step away from the end drops it and the step back walks again.
+/// edge (the caret never enters a nailed segment) it is a plain snapshot —
+/// except a step left from the start of a tail the request converts, which
+/// re-opens the last nailed segment ([`unnail_last`]) and answers as
+/// Backspace's un-nail does. A tail the request converts and the phase holds
+/// no conversion for is walked first; a new conversion is answered with the
+/// `UpdatePreedit` even when the step meets an edge.
 fn move_caret(
     state: &mut EngineState,
     direction: Option<CaretDirection>,
     config: &AppConfig,
 ) -> ComposingResponse {
+    if let Phase::Continuous {
+        raw, caret, nailed, ..
+    } = &state.phase
+    {
+        let reopens = direction == Some(CaretDirection::Left)
+            && *caret == 0
+            && nailed.last().is_some_and(|last| {
+                crate::conversion::is_requested(&format!("{}{raw}", last.raw_text), config)
+            });
+        if reopens {
+            let (nailed, tail) = (nailed.clone(), raw.clone());
+            return unnail_last(state, nailed, tail, UnnailedCaret::BeforeIt, config);
+        }
+    }
+    // A tail the request converts that holds no conversion for it (another
+    // source filter, or the switch was off) is walked first, so the step
+    // goes over its words and never the other way.
+    let mut is_newly_converted = false;
+    if let Phase::Continuous {
+        raw,
+        caret,
+        nailed,
+        conversion,
+    } = &state.phase
+    {
+        let is_shown = conversion
+            .as_ref()
+            .is_some_and(|conversion| conversion.is_for(config));
+        if !is_shown && crate::conversion::is_requested(raw, config) {
+            let (raw, caret, nailed) = (raw.clone(), *caret, nailed.clone());
+            set_continuous_walked_afresh(state, raw, caret, nailed, config);
+            is_newly_converted = matches!(
+                state.phase,
+                Phase::Continuous {
+                    conversion: Some(_),
+                    ..
+                }
+            );
+        }
+    }
     let moved = match &state.phase {
         Phase::Idle => None,
         Phase::Continuous {
-            raw, caret, nailed, ..
+            raw,
+            caret,
+            nailed,
+            conversion,
         } => direction
-            .and_then(|direction| step_caret(raw, *caret, direction))
+            .and_then(|direction| {
+                conversion
+                    .as_ref()
+                    .filter(|conversion| conversion.is_for(config))
+                    .and_then(|conversion| conversion.step_over_word(*caret, direction))
+                    .or_else(|| step_caret(raw, *caret, direction))
+            })
             .map(|next| (raw.clone(), next, nailed.clone())),
     };
     let has_moved = moved.is_some();
@@ -174,7 +228,7 @@ fn move_caret(
         set_continuous(state, raw, caret, nailed, config);
     }
     let mut resp = snapshot(state, config);
-    if has_moved {
+    if has_moved || is_newly_converted {
         if let Some(preedit) = &resp.preedit {
             resp.effect.push(update_preedit(preedit));
         }
@@ -288,10 +342,9 @@ fn step_response(preedit: Preedit) -> ComposingResponse {
 /// The wire form of `phase`'s composition: the pending `raw`, the whole
 /// display — the nailed prefix, then the pending tail: its Hanji conversion
 /// when the phase holds one this request asks for, else its derived form —
-/// and the caret projected into it. A conversion exists only with the caret
-/// at the end of the tail, which is the end of the display; otherwise the
-/// caret is the prefix's UTF-16 length plus its offset inside the tail
-/// ([`display_caret_utf16`]).
+/// and the caret projected into it: the prefix's UTF-16 length plus the
+/// caret's offset inside the tail (word by word under a conversion, else
+/// [`display_caret_utf16`]).
 fn phase_preedit(phase: &Phase, config: &AppConfig) -> Preedit {
     let Phase::Continuous {
         raw,
@@ -304,16 +357,15 @@ fn phase_preedit(phase: &Phase, config: &AppConfig) -> Preedit {
     };
     let converted_tail = conversion
         .as_ref()
-        .and_then(|conversion| conversion.tail_display(raw, config));
-    let is_converted = converted_tail.is_some();
-    let tail = converted_tail.unwrap_or_else(|| derived_display(raw, config));
-    let (display, tail_start) = join_nailed_prefix_and_tail(nailed, &tail, config);
-    let caret_utf16 = if is_converted {
-        display.encode_utf16().count()
-    } else {
-        let (prefix, tail) = display.split_at(tail_start);
-        prefix.encode_utf16().count() + display_caret_utf16(raw, tail, *caret)
+        .and_then(|conversion| conversion.tail_display(raw, *caret, config));
+    let (tail, converted_caret) = match converted_tail {
+        Some((tail, caret_utf16)) => (tail, Some(caret_utf16)),
+        None => (derived_display(raw, config), None),
     };
+    let (display, tail_start) = join_nailed_prefix_and_tail(nailed, &tail, config);
+    let (prefix, tail) = display.split_at(tail_start);
+    let caret_in_tail = converted_caret.unwrap_or_else(|| display_caret_utf16(raw, tail, *caret));
+    let caret_utf16 = prefix.encode_utf16().count() + caret_in_tail;
     Preedit {
         raw_input: raw.clone(),
         display_text: display,
@@ -322,9 +374,11 @@ fn phase_preedit(phase: &Phase, config: &AppConfig) -> Preedit {
 }
 
 /// Replace the phase with a Continuous one over `raw`, converting its tail
-/// when `config` asks for it. The phase being replaced lends its conversion
-/// (`crate::conversion::convert`). The one place a Continuous phase is built,
-/// so no path leaves a conversion of another buffer behind.
+/// when `config` asks for it. The tail being replaced lends its conversion
+/// (`crate::conversion::convert`), which may move the caret out of a word a
+/// new walk made. With [`set_continuous_walked_afresh`], the one place a
+/// Continuous phase is built, so no path leaves a conversion of another
+/// buffer behind.
 fn set_continuous(
     state: &mut EngineState,
     raw: String,
@@ -335,18 +389,37 @@ fn set_continuous(
     let previous = match &state.phase {
         Phase::Continuous {
             raw,
+            caret,
             conversion: Some(conversion),
             ..
-        } => Some((raw.as_str(), conversion)),
+        } => Some(PreviousTail {
+            raw,
+            caret: *caret,
+            conversion,
+        }),
         _ => None,
     };
-    let conversion = crate::conversion::convert(previous, &raw, caret, config);
+    let (conversion, caret) = crate::conversion::convert(previous, &raw, caret, config);
     state.phase = Phase::Continuous {
         raw,
         caret,
         nailed,
         conversion,
     };
+}
+
+/// [`set_continuous`] for a tail no word of the replaced one carries over
+/// to: a nailed segment's raw text put back in front of it.
+fn set_continuous_walked_afresh(
+    state: &mut EngineState,
+    raw: String,
+    caret: usize,
+    nailed: Vec<NailedSegment>,
+    config: &AppConfig,
+) {
+    // With the phase dropped first, nothing lends a conversion.
+    state.phase = Phase::Idle;
+    set_continuous(state, raw, caret, nailed, config);
 }
 
 /// Begin a composition from Idle: the buffer becomes `raw` with nothing
@@ -514,24 +587,50 @@ fn delete_backward_continuous(
     if nailed.is_empty() {
         return exit_to_idle(state, abort_continuous_effects());
     }
+    unnail_last(state, nailed, String::new(), UnnailedCaret::AfterIt, config)
+}
 
-    let mut new_nailed = nailed;
-    // JUSTIFICATION: `nailed.is_empty()` was checked at the branch above;
-    // popping a non-empty Vec is a programmer-invariant guarantee, not a
-    // data path.
-    let popped = new_nailed.pop().expect("nailed non-empty checked above");
+/// Where an un-nailed segment's raw text leaves the caret.
+enum UnnailedCaret {
+    /// Backspace: the next one takes the segment's last glyph.
+    AfterIt,
+    /// A step left from the start of a converted tail re-opens the segment
+    /// (H3): the caret lands before its glyphs.
+    BeforeIt,
+}
+
+/// Pop the last of the non-empty `nailed` and make its raw text, followed
+/// by `tail`, the pending tail, walked afresh — a pick re-opened from in
+/// front of the tail is dropped, as librime re-opens a selected segment. The
+/// usage the pick recorded stays recorded.
+fn unnail_last(
+    state: &mut EngineState,
+    mut nailed: Vec<NailedSegment>,
+    tail: String,
+    caret: UnnailedCaret,
+    config: &AppConfig,
+) -> ComposingResponse {
+    // JUSTIFICATION: both callers checked `nailed` is non-empty; popping a
+    // non-empty Vec is a programmer-invariant guarantee, not a data path.
+    let popped = nailed
+        .pop()
+        .expect("nailed non-empty checked by the caller");
     // Model B: the popped segment was never in the document — unnailing it
     // just restores its raw text as the editable pending tail. No
     // `DeleteBackwardFromDocument`; the combined preedit re-render replaces
     // the marked region. Authority is `raw_text`, never a display-char
     // count (swap / TPS / both-scripts display can desync from raw).
-    let new_pending = popped.raw_text;
+    let caret = match caret {
+        UnnailedCaret::AfterIt => popped.raw_text.len(),
+        UnnailedCaret::BeforeIt => 0,
+    };
+    let new_pending = popped.raw_text + &tail;
     // Unnail handshake. NextWord learns nothing from it and keeps its
     // committed context (behavioral-invariants §40) — the popped segment can
     // no longer reach NextWord at all, because only the final commit's
     // `preceding` carries nailed segments. Kept for platforms that read the
     // effect stream; canonical key per v3.5.8 Phase 9 Bug 1 (Option A).
-    let nextword_correction = match new_nailed.last() {
+    let nextword_correction = match nailed.last() {
         Some(prev) => next_word_update_last_selected_word(
             prev.canonical_text.clone(),
             // R2: canonical TL (raw-slice fallback), as the commit path.
@@ -539,8 +638,7 @@ fn delete_backward_continuous(
         ),
         None => next_word_clear_for_new_composing(),
     };
-    let caret = new_pending.len();
-    set_continuous(state, new_pending, caret, new_nailed, config);
+    set_continuous_walked_afresh(state, new_pending, caret, nailed, config);
 
     let preedit = phase_preedit(&state.phase, config);
     let effects = vec![

@@ -10,7 +10,7 @@
 //! body `ㆢㄧ`) under 日 (ji̍t, `ㆢㄧㆵ˙`), 之 (tsi, `ㄐㄧ`) under 這 (tsit,
 //! `ㄐㄧㆵ`).
 
-use composing::api::{CaretDirection, CommitScript, Conversion};
+use composing::api::{CommitScript, Conversion};
 use composing::{requests, Engine, Intent, Phase};
 use protos::engine::composing_request::Method;
 use protos::engine::effect::Kind;
@@ -24,7 +24,7 @@ use crate::common::{
     config_converting, converted_words, empty_association_bin, install_lexicon, req, Fetch, Row,
 };
 
-fn row(hanji: &'static str, tl: &'static str, syll: u8, freq: u32) -> Row {
+pub(crate) fn row(hanji: &'static str, tl: &'static str, syll: u8, freq: u32) -> Row {
     Row {
         toneless_key: "",
         hanji,
@@ -41,7 +41,7 @@ fn row(hanji: &'static str, tl: &'static str, syll: u8, freq: u32) -> Row {
 /// - `ㄐㄧㆵ`: 這 (tsit4) under the higher-frequency 一 (tsit8) — Space pins
 ///   the stop coda's unmarked tone.
 /// - 機, 字 and 之: the strict-prefix controls.
-fn dictionary_rows() -> Vec<Row> {
+pub(crate) fn dictionary_rows() -> Vec<Row> {
     vec![
         row("詩", "si", 1, 50),
         row("死", "sí", 1, 900),
@@ -61,8 +61,23 @@ fn dictionary_rows() -> Vec<Row> {
 /// The dictionary rows plus 喇 (lá), a syllable the inventory knows and the
 /// dictionary has no word for.
 fn install_fixture() {
-    let rows = dictionary_rows();
-    let mut syllable_rows = dictionary_rows();
+    install_fixture_with(&[]);
+}
+
+/// [`install_fixture`] with `extra` dictionary rows, `(hanji, tl, freq)`
+/// of one syllable each.
+pub(crate) fn install_fixture_with(extra: &[(&'static str, &'static str, u32)]) {
+    let with_extra = || {
+        let extra = extra
+            .iter()
+            .map(|&(hanji, tl, freq)| row(hanji, tl, 1, freq));
+        dictionary_rows()
+            .into_iter()
+            .chain(extra)
+            .collect::<Vec<_>>()
+    };
+    let rows = with_extra();
+    let mut syllable_rows = with_extra();
     syllable_rows.push(row("喇", "lá", 1, 1));
     let dict_path = write_temp("dictionary-hanji-conversion.bin", &build_tkdb_v3(&rows));
     let fst_path = build_dictionary_fst_tps(&rows);
@@ -72,13 +87,13 @@ fn install_fixture() {
 }
 
 /// A fresh engine composing `raw` under `config`.
-fn composing_engine(raw: &str, config: &AppConfig) -> (Engine, ComposingResponse) {
+pub(crate) fn composing_engine(raw: &str, config: &AppConfig) -> (Engine, ComposingResponse) {
     let mut engine = Engine::new();
     let response = engine.apply(Intent::Start { text: raw.into() }, config);
     (engine, response)
 }
 
-fn tps_key(engine: &mut Engine, key: &str, config: &AppConfig) -> ComposingResponse {
+pub(crate) fn tps_key(engine: &mut Engine, key: &str, config: &AppConfig) -> ComposingResponse {
     requests::handle(
         &req(Method::TpsKey(TpsKey { key: key.into() })),
         engine,
@@ -87,20 +102,20 @@ fn tps_key(engine: &mut Engine, key: &str, config: &AppConfig) -> ComposingRespo
     .expect("TpsKey")
 }
 
-fn display(response: &ComposingResponse) -> &str {
+pub(crate) fn display(response: &ComposingResponse) -> &str {
     &response.preedit.as_ref().expect("preedit").display_text
 }
 
-fn caret_utf16(response: &ComposingResponse) -> u32 {
+pub(crate) fn caret_utf16(response: &ComposingResponse) -> u32 {
     response.preedit.as_ref().expect("preedit").caret_utf16
 }
 
-fn raw_input(response: &ComposingResponse) -> &str {
+pub(crate) fn raw_input(response: &ComposingResponse) -> &str {
     &response.preedit.as_ref().expect("preedit").raw_input
 }
 
 /// The displays the response asks the host to write, in order.
-fn preedit_writes(response: &ComposingResponse) -> Vec<&str> {
+pub(crate) fn preedit_writes(response: &ComposingResponse) -> Vec<&str> {
     response
         .effect
         .iter()
@@ -111,7 +126,7 @@ fn preedit_writes(response: &ComposingResponse) -> Vec<&str> {
         .collect()
 }
 
-fn conversion_of(engine: &Engine) -> Option<Conversion> {
+pub(crate) fn conversion_of(engine: &Engine) -> Option<Conversion> {
     match engine.snapshot_state().phase {
         Phase::Continuous { conversion, .. } => conversion,
         Phase::Idle => None,
@@ -282,8 +297,8 @@ fn the_open_reading_follows_the_converted_words() {
 }
 
 // trace: "ㄍㄧㄣ ㄚˋ" (9 + 1 + 5 bytes) closes on ㄚˋ: no row spans kin-á, so
-// the path is 今 (0, 9) + 仔 (9, 15) — the interior separator rides the next
-// word's span. Closing "ㆢㄧㆵ˙" (11 bytes) makes the three-syllable 今仔日
+// the path is 今 (0, 10) + 仔 (10, 15) — the separator belongs to the word
+// whose reading it closes. Closing "ㆢㄧㆵ˙" (11 bytes) makes the three-syllable 今仔日
 // one edge over the whole closed part: the words before the new reading
 // change. The controls 機 (ki) and 字 (jī) are strict prefixes of the typed
 // syllables and never appear.
@@ -296,7 +311,7 @@ fn closing_a_later_reading_resegments_the_words_before_it() {
     assert_eq!(display(&response), "今仔");
     assert_eq!(
         converted_words(&engine),
-        vec![((0, 9), "今".to_string()), ((9, 15), "仔".to_string())]
+        vec![((0, 10), "今".to_string()), ((10, 15), "仔".to_string())]
     );
 
     for key in ["ㆢ", "ㄧ", "ㆵ"] {
@@ -394,33 +409,6 @@ fn backspace_reopens_the_reading_it_takes_the_close_from() {
     assert_eq!(raw_input(&response), "ㄒㄧ");
     assert_eq!(display(&response), "ㄒㄧ");
     assert_eq!(conversion_of(&engine), None);
-}
-
-// The conversion exists only with the caret at the end of the tail: the
-// caret the host draws must be where the next key edits. trace: one step
-// left of "ㄒㄧˋ" puts the raw caret before the mark → glyphs, caret after
-// two of three characters; the step back converts again.
-#[test]
-fn a_caret_inside_the_tail_shows_glyphs_until_it_returns_to_the_end() {
-    let _lock = engine_install_lock();
-    install_fixture();
-    let config = config_converting("tps");
-    let (mut engine, _) = composing_engine("ㄒㄧˋ", &config);
-
-    let left = Intent::MoveCaret {
-        direction: Some(CaretDirection::Left),
-    };
-    let response = engine.apply(left, &config);
-    assert_eq!(display(&response), "ㄒㄧˋ");
-    assert_eq!(caret_utf16(&response), 2);
-    assert_eq!(conversion_of(&engine), None);
-
-    let right = Intent::MoveCaret {
-        direction: Some(CaretDirection::Right),
-    };
-    let response = engine.apply(right, &config);
-    assert_eq!(display(&response), "死");
-    assert_eq!(caret_utf16(&response), 1);
 }
 
 // Without the switch nothing converts — the D7 glyph preedit, as today.

@@ -2,7 +2,7 @@
 
 Under TPS (方音符號, the i18n `en` label "Phonetic Symbols") on macOS, Windows and Linux, the preedit shows the predicted Hanji while the user types, and ↓ opens the candidates of the word at the caret — the way the Zhuyin input methods work. This is arm B of U8 in [`desktop-tps-roadmap.md`](desktop-tps-roadmap.md); arm A (the preedit stays glyphs, D7) is what P1–P6 of that roadmap built.
 
-Status: H-P1 (engine, typing forward) is merged (#398); the later phases have not started. No shell asks for the conversion until H-P4, so nothing a user types changes yet. No release is assigned; scope and timing are the maintainer's call.
+Status: H-P1 (engine, typing forward) is merged (#398); H-P2 (engine, the caret) is in review; the later phases have not started. No shell asks for the conversion until H-P4, so nothing a user types changes yet. No release is assigned; scope and timing are the maintainer's call.
 
 Not next-word prediction. The desktops never suggest a word after a commit (maintainer, 2026-10-03), and nothing here changes that: this converts the glyphs being composed, before any commit. TL and POJ are untouched (U8).
 
@@ -84,7 +84,7 @@ As built in H-P1 (`engine/composing/src/conversion.rs`):
 - The walk runs inside the mutation, under the composing mutex, in one read of the lexicon for the boundary and the path. `Phase::Continuous` holds the result beside `raw` and `caret`, so replacing the phase replaces it.
 - The closed part is walked as a buffer of its own, with its trailing separator, so the §41 pin holds and a tail the whole-buffer walk cannot span still converts what is closed. The boundary comes from the whole tail's lattice: a boundary that what follows makes invalid (a tone mark typed after a separator) is not closed.
 - A conversion is shown and re-used only for the source filter it was walked with; a request that asks for another filter, or for none, gets the glyphs, and the next mutation walks again.
-- A conversion exists only while the caret is at the end of the tail. With the caret inside the tail the preedit is the glyphs, one displayed character per raw character, so the caret the host draws is where the next key edits. H-P2 replaces this with the caret by word (H3).
+- A conversion existed only while the caret was at the end of the tail; H-P2 replaced this with the caret by word (H3, As built in H-P2).
 - The walk is neutral — no user frequency, no previous-word context. H-P3 adds the user's rows with the frequency lookup of H5.
 - A segment keeps its raw span and its displayed text. The Hanji and the canonical TL of H2 arrive in H-P3 with the pick that reads them.
 - A tone mark typed after a reading its own mark already closed (`ㄒㄧˋ` then `ˊ`) shows that word as glyphs again: the whole tail's lattice refuses a syllable end followed by a tone mark, as the candidate list does. Kept as it is (maintainer, 2026-10-05); Backspace restores the word.
@@ -99,6 +99,18 @@ The caret sits on a boundary between words of the conversion, or inside the open
 A glyph typed with the caret between two words starts an open reading there. The conversion on both sides is kept as it was; the walk runs again when that reading closes.
 
 Backspace always removes one glyph. A closed syllable that loses its tone mark is an open reading again and shows as glyphs. On an empty tail it un-nails, as today.
+
+As built in H-P2 (`engine/composing/src/conversion.rs`, `transition.rs`):
+
+- The conversion is a list of words in raw order that need not cover the tail: the raw text no word covers shows as glyphs. No open-reading span is stored; the text between and after the words is the open text, and the caret is on a word boundary or inside that text.
+- A word's raw span ends after the separator run that closes its last reading, so the caret stop after it is past the separator and a glyph typed there starts a new reading (H-P1 gave an interior separator to the next word).
+- A request that leaves the text alone (a caret step) keeps the words. An edit at the end of the tail is H-P1's rule: the closed part is walked again when its text changed, and words with glyphs between them are never re-used there. An edit inside the tail keeps the words before the changed text and the words after the caret (shifted); a word the edit touched shows as glyphs. When the reading at the caret closes — a closing end of the whole tail's lattice falls in the uncovered text at or after the caret, open text may follow — the closed part is walked again, and a caret the new walk put inside a word moves to that word's end.
+- So Backspace that takes a word's tone mark at the end of the tail walks the closed part again (the word's other closed readings convert), while inside the tail the whole word shows as glyphs until its reading closes: the caret must stay in that reading.
+- A reading left open inside the tail that the syllabifier cannot read stops the lattice there: no reading after it closes, and a walk converts only what is before it.
+- Re-opening is `MoveCaret` left from the start of the tail, under the switch and on a TPS buffer — no new intent. It answers as Backspace's un-nail (the NextWord handshake, `UpdatePreedit`, `RefreshCandidates`), and the tail is walked afresh. Without the switch the start of the tail stays an edge.
+- A caret step under a request the held conversion is not for (another source filter, or the switch was off) walks the tail first, then steps over its words, so a step never moves the other way.
+- A step over a hidden separator in the open text moves the raw caret and not the drawn one, as in the glyph preedit.
+- With no dictionary word in reach (every source off), the walker's path can be one glyph word over several readings, and the caret steps over all of them at once.
 
 ### H4 — Choosing a word
 
@@ -117,7 +129,7 @@ Names and wire shapes are settled in each phase's pre-implementation review; the
 | Pick | `CommitContinuous`, under H2, nails the words before the anchor itself (not picked), then the pick, and keeps the composition |
 | Commit as shown | A new intent: writes nailed text + conversion + open reading and goes idle. Enter, a printable that commits first, a mode switch and a host's Finalize use it |
 | Commit as typed | Under H2 the key bound to Commit as Typed writes the glyphs of the **whole** composition, rebuilt from each segment's raw text with the separators stripped — a new intent, since `CommitRaw` writes nailed Hanji |
-| Caret | `MoveCaret` under H2 steps as H3 says; a new intent re-opens the last nailed segment |
+| Caret | `MoveCaret` under H2 steps as H3 says; a step left from the start of the tail re-opens the last nailed segment (no new intent — H-P2's pre-implementation review) |
 | Learning | A nailed segment carries whether it was picked. A segment not picked gives no usage, keeps §50 from learning a phrase, and is no predecessor or successor in a next-word pair — the pair is not bridged across it |
 
 Legacy requests keep their behaviour byte for byte: `FetchAtPos` without the new field, `CommitContinuous` and `CommitRaw` without H2.
@@ -188,7 +200,7 @@ Sizes are estimates. The engine phases are unreachable until H-P4 sets the switc
 |---|---|---|---|---|---|
 | H-P0 | docs | This roadmap, the `roadmap.md` row | — | — | Merged |
 | H-P1 | feat (engine) | H1, H2 for typing forward: the switch, the conversion in the state, the closed-part boundary, the walk on closing, the derived preedit and caret, Backspace; tests from production syllables (fixture rule: every strict-prefix syllable asserted) | engine; `make build` for the mobile artifacts (additive) | ~450 | Merged #398 `3e81146b` |
-| H-P2 | feat (engine) | H3: the caret by word, the open reading inside the tail, re-opening a nailed segment | engine; `make build` | ~400 | Pending |
+| H-P2 | feat (engine) | H3: the caret by word, the open reading inside the tail, re-opening a nailed segment | engine; `make build` | ~400 | In review |
 | H-P3 | feat (engine) | H4, H5, H7: the word's list and its frequency lookup, the pick that keeps composing, commit as shown, commit as typed, the picked mark and what it withholds | engine, dispatch, nextword; `make build` | ~500 | Pending |
 | H-P4 | feat (desktop-core, all three shells) | H6, H8: the switch on under TPS, the classifier and executor rows, every shell's tests | desktop-core, Windows, Linux, macOS | ~500 | Pending |
 | H-P5 | feat (macOS) + docs | The window's place on device; the behavioural invariant for H1–H7; the dogfood items; D7 and U8 in `desktop-tps-roadmap.md` marked as revised, S91 reworded | macOS | ~250 | Pending |
@@ -240,6 +252,8 @@ Deliberately not adopted:
 - H-P0 pre-implementation, 2026-10-05: Codex (`codex-cli 0.160.0`, `gpt-6.1-sol`) GO-WITH-CHANGES on a first draft in which a fetch after each key returned the conversion and the commits carried its segments back. Applied: the closed-part boundary comes from the syllabifier and the shadow's barriers, with the unclosable cases named (H1); re-segmentation on completion is stated, not denied (H1); an open reading inside the tail keeps the conversion on both sides and re-walks on closing (H3); field 1 of `FetchAtPos` is reserved, so a new tag (H5); a pick that reaches the end keeps the composition (H4); one preedit write per key (H2); the picked mark also cuts next-word adjacency, compound pairs included (H5, H7); re-opening puts the raw text back in front of a kept tail, and Commit as Typed rebuilds glyphs from every segment (H3, H5); the undefined key states are named (H6); frequency lookup covers the walker's edges (H5); all three desktops flip in one phase and the engine phases stay unreachable before it (Phases).
 - Where this plan goes further than the review: Codex kept the caller-carried conversion and asked for a revision the engine would check under its mutex. The plan moves the conversion into the engine's state instead (H2), which removes the race rather than validating it and is how McBopomofo and vChewing hold their walk. H-P1's pre-implementation review, below, is where this shape was reviewed.
 - H-P1 pre-implementation, 2026-10-05: Codex (`codex-cli 0.160.0`, `gpt-6.1-sol`) AGREE on the conversion as engine state held in `Phase::Continuous` and computed inside the mutation — the shape the H-P0 review had not seen — and GO-WITH-CHANGES on the phase's plan. Applied: no conversion while the caret is inside the tail, instead of a display caret snapped to a word while the raw caret steps by glyph; a conversion is valid only for the source filter it was walked with, and a request without the switch ignores one the state holds; the separator barriers are read from the shadow pipeline, not derived from the merged barrier set, and the boundary is the furthest closing end among the lattice's edges; one lexicon read for the boundary and the walk, the render outside it; the walker is split by extraction only, slot 0 keeping its guard, flattening and order; a segment holds nothing H-P1 does not read.
+- H-P2 pre-implementation, 2026-10-05: Codex (`codex-cli 0.160.0`, `gpt-6.1-sol`) CHANGE on the caret design (words with derived gaps, the at-end path kept from H-P1, the edit-inside path, the separator moved to the word it closes, re-open through `MoveCaret`). Applied: the at-end path re-uses only words that cover the tail from its start; a re-open walks afresh by construction instead of being detected from the text; no new intent, H5 corrected; a walk after the switch returns keeps the caret out of a word; tests for those, a separator in the open text, two nailed segments and a non-BMP word.
+- H-P2 post-implementation, 2026-10-05: Codex SHIP-WITH-FIXES (two tests, added); Claude cloud review SHIP-WITH-FIXES — `cargo test --workspace`, 135k-operation differential against `main` without the switch (identical), 160k-operation caret-invariant fuzz (no violation). Applied: a reading closed at the caret converts even with open text after it (it waited for the end of the uncovered text); a caret step under a request the held conversion is not for walks first; tests for those, a pick with the caret inside the tail, a re-open that closes nothing. Not added: a property test under the switch.
 
 ## Dogfood
 

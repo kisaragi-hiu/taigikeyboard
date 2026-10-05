@@ -734,6 +734,12 @@ public nonisolated struct Taigi_Engine_TpsKey: Sendable {
 /// `ReplaceLast` act on the character before it, `TelexKey` and `TpsKey` on
 /// the chunk before it. Mobile never sends this, so its caret stays at the end and
 /// every mutator behaves as before.
+/// Under a Hanji conversion the request asks for (`AppConfig.hanji_conversion`,
+/// a TPS tail): a step over a converted word moves past the whole word, and a
+/// step left from the start of the tail with a segment nailed re-opens that
+/// segment — its glyphs go back in front of the tail, the caret before them —
+/// answering as `DeleteBackward`'s un-nail does (NextWord handshake,
+/// `UpdatePreedit`, `RefreshCandidates`).
 public nonisolated struct Taigi_Engine_MoveCaret: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
