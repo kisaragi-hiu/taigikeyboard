@@ -2,7 +2,7 @@
 
 Under TPS (方音符號, the i18n `en` label "Phonetic Symbols") on macOS, Windows and Linux, the preedit shows the predicted Hanji while the user types, and ↓ opens the candidates of the word at the caret — the way the Zhuyin input methods work. This is arm B of U8 in [`desktop-tps-roadmap.md`](desktop-tps-roadmap.md); arm A (the preedit stays glyphs, D7) is what P1–P6 of that roadmap built.
 
-Status: H-P1 (engine, typing forward) is in review; the later phases have not started. No shell asks for the conversion until H-P4, so nothing a user types changes yet. No release is assigned; scope and timing are the maintainer's call.
+Status: H-P1 (engine, typing forward) is merged (#398); the later phases have not started. No shell asks for the conversion until H-P4, so nothing a user types changes yet. No release is assigned; scope and timing are the maintainer's call.
 
 Not next-word prediction. The desktops never suggest a word after a commit (maintainer, 2026-10-03), and nothing here changes that: this converts the glyphs being composed, before any commit. TL and POJ are untouched (U8).
 
@@ -87,6 +87,7 @@ As built in H-P1 (`engine/composing/src/conversion.rs`):
 - A conversion exists only while the caret is at the end of the tail. With the caret inside the tail the preedit is the glyphs, one displayed character per raw character, so the caret the host draws is where the next key edits. H-P2 replaces this with the caret by word (H3).
 - The walk is neutral — no user frequency, no previous-word context. H-P3 adds the user's rows with the frequency lookup of H5.
 - A segment keeps its raw span and its displayed text. The Hanji and the canonical TL of H2 arrive in H-P3 with the pick that reads them.
+- A tone mark typed after a reading its own mark already closed (`ㄒㄧˋ` then `ˊ`) shows that word as glyphs again: the whole tail's lattice refuses a syllable end followed by a tone mark, as the candidate list does. Kept as it is (maintainer, 2026-10-05); Backspace restores the word.
 - `CommitRaw` and `CommitContinuous` keep their behaviour: the conversion changes what the preedit shows, not what a commit writes, until H-P3.
 
 Why state rather than a fetch answer the caller hands back: a fetch runs on a clone of the engine (`C/handle.rs:13-22`), so a conversion returned by one would have to be carried back by every commit and checked against a revision the engine does not have — the caret, the nails or the context can change under equal raw text. Held in the engine, there is nothing to go stale, the commits need no payload, and the open reading is spliced into a conversion the engine still has.
@@ -186,7 +187,7 @@ Sizes are estimates. The engine phases are unreachable until H-P4 sets the switc
 | Phase | Type | Scope | Builds / tests | Size | Status |
 |---|---|---|---|---|---|
 | H-P0 | docs | This roadmap, the `roadmap.md` row | — | — | Merged |
-| H-P1 | feat (engine) | H1, H2 for typing forward: the switch, the conversion in the state, the closed-part boundary, the walk on closing, the derived preedit and caret, Backspace; tests from production syllables (fixture rule: every strict-prefix syllable asserted) | engine; `make build` for the mobile artifacts (additive) | ~450 | In review |
+| H-P1 | feat (engine) | H1, H2 for typing forward: the switch, the conversion in the state, the closed-part boundary, the walk on closing, the derived preedit and caret, Backspace; tests from production syllables (fixture rule: every strict-prefix syllable asserted) | engine; `make build` for the mobile artifacts (additive) | ~450 | Merged #398 `3e81146b` |
 | H-P2 | feat (engine) | H3: the caret by word, the open reading inside the tail, re-opening a nailed segment | engine; `make build` | ~400 | Pending |
 | H-P3 | feat (engine) | H4, H5, H7: the word's list and its frequency lookup, the pick that keeps composing, commit as shown, commit as typed, the picked mark and what it withholds | engine, dispatch, nextword; `make build` | ~500 | Pending |
 | H-P4 | feat (desktop-core, all three shells) | H6, H8: the switch on under TPS, the classifier and executor rows, every shell's tests | desktop-core, Windows, Linux, macOS | ~500 | Pending |
