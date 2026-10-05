@@ -476,6 +476,16 @@ internal class TextInputKeyHandler(
     }
 
     /**
+     * Spends a one-shot Shift (auto-capitalization or a single manual tap)
+     * on the character it just shaped; Caps Lock stays. Synchronous, so a
+     * key typed before the host's next cursor-anchor callback is not
+     * shaped by a stale Shift (`TÂI` instead of `Tâi`).
+     */
+    private fun releaseSingleShift() {
+        if (caps && !capsLock) capsStateManager.resetSingleShift()
+    }
+
+    /**
      * Handle Taigi character input.
      */
     private fun handleTaigiInput(keyData: KeyData) {
@@ -520,9 +530,7 @@ internal class TextInputKeyHandler(
         // English mode: commit directly
         if (prefs.inputMode == "english") {
             ic.commitText(char, 1)
-            if (caps && !capsLock) {
-                capsStateManager.resetSingleShift()
-            }
+            releaseSingleShift()
             candidateCoordinator.updateEnglishCandidates()
             return
         }
@@ -547,6 +555,7 @@ internal class TextInputKeyHandler(
                     manager.appendHyphen(ic)
                 } else {
                     manager.appendCharacter(char, ic)
+                    if (consumesSingleShift(char)) releaseSingleShift()
                 }
                 if (prefs.isToolbarAutoCollapse) smartbarManager.collapseToolbarIfOpen()
                 logger.debug("PERF") {
@@ -559,6 +568,7 @@ internal class TextInputKeyHandler(
                     logger.debug(TAG) { "[INPUT] '-' committed in NextWord mode, keeping suggestions" }
                 } else {
                     manager.startComposing(char, ic)
+                    if (consumesSingleShift(char)) releaseSingleShift()
                     if (prefs.isToolbarAutoCollapse) smartbarManager.collapseToolbarIfOpen()
                     logger.debug("PERF") {
                         "[1] handleTaigiInput newComposing: ${System.currentTimeMillis() - inputStart}ms"
@@ -636,6 +646,16 @@ internal class TextInputKeyHandler(
  * ::note_character_typed_outside_composition`. Drift causes silent divergence.
  */
 internal fun isContextCharacterOutsideComposition(char: String): Boolean = char.isNotEmpty() && char.none { it.isLetter() || it.isWhitespace() }
+
+/**
+ * Whether typing [char] spends a one-shot Shift: only a cased letter does.
+ * Tone digits, the hyphen, TPS Bopomofo and TPS tone marks carry no case,
+ * so a Shift stays armed across them for the next letter.
+ */
+internal fun consumesSingleShift(char: String): Boolean {
+    val first = char.firstOrNull() ?: return false
+    return first.isUpperCase() || first.isLowerCase()
+}
 
 /**
  * Pure-function classifier: returns `true` when [char] enters composing
