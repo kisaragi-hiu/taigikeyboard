@@ -211,4 +211,24 @@ class TextInputKeyHandlerTest {
             resolveBackspaceDeletion(InputType.TYPE_CLASS_TEXT, hasSelection = false, textBefore = "hi😀"),
         )
     }
+
+    @Test
+    fun `consumesSingleShift is true for cased letters only`() {
+        // A one-shot Shift is spent by the letter it shaped (`Tâi`, not
+        // `TÂI` when the next key beats the host's cursor-anchor callback).
+        for (ch in ('a'..'z') + ('A'..'Z')) {
+            assertTrue("'$ch' spends the Shift", consumesSingleShift(ch.toString()))
+        }
+        assertTrue("POJ o͘ key label", consumesSingleShift("o\u0358"))
+    }
+
+    @Test
+    fun `consumesSingleShift keeps the Shift across caseless composing keys`() {
+        // Tone digits, the hyphen, TPS Bopomofo and TPS tone marks carry no
+        // case: the Shift stays armed for the next letter.
+        val caseless = listOf("1", "5", "9", "-", "ㄅ", "ㄉ", "ㆡ", "ˊ", "ˋ", "˪", "˫", "˙", "")
+        for (s in caseless) {
+            assertFalse("'$s' keeps the Shift", consumesSingleShift(s))
+        }
+    }
 }
