@@ -7,6 +7,7 @@
 @font-face { font-family: Huninn; src: url(assets/jf_openhuninn_2_1.ttf); }
 @font-face { font-family: GenMin; src: url(assets/genyomin2tw_r.otf); }
 @font-face { font-family: GenGo; src: url(assets/genyogothic2tw_r.otf); }
+@font-face { font-family: Iansui; src: url(assets/iansui_regular.ttf); }
 :root {
   --ink: #1d1d1f;
   --ink2: #86868b;
@@ -106,7 +107,7 @@ html, body { width: 1080px; height: 1350px; overflow: hidden; background: var(--
 .mcell .st { display: flex; flex-direction: column; align-items: flex-start; }
 .mcell .h { font-size: 17px; line-height: 21px; }
 .mcell .r { font-size: 15px; line-height: 18px; margin-top: 2px; color: var(--pink2); }
-.mcell.on { background: #0088ff; color: #fff; }
+.mcell.on { background: var(--acc, #0088ff); color: #fff; }
 .mcell.on .ix, .mcell.on .r { color: rgba(255,255,255,.85); }
 .msep { width: 1px; margin: 9px 0; background: var(--psep); }
 .mcell.on + .msep, .msep:has(+ .mcell.on) { opacity: 0; }
@@ -117,7 +118,11 @@ html, body { width: 1080px; height: 1350px; overflow: hidden; background: var(--
 .mcol .vr > span { padding: 7px 12px; font-size: 17px; line-height: 21px; white-space: nowrap; }
 .mcol .vr > span:first-child { border-radius: 12px 0 0 12px; }
 .mcol .vr > span:last-child { border-radius: 0 12px 12px 0; color: var(--pink2); font-size: 15px; padding-left: 6px; }
-.mcol .vr.on > span { background: #0088ff; color: #fff; }
+.mcol .vr.on > span { background: var(--acc, #0088ff); color: #fff; }
+/* expandable layout: the row unfolded into a column-quantized grid */
+.mgridwrap { overflow: hidden; }
+.mgridrow { display: grid; }
+.mgridsep { height: 1px; margin: 0 7px; background: var(--psep); }
 
 /* segmented control */
 .segc { position: absolute; border-radius: 18px; background: #e9e9ee; }
@@ -158,6 +163,18 @@ html, body { width: 1080px; height: 1350px; overflow: hidden; background: var(--
 .dot { width: 64px; height: 64px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0,0,0,.10); position: relative; }
 .dot b { position: absolute; inset: -7px; border-radius: 50%; border: 4px solid var(--accent); }
 .tname { position: absolute; font: 40px GenGo, sans-serif; color: var(--ink); white-space: nowrap; }
+.dots.acc { gap: 13px; }
+.dots.acc .dot { width: 46px; height: 46px; }
+.dots.acc .dot b { inset: -6px; border-width: 3px; border-color: currentColor; }
+
+/* desktop panes: shortcuts + typefaces */
+.card.desk .row { height: 74px; }
+.keys2 { display: flex; align-items: center; gap: 8px; }
+.kc { min-width: 46px; height: 46px; padding: 0 12px; border-radius: 11px; background: #f2f2f7; box-shadow: inset 0 0 0 1px rgba(60,60,67,.14);
+  display: flex; align-items: center; justify-content: center; font: 500 26px "SF Pro Text", "SF Pro Display", sans-serif; color: var(--ink); }
+.rec { height: 46px; padding: 0 18px; border-radius: 11px; box-shadow: inset 0 0 0 2px var(--accent); display: flex; align-items: center;
+  font: 26px GenGo, sans-serif; color: var(--accent); }
+.row .smp { font-size: 28px; }
 
 /* end */
 .icon { position: absolute; left: 50%; top: 50%; border-radius: 22.37%; overflow: hidden; background: #fff;
@@ -189,7 +206,7 @@ const stepAt = (t, times, d = .5) => { let i = 0; for (let j = 1; j < times.leng
 const stage = document.getElementById('stage');
 const scenes = [];
 const SIZE = { width: 1080, height: 1350 };
-const DURATION = 32.6;
+const DURATION = 37.5;
 
 // fade a whole layer in/out with blur and drift
 function presence(el, t, tin, tout, opts = {}) {
@@ -381,7 +398,7 @@ function makePhone(parent, x, y, sc) {
 }
 
 // ---------- desktop window + candidate panel ----------
-// real engine output (candidate_dump, mode=tl) per prefix of "tai5gi2tsin1sui2":
+// real engine output (candidate_dump, mode=tl) per prefix of "tai5gi2khi2puann5":
 // [literal, keyed…] — the literal lead cell is unkeyed, keys follow q w d f z
 const DUMP = {
   't': ['t', ['佇', 'tī'], ['台', 'tâi'], ['就', 'tō'], ['代', 'tāi'], ['大', 'tāi']],
@@ -391,17 +408,18 @@ const DUMP = {
   'tai5g': ['tai5g', ['台', 'tâi'], ['臺', 'tâi'], ['𧉟', 'tâi'], ['抬', 'tâi'], ['枱', 'tâi']],
   'tai5gi': ['tai5gi', ['台語', 'tâi-gí'], ['臺語', 'tâi-gí'], ['台', 'tâi'], ['臺', 'tâi'], ['𧉟', 'tâi']],
   'tai5gi2': ['tai5gi2', ['台語', 'tâi-gí'], ['臺語', 'tâi-gí'], ['台', 'tâi'], ['臺', 'tâi'], ['𧉟', 'tâi']],
-  'tai5gi2t': ['tai5gi2t', ['台', 'tâi'], ['臺', 'tâi'], ['台語', 'tâi-gí'], ['𧉟', 'tâi'], ['抬', 'tâi']],
-  'tai5gi2ts': ['tai5gi2ts', ['台', 'tâi'], ['臺', 'tâi'], ['台語', 'tâi-gí'], ['𧉟', 'tâi'], ['抬', 'tâi']],
-  'tai5gi2tsi': ['tai5gi2tsi', ['台語誌', 'tâi-gí tsì'], ['台', 'tâi'], ['臺', 'tâi'], ['台語', 'tâi-gí'], ['𧉟', 'tâi']],
-  'tai5gi2tsin': ['tai5gi2tsin', ['台語真', 'tâi-gí tsin'], ['台', 'tâi'], ['臺', 'tâi'], ['台語', 'tâi-gí'], ['𧉟', 'tâi']],
-  'tai5gi2tsin1': ['tai5gi2tsin1', ['台語真', 'tâi-gí tsin'], ['台', 'tâi'], ['臺', 'tâi'], ['台語', 'tâi-gí'], ['𧉟', 'tâi']],
-  'tai5gi2tsin1s': ['tai5gi2tsin1s', ['台', 'tâi'], ['臺', 'tâi'], ['台語', 'tâi-gí'], ['𧉟', 'tâi'], ['抬', 'tâi']],
-  'tai5gi2tsin1su': ['tai5gi2tsin1su', ['台語真書', 'tâi-gí tsin-su'], ['台', 'tâi'], ['臺', 'tâi'], ['台語', 'tâi-gí'], ['𧉟', 'tâi']],
-  'tai5gi2tsin1sui': ['tai5gi2tsin1sui', ['台語真媠', 'tâi-gí tsin-suí'], ['台', 'tâi'], ['臺', 'tâi'], ['台語', 'tâi-gí'], ['𧉟', 'tâi']],
-  'tai5gi2tsin1sui2': ['tai5gi2tsin1sui2', ['台語真媠', 'tâi-gí tsin-suí'], ['台', 'tâi'], ['臺', 'tâi'], ['台語', 'tâi-gí'], ['𧉟', 'tâi']],
+  'tai5gi2k': ['tai5gi2k', ['台', 'tâi'], ['臺', 'tâi'], ['台語', 'tâi-gí'], ['𧉟', 'tâi'], ['抬', 'tâi']],
+  'tai5gi2kh': ['tai5gi2kh', ['台', 'tâi'], ['臺', 'tâi'], ['台語', 'tâi-gí'], ['𧉟', 'tâi'], ['抬', 'tâi']],
+  'tai5gi2khi': ['tai5gi2khi', ['台語去', 'tâi-gí khì'], ['台', 'tâi'], ['臺', 'tâi'], ['台語', 'tâi-gí'], ['𧉟', 'tâi']],
+  'tai5gi2khi2': ['tai5gi2khi2', ['台語起', 'tâi-gí khí'], ['台', 'tâi'], ['臺', 'tâi'], ['台語', 'tâi-gí'], ['𧉟', 'tâi']],
+  'tai5gi2khi2p': ['tai5gi2khi2p', ['台', 'tâi'], ['臺', 'tâi'], ['台語', 'tâi-gí'], ['𧉟', 'tâi'], ['抬', 'tâi']],
+  'tai5gi2khi2pu': ['tai5gi2khi2pu', ['台語起婦', 'tâi-gí khí pū'], ['台', 'tâi'], ['臺', 'tâi'], ['台語', 'tâi-gí'], ['𧉟', 'tâi']],
+  'tai5gi2khi2pua': ['tai5gi2khi2pua', ['台語起簸', 'tâi-gí khí puà'], ['台', 'tâi'], ['臺', 'tâi'], ['台語', 'tâi-gí'], ['𧉟', 'tâi']],
+  'tai5gi2khi2puan': ['tai5gi2khi2puan', ['台語起叛', 'tâi-gí khí-puān'], ['台', 'tâi'], ['臺', 'tâi'], ['台語', 'tâi-gí'], ['𧉟', 'tâi']],
+  'tai5gi2khi2puann': ['tai5gi2khi2puann', ['台語齒盤', 'tâi-gí khí-puânn'], ['台', 'tâi'], ['臺', 'tâi'], ['台語', 'tâi-gí'], ['𧉟', 'tâi']],
+  'tai5gi2khi2puann5': ['tai5gi2khi2puann5', ['台語齒盤', 'tâi-gí khí-puânn'], ['台', 'tâi'], ['臺', 'tâi'], ['台語', 'tâi-gí'], ['𧉟', 'tâi']],
 };
-const DESK_TYPED = 'tai5gi2tsin1sui2', DESK_COMMIT = '台語真媠';
+const DESK_TYPED = 'tai5gi2khi2puann5', DESK_COMMIT = '台語齒盤';
 const SLOT_KEYS = ['q', 'w', 'd', 'f', 'z'];
 function panelRow(panel, [lit, ...cs]) {
   const row = $('div', 'mrow', panel);
@@ -418,6 +436,15 @@ function panelColumn(panel, [, ...cs]) {
   cs.forEach(([hz, rm], i) => $('div', 'vr' + (i === 0 ? ' on' : ''), col, `<span>${hz}</span><span>${rm}</span>`));
   return col;
 }
+// The selection highlight follows the system accent colour (macos CandidateAccentColor.swift). Values are AppKit's
+// light-appearance system colours (systemBlue … systemGray), then the Tahoe luminance clamp that keeps white
+// text legible on a bright accent (CandidateAccentColor.tahoeAdjusted).
+const ACCENTS = ['#0088ff', '#cb30e0', '#ff2d55', '#ff383c', '#ff8d28', '#ffcc00', '#34c759', '#8e8e93'].map(h => {
+  const c = hex(h), lin = v => Math.pow(v / 255, 2.2);
+  const lum = Math.pow(.2126 * lin(c[0]) + .7152 * lin(c[1]) + .0722 * lin(c[2]), 1 / 2.2);
+  const k = lum > .599 ? Math.max(.4726, 1 - 7.2 * Math.pow(lum - .599, 2.3)) : 1;
+  return '#' + c.map(v => Math.round(v * k).toString(16).padStart(2, '0')).join('');
+});
 // Light / Dark (the desktop Appearance setting); values follow the Windows candidate window
 const DESK_LIGHT = { wbg: '#ffffff', wink: '#1d1d1f', pbg: '#f7f7f9', pink2: '#6f6f76', psep: '#e3e3e6' };
 const DESK_DARK = { wbg: '#1c1c1e', wink: '#f5f5f7', pbg: '#2a2a2c', pink2: '#a5a5ad', psep: '#444448' };
@@ -432,8 +459,9 @@ function makeDesk(parent, x, y, sc) {
   const panel = $('div', 'mpanel', D); Object.assign(panel.style, { left: '26px', top: '100px' });
   const rows = {};
   for (const [raw, d] of Object.entries(DUMP)) rows[raw] = panelRow(panel, d);
-  // st: { n typed, picked, caretOn, appear 0..1, flash 0..1, dark 0..1 }
+  // st: { n typed, picked, caretOn, appear 0..1, flash 0..1, dark 0..1, accent css colour }
   function update(st) {
+    D.style.setProperty('--acc', st.accent || ACCENTS[0]);
     for (const k in DESK_LIGHT) D.style.setProperty('--' + k, mix(DESK_LIGHT[k], DESK_DARK[k], st.dark || 0));
     const raw = DESK_TYPED.slice(0, st.n);
     docText.className = !st.picked && st.n ? 'mcomp' : '';
@@ -470,7 +498,7 @@ function duoEnter(duo, t, tIn) {
   });
 })();
 
-// ---------- Scene B: TL typing — tâi-gí tsin-suí / 台語真媠 ----------
+// ---------- Scene B: TL typing — tâi-gí khí-puânn / 台語齒盤 ----------
 const MARKS = { '2': 'ˊ', '3': 'ˋ', '5': 'ˆ', '6': 'ˇ', '7': 'ˉ', '8': 'ˈ', '9': '˝' };
 function typingScene(o) {
   const L = $('div', 'layer', stage);
@@ -591,18 +619,18 @@ function typingScene(o) {
 }
 typingScene({
   label: 'TL', seed: 7, size: 108, hanjiSize: 190, subScale: .5, subDrop: 150,
-  tIn: 1.45, tType: 1.95, beat: .115, tReveal: 4.75, tOut: 6.45,
-  hanji: '台語真媠',
+  tIn: 1.45, tType: 1.95, beat: .108, tReveal: 4.75, tOut: 6.45,
+  hanji: '台語齒盤',
   steps: [
     { k: 't', add: 't' }, { k: 'a', add: 'a' }, { k: 'i', add: 'i' },
     { k: '5', tone: true, mark: { at: -2, g: 'â' }, pauseBefore: .05 },
     { k: '-', add: '-', pauseBefore: .06 }, { k: 'g', add: 'g' }, { k: 'i', add: 'i' },
     { k: '2', tone: true, mark: { at: -1, g: 'í' }, pauseBefore: .05 },
     { k: ' ', add: ' ', pauseBefore: .09 },
-    { k: 't', add: 't' }, { k: 's', add: 's' }, { k: 'i', add: 'i' }, { k: 'n', add: 'n' },
-    { k: '1', tone: true, keyMark: '', pauseBefore: .03 },
-    { k: '-', add: '-', pauseBefore: .05 }, { k: 's', add: 's' }, { k: 'u', add: 'u' }, { k: 'i', add: 'i' },
+    { k: 'k', add: 'k' }, { k: 'h', add: 'h' }, { k: 'i', add: 'i' },
     { k: '2', tone: true, mark: { at: -1, g: 'í' }, pauseBefore: .05 },
+    { k: '-', add: '-', pauseBefore: .05 }, { k: 'p', add: 'p' }, { k: 'u', add: 'u' }, { k: 'a', add: 'a' }, { k: 'n', add: 'n' }, { k: 'n', add: 'n' },
+    { k: '5', tone: true, mark: { at: -3, g: 'â' }, pauseBefore: .05 },
   ],
 });
 
@@ -610,11 +638,11 @@ typingScene({
 (function () {
   const L = $('div', 'layer', stage);
   const tIn = 6.55, tOut = 9.1;
-  const h = $('div', 'tri-h', L, '台語真媠');
+  const h = $('div', 'tri-h', L, '台語齒盤');
   const rows = [
-    ['TL', ['tâi-gí ', ['ts', 1], 'in-', ['suí', 1]]],
-    ['POJ', ['tâi-gí ', ['ch', 1], 'in-', ['súi', 1]]],
-    ['TPS', ['ㄉㄞˊ ㆣㄧˋ ㄐㄧㄣ ㄙㄨㄧˋ']],
+    ['TL', ['tâi-gí khí-p', ['uânn', 1]]],
+    ['POJ', ['tâi-gí khí-p', ['ôaⁿ', 1]]],
+    ['TPS', ['ㄉㄞˊ ㆣㄧˋ ㄎㄧˋ ㄅㄨㆩˊ']],
   ];
   const hl = [];
   const rowEls = rows.map(([k, parts], i) => {
@@ -639,11 +667,11 @@ typingScene({
   });
 })();
 
-// ---------- Scene D: every platform — phone and desktop type side by side ----------
+// ---------- Scene D: desktop and phone type side by side ----------
 (function () {
   const L = $('div', 'layer', stage);
   const tIn = 9.2, tOut = 13.7;
-  const cap = caption(L, 'One engine · five platforms', '多平台');
+  const cap = caption(L, 'One engine · five platforms', '電腦、手機仔');
   const duo = makeDuo(L);
   const names = ['iOS', 'Android', 'macOS', 'Windows', 'Linux'].map((n, i) => { const e = $('div', 'pname', L, n); e.style.top = (850 + i * 88) + 'px'; return e; });
 
@@ -678,8 +706,8 @@ typingScene({
 // ---------- Scene E: candidate display modes + candidate window layouts ----------
 (function () {
   const L = $('div', 'layer', stage);
-  const tIn = 13.8, tOut = 18.3;
-  const cap = caption(L, 'Candidate Display', '候選詞顯示');
+  const tIn = 13.8, tOut = 19.1;
+  const cap = caption(L, 'Candidate Display', '選字窗顯示');
   // Hanji–Romanization Pairing / Hanji with Romanization / Romanization Only
   const modeSeg = segControl(L, ['漢羅對應', '漢羅濫', '羅馬字'], 120, 300, 840, 84, 34);
   const bar = $('div', 'showbar', L); bar.style.top = '420px';
@@ -690,20 +718,45 @@ typingScene({
     mk(list.slice(0, 2).map(([h, r]) => `<div class="one">${h}</div><div class="one rm">${r}</div>`).join('')),
     mk(['tsia̍h-pá', 'tsia̍h', 'tsiah'].map(r => `<div class="one rm">${r}</div>`).join('')),
   ];
-  const tMode = [0, tIn + 1.5, tIn + 2.7];
+  const tMode = [0, tIn + 1.4, tIn + 2.6];
 
   const eb = $('div', 'eyebrow', L, '選字窗排列　·　macOS　Windows　Linux'); Object.assign(eb.style, { left: '120px', top: '660px' });
-  // Horizontal / Vertical (Expandable is the third option on macOS and Windows)
-  const laySeg = segControl(L, ['水平', '徛直'], 120, 710, 480, 76, 32);
+  // Horizontal / Vertical / Expandable
+  const laySeg = segControl(L, ['水平', '徛直', '展開'], 120, 710, 660, 76, 32);
   const d = DUMP[DESK_TYPED];
-  const ph = $('div', 'mpanel', L); Object.assign(ph.style, { left: '120px', top: '840px', transform: 'scale(1.7)' });
-  panelRow(ph, d);
-  const pv = $('div', 'mpanel', L); Object.assign(pv.style, { left: '120px', top: '840px', transform: 'scale(1.9)' });
-  panelColumn(pv, d);
-  const tLay = tIn + 2.1;
+  const mk2 = sc => { const e = $('div', 'mpanel', L); Object.assign(e.style, { left: '120px', top: '840px', transform: `scale(${sc})` }); return e; };
+  const ph = mk2(1.7); panelRow(ph, d);
+  const pv = mk2(1.9); panelColumn(pv, d);
+  // Expandable: the same row, which unfolds into a grid of six columns. Real engine output past the first page
+  // (candidate_dump, mode=tl); cells span the columns their width needs (macos ExpandedGridLayout.compute).
+  const MORE = ['抬', '枱', '駘', '詒', '籉', '坮', '薹', '炱', '埋', '檯', '儓', '苔', '跆'].map(h => [h, 'tâi']).concat([['臺語', 'tâi-gí']]);
+  const pe = mk2(1.7); const collapsed = panelRow(pe, d);
+  const pg = mk2(1.7); const gw = $('div', 'mgridwrap', pg);
+  const flat = $('div', 'mrow', gw);
+  const gcells = [$('div', 'mcell lit', flat, '<span class="h">' + d[0] + '</span>')].concat(d.slice(1).concat(MORE).map(([hz, rm], i) =>
+    $('div', 'mcell' + (i === 0 ? ' on' : ''), flat, '<span class="ix"></span><span class="st"><span class="h">' + hz + '</span><span class="r">' + rm + '</span></span>')));
+  let gridH = null;
+  function layoutGrid() {
+    const COLS = 6, chev = collapsed.row.lastChild, chevW = chev.offsetWidth, colW = (collapsed.row.offsetWidth - chevW) / COLS;
+    const widths = gcells.map(c => c.offsetWidth);
+    flat.remove();
+    const rows = []; let col = COLS;
+    gcells.forEach((c, i) => {
+      const span = Math.max(1, Math.min(COLS, Math.ceil(widths[i] / colW)));
+      if (col + span > COLS) { const r = $('div', 'mgridrow', gw); r.style.gridTemplateColumns = `repeat(${COLS}, ${colW}px) ${chevW}px`; rows.push(r); col = 0; }
+      c.style.gridColumn = 'span ' + span; rows[rows.length - 1].appendChild(c); col += span;
+    });
+    // keys label the row the selection is on; the literal lead cell takes none
+    [...rows[0].children].slice(1).forEach((c, i) => { c.firstChild.textContent = SLOT_KEYS[i]; });
+    const up = chev.cloneNode(true); up.style.gridColumn = COLS + 1; up.firstChild.style.transform = 'rotate(180deg)'; rows[0].appendChild(up);
+    gw.insertBefore($('div', 'mgridsep'), rows[1]);
+    gridH = [rows[0].offsetHeight, gw.scrollHeight];
+  }
+  const tLay = tIn + 1.9, tExp = tIn + 3.1, tUnf = tIn + 3.65;
 
   scenes.push(tt => {
     if (!presence(L, tt, tIn, tOut)) return;
+    if (!gridH) layoutGrid();
     cap(tt, tIn);
     [modeSeg.el, bar].forEach((e, i) => rise(e, tt, tIn + .2 + i * .12));
     [eb, laySeg.el].forEach((e, i) => rise(e, tt, tIn + .45 + i * .1));
@@ -714,26 +767,29 @@ typingScene({
       row.style.opacity = o; row.style.display = o > .001 ? 'flex' : 'none';
       row.style.transform = `translateX(${i === m.i ? (1 - m.p) * 18 : 0}px)`;
     });
-    const lp = eIO(seg(tt, tLay, tLay + .5));
-    laySeg.set(lp);
+    laySeg.set(eIO(seg(tt, tLay, tLay + .5)) + eIO(seg(tt, tExp, tExp + .5)));
     const base = rise(ph, tt, tIn + .65);
     ph.style.opacity = base * (1 - seg(tt, tLay, tLay + .2));
-    pv.style.opacity = eOut(seg(tt, tLay + .12, tLay + .55));
+    pv.style.opacity = eOut(seg(tt, tLay + .12, tLay + .55)) * (1 - seg(tt, tExp, tExp + .2));
     pv.style.translate = `0 ${(1 - eOut(seg(tt, tLay + .12, tLay + .6))) * 14}px`;
+    const un = seg(tt, tUnf, tUnf + .12);
+    pe.style.opacity = eOut(seg(tt, tExp + .12, tExp + .5)) * (1 - un);
+    pg.style.opacity = un;
+    gw.style.height = lerp(gridH[0], gridH[1], eOut(seg(tt, tUnf, tUnf + .4))) + 'px';
   });
 })();
 
 // ---------- Scene F: settings ----------
 (function () {
   const L = $('div', 'layer', stage);
-  const tIn = 18.4, tOut = 21.7;
+  const tIn = 19.2, tOut = 22.5;
   const cap = caption(L, 'Settings', '設定');
   const card = $('div', 'card', L); Object.assign(card.style, { top: '290px', height: '1120px' });
   const sc = $('div', 'scroll', card);
   // rows in on-screen order (ios SettingsTab): [label, value | initial toggle state, flip time offset]
   const SECTIONS = [
     [null, [['輸入模式', '台羅'], ['字型設定', '粉圓']]],
-    ['拍字設定', [['候選詞顯示', '漢羅對應'], ['括號標註', 0, .7], ['無連字符', 0], ['當咧拍的字囥第一个', 0, 1.0], ['自動大本字', 1], ['自動閬一格', 1]]],
+    ['拍字設定', [['選字窗顯示', '漢羅對應'], ['括號標註', 0, .7], ['無連字符', 0], ['當咧拍的字囥第一个', 0, 1.0], ['自動大本字', 1], ['自動閬一格', 1]]],
     ['齒盤設定', [['選字後自動收合工具列', 1], ['齒盤切換揤鈕', 1]]],
     ['拍字反應', [['揤仔聲', 0, 1.7], ['震動反應', 1]]],
     ['白話字', [['連紲拍 oo → o͘', 1], ['連紲拍 nn → ⁿ', 1], ['大本字時 ⁿ 轉做 ᴺ', 0, 2.3]]],
@@ -761,7 +817,7 @@ typingScene({
 // ---------- Scene G: dictionaries ----------
 (function () {
   const L = $('div', 'layer', stage);
-  const tIn = 21.8, tOut = 25.4;
+  const tIn = 22.6, tOut = 26.2;
   const cap = caption(L, 'Manage Dictionaries', '辭典管理');
   const c1 = $('div', 'card', L); Object.assign(c1.style, { top: '290px', height: '472px' });
   const g1 = $('div', 'grp', $('div', 'scroll', c1));
@@ -776,7 +832,7 @@ typingScene({
   const g2 = $('div', 'grp', s2);
   const word = (h, r) => $('div', 'row', g2, `<span>${h}<span class="rm">${r}</span></span>`);
   const added = word('食飽未', 'tsia̍h-pá--buē');
-  word('台語真媠', 'tâi-gí tsin-suí'); word('白話字', 'pe̍h-ōe-jī');
+  word('台語齒盤', 'tâi-gí khí-puânn'); word('白話字', 'pe̍h-ōe-jī');
   const tAdd = tIn + 1.9;
   const pills = $('div', 'pills', L); pills.style.top = '1222px';
   const pillEls = ['學習紀錄', '詞頻', '匯入佮匯出', '備份復原'].map(n => $('span', null, pills, n));
@@ -795,10 +851,59 @@ typingScene({
   });
 })();
 
-// ---------- Scene H: themes — mobile palettes × key styles, desktop light / dark ----------
+// ---------- Scene J: desktop — shortcuts + typeface management ----------
 (function () {
   const L = $('div', 'layer', stage);
-  const tIn = 25.5, tOut = 29.9;
+  const tIn = 26.3, tOut = 30.3;
+  const cap = caption(L, 'Desktop · macOS Windows Linux', '快速齒、字型管理');
+  const paneCard = (top, height, title) => {
+    const c = $('div', 'card desk', L); Object.assign(c.style, { top: top + 'px', height: height + 'px' });
+    const sc = $('div', 'scroll', c);
+    const head = $('div', 'row', sc, `<span style="font-size:36px">${title}</span>`); Object.assign(head.style, { padding: '0 14px 0 22px', height: '70px', marginBottom: '14px' });
+    return { c, head, g: $('div', 'grp', sc) };
+  };
+  const chord = keys => keys.map(k => `<span class="kc">${k}</span>`).join('');
+
+  // Shortcuts pane: every action takes a recorded chord (macOS defaults shown)
+  const c1 = paneCard(290, 432, '快速齒');
+  const acts = [['切換台羅/白話字', ['⌃', '⌘', 'C']], ['切換方音符號', ['⌃', '⌘', 'P']], ['拍開符號選單', ['⌃', '⌘', ',']], ['拍開設定選單', ['⌃', '⌘', 'S']]]
+    .map(([n, k]) => $('div', 'keys2', $('div', 'row', c1.g, `<span>${n}</span>`), chord(k)));
+  // re-record one: old chord → "Press a key…" → new chord
+  const slot = acts[1], was = slot.innerHTML, rec = '<span class="rec">揤一个齒…</span>', now = chord(['⌥', 'T']);
+  const tRec = tIn + 1.2, tSet = tIn + 2.0;
+
+  // Manage Typefaces pane: one list, the selected row is the typeface the candidate window is set in
+  const c2 = paneCard(748, 506, '字型管理');
+  $('div', 'addbtn', c2.head, '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M12 3v18M3 12h18" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg>');
+  const SYS = '"SF Pro Text", "PingFang TC", sans-serif';
+  const faces = [['系統', SYS], ['粉圓', 'Huninn'], ['芫荽', 'Iansui'], ['源樣明體', 'GenMin'], ['源樣烏體', 'GenGo']].map(([n, f]) => {
+    const row = $('div', 'row', c2.g, `<span>${n}</span><span class="smp">台語齒盤　tâi-gí khí-puânn</span>`);
+    row.style.fontFamily = f;
+    return row;
+  });
+  const tFace = faces.map((_, i) => i === 0 ? 0 : tIn + .9 + i * .62);
+
+  scenes.push(tt => {
+    if (!presence(L, tt, tIn, tOut)) return;
+    cap(tt, tIn);
+    rise(c1.c, tt, tIn + .15, .9, 50); rise(c2.c, tt, tIn + .3, .9, 50);
+    const html = tt < tRec ? was : (tt < tSet ? rec : now);
+    if (slot.innerHTML !== html) slot.innerHTML = html;
+    slot.parentNode.style.background = mix('#ffffff', '#e5f0fd', eOut(seg(tt, tRec, tRec + .2)) * (1 - eIO(seg(tt, tSet + .3, tSet + .9))));
+    const st = stepAt(tt, tFace, .3);
+    faces.forEach((row, i) => {
+      const o = i === st.i ? st.p : (i === st.i - 1 ? 1 - st.p : 0);
+      row.style.background = mix('#ffffff', ACCENTS[0], o);
+      row.style.color = mix('#1d1d1f', '#ffffff', o);
+      row.lastChild.style.color = mix('#8e8e93', '#ffffff', o);
+    });
+  });
+})();
+
+// ---------- Scene H: themes — mobile palettes × key styles, desktop light / dark × accent colour ----------
+(function () {
+  const L = $('div', 'layer', stage);
+  const tIn = 30.4, tOut = 34.8;
   const cap = caption(L, 'Theme', '主題');
   const duo = makeDuo(L);
   const order = ['def', 'sakura', 'gold', 'sea', 'jade', 'wisteria', 'cat'];
@@ -812,14 +917,17 @@ typingScene({
   const rings = order.map(n => { const d = $('div', 'dot', dots); d.style.background = `linear-gradient(180deg, ${PALETTE[n].top}, ${PALETTE[n].bot})`; return $('b', null, d); });
   const tname = order.map(n => { const e = $('div', 'tname', L, PALETTE[n].zh); Object.assign(e.style, { left: '70px', top: '984px' }); return e; });
   const styleSeg = segControl(L, STYLES.map(s => s[0]), 250, 978, 290, 64, 27);
-  const e2 = $('div', 'eyebrow', L, '外觀　·　macOS　Windows'); Object.assign(e2.style, { left: '70px', top: '1120px' });
+  const e2 = $('div', 'eyebrow', L, '外觀　·　macOS　Windows'); Object.assign(e2.style, { left: '70px', top: '1092px' });
   // Appearance: Light / Dark / Automatic
-  const appSeg = segControl(L, ['淺色', '深色', '自動'], 70, 1166, 470, 72, 30);
+  const appSeg = segControl(L, ['淺色', '深色', '自動'], 70, 1136, 470, 72, 30);
+  // the candidate window's highlight takes the system accent colour — one per theme step, graphite left unvisited
+  const adots = $('div', 'dots acc', L); Object.assign(adots.style, { left: '70px', top: '1238px' });
+  const arings = ACCENTS.map(c => { const d = $('div', 'dot', adots); d.style.background = d.style.color = c; return $('b', null, d); });
 
   scenes.push(tt => {
     if (!presence(L, tt, tIn, tOut, { dIn: .5 })) return;
     cap(tt, tIn); duoEnter(duo, tt, tIn);
-    [e1, dots, styleSeg.el, e2, appSeg.el].forEach((e, i) => rise(e, tt, tIn + .4 + i * .08, .7, 18));
+    [e1, dots, styleSeg.el, e2, appSeg.el, adots].forEach((e, i) => rise(e, tt, tIn + .4 + i * .08, .7, 18));
     const st = stepAt(tt, times, .42);
     const A = themeOf(...WALK[Math.max(0, st.i - 1)]), B = themeOf(...WALK[st.i]);
     duo.phone.update(themeMix(A, B, st.p), { n: PHONE_TYPED.length, committed: false, caretOn: true, appear: 1 });
@@ -830,14 +938,16 @@ typingScene({
     styleSeg.set(lerp(A.fill ? 0 : (A.outline ? 1 : 2), B.fill ? 0 : (B.outline ? 1 : 2), st.p));
     const dk = eIO(seg(tt, tDark, tDark + .5));
     appSeg.set(dk);
-    duo.desk.update({ n: DESK_TYPED.length, picked: false, caretOn: true, appear: 1, dark: dk });
+    const ai = st.i, ap = Math.max(0, st.i - 1);
+    arings.forEach((r, i) => { const o = i === ai ? st.p : (i === ap ? 1 - st.p : 0); r.style.opacity = o; r.style.transform = `scale(${lerp(1.25, 1, o)})`; });
+    duo.desk.update({ n: DESK_TYPED.length, picked: false, caretOn: true, appear: 1, dark: dk, accent: mix(ACCENTS[ap], ACCENTS[ai], st.p) });
   });
 })();
 
 // ---------- Scene I: end card (held to the last frame — feeds loop) ----------
 (function () {
   const L = $('div', 'layer', stage);
-  const tIn = 30.1;
+  const tIn = 35.0;
   const ic = $('div', 'icon', L, '<img src="assets/icon.png">');
   const S = 190; Object.assign(ic.style, { width: S + 'px', height: S + 'px', marginLeft: -S / 2 + 'px', top: '360px', marginTop: 0 });
   const n1 = $('div', 'brand', L, '台語齒盤'); Object.assign(n1.style, { top: '610px', font: '84px GenMin', color: '#1d1d1f', letterSpacing: '.14em', textIndent: '.14em' });
@@ -860,7 +970,7 @@ window.render = t => { for (const f of scenes) f(t); };
 window.SIZE = SIZE;
 window.DURATION = DURATION;
 window.ready = document.fonts.ready.then(() => Promise.all([
-  document.fonts.load('108px Huninn', 'tâi'), document.fonts.load('150px GenMin', '台語'), document.fonts.load('32px GenGo', '台')
+  document.fonts.load('108px Huninn', 'tâi'), document.fonts.load('150px GenMin', '台語'), document.fonts.load('32px GenGo', '台'), document.fonts.load('32px Iansui', '芫荽')
 ])).then(() => Promise.all([...document.images].map(i => i.decode().catch(() => {})))).then(() => { render(0); return true; });
 </script>
 </body>
