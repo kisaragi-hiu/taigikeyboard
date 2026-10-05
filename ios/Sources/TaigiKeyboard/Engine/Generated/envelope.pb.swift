@@ -297,7 +297,7 @@ public nonisolated struct Taigi_Engine_AppConfig: Sendable {
 /// over the closed readings — closed by a tone mark, or by Space for tones 1
 /// and 4 — and the preedit shows it, with the glyphs of a reading still being
 /// typed where it is typed. `MoveCaret` steps over a converted word;
-/// `FetchAtPos.word_before_caret` lists the word before the caret, a
+/// `FetchAtPos` lists the word before the caret, a
 /// `CommitContinuous` of it keeps composing, and `CommitAsShown` /
 /// `CommitAsTyped` write the composition. A walk ranks with the user's learned
 /// counts when the engine holds the user-data stores.

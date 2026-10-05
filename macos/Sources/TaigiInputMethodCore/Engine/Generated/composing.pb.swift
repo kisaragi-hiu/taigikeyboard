@@ -557,6 +557,14 @@ public nonisolated struct Taigi_Engine_Reset: Sendable {
 /// `literalRomanCandidateEnabled` Android, `is_literal_roman_candidate_enabled`
 /// Windows); the platform sets `disabled = !enabled` — mobile in
 /// `ComposingManager`, desktop in the engine bridge.
+///
+/// Under a Hanji conversion the request asks for (`AppConfig.hanji_conversion`,
+/// a TPS composition) the list is the word before the caret's, never the whole
+/// tail's: the engine resolves its start from its own words — the word ending
+/// at the caret, else the start of the glyphs the caret is in, `0` at the
+/// start of the tail — and lists from there to the end of the tail, longer
+/// words first, never a phrase of several words. Spans stay in the pending
+/// tail's byte coordinates.
 public nonisolated struct Taigi_Engine_FetchAtPos: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -580,17 +588,6 @@ public nonisolated struct Taigi_Engine_FetchAtPos: Sendable {
   /// Clears the value of `toggles`. Subsequent reads from it will return its default value.
   public mutating func clearToggles() {self._toggles = nil}
 
-  /// Under a Hanji conversion the request asks for
-  /// (`AppConfig.hanji_conversion`, a TPS tail): the list of the word before
-  /// the caret instead of the whole tail's. The engine resolves the anchor from
-  /// its own words — the word ending at the caret, else the start of the
-  /// glyphs the caret is in, `0` at the start of the tail — and lists from
-  /// there to the end of the tail: longer words first, then the word's
-  /// homophones, never a phrase of several words. Spans stay in the pending
-  /// tail's byte coordinates. `false`, or no conversion asked for: the whole
-  /// tail's list, as without the field.
-  public var wordBeforeCaret: Bool = false
-
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -607,13 +604,14 @@ public nonisolated struct Taigi_Engine_FetchAtPos: Sendable {
 /// `consumed_bytes`, no `script`, empty `canonical_text`) collapse to noop.
 ///
 /// Under a Hanji conversion the request asks for (`AppConfig.hanji_conversion`,
-/// a TPS tail), the pick is the word `FetchAtPos.word_before_caret` listed: the
+/// a TPS composition), the pick is of the word `FetchAtPos` listed: the
 /// engine resolves the same anchor, nails what precedes it as shown (words and
 /// glyphs, not picked), nails the pick, walks the rest again with the caret at
 /// its end, and never finalizes — also when the pick reaches the end of the
 /// tail. `consumed_bytes` is the span end; a pick that does not end after the
 /// anchor is ignored. Effects: `UpdatePreedit`, `NextWordUpdateLastSelectedWord`,
-/// `ClearCandidates` (the window closes).
+/// `ClearCandidates` (the window closes). The list a conversion answers is
+/// always that word's, so a pick can only be of it.
 ///
 /// **Platform contract**: when committing the user's tap on a candidate
 /// returned by `FetchAtPos`, `consumed_bytes` MUST equal the chosen
@@ -1806,7 +1804,7 @@ nonisolated extension Taigi_Engine_Reset: SwiftProtobuf.Message, SwiftProtobuf._
 
 nonisolated extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".FetchAtPos"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{3}now_ms\0\u{4}\u{3}literal_roman_candidate_disabled\0\u{4}\u{2}custom_dictionary_disabled\0\u{1}toggles\0\u{3}word_before_caret\0\u{b}position\0\u{b}frequency_entries\0\u{b}custom_entries\0\u{b}learned_entries\0\u{b}enabled_sources_bitmask\0\u{c}\u{1}\u{1}\u{c}\u{2}\u{1}\u{c}\u{4}\u{1}\u{c}\u{7}\u{1}\u{c}\u{5}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{3}now_ms\0\u{4}\u{3}literal_roman_candidate_disabled\0\u{4}\u{2}custom_dictionary_disabled\0\u{1}toggles\0\u{b}position\0\u{b}frequency_entries\0\u{b}custom_entries\0\u{b}learned_entries\0\u{b}enabled_sources_bitmask\0\u{c}\u{1}\u{1}\u{c}\u{2}\u{1}\u{c}\u{4}\u{1}\u{c}\u{7}\u{1}\u{c}\u{5}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1818,7 +1816,6 @@ nonisolated extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProto
       case 6: try { try decoder.decodeSingularBoolField(value: &self.literalRomanCandidateDisabled) }()
       case 8: try { try decoder.decodeSingularBoolField(value: &self.customDictionaryDisabled) }()
       case 9: try { try decoder.decodeSingularMessageField(value: &self._toggles) }()
-      case 10: try { try decoder.decodeSingularBoolField(value: &self.wordBeforeCaret) }()
       default: break
       }
     }
@@ -1841,9 +1838,6 @@ nonisolated extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProto
     try { if let v = self._toggles {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
     } }()
-    if self.wordBeforeCaret != false {
-      try visitor.visitSingularBoolField(value: self.wordBeforeCaret, fieldNumber: 10)
-    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1852,7 +1846,6 @@ nonisolated extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProto
     if lhs.literalRomanCandidateDisabled != rhs.literalRomanCandidateDisabled {return false}
     if lhs.customDictionaryDisabled != rhs.customDictionaryDisabled {return false}
     if lhs._toggles != rhs._toggles {return false}
-    if lhs.wordBeforeCaret != rhs.wordBeforeCaret {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
