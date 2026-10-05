@@ -49,4 +49,4 @@ permalink: /blog/desktop-manual/
 
 選字窗的排列、大細、字型，佮逐个快速齒，嘛攏會當改。詳細請看[使用手冊](/manual/)。
 
-用了若有問題抑是建議，歡迎來 [Discord](https://discord.gg/kXhtQfWvK) 講。
+用了若有問題抑是建議，歡迎來 [Discord](https://discord.gg/UFn9RdynPu) 講。

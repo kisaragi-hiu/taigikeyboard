@@ -123,7 +123,7 @@ private val aboutLinks =
     listOf(
         Triple(StringKey.HOME_WEBSITE_LINK, R.drawable.ic_globe, "https://taigikeyboard.tw"),
         Triple(StringKey.HOME_GITHUB_LINK, R.drawable.ic_github, "https://github.com/taigikeyboard"),
-        Triple(StringKey.HOME_DISCORD_LINK, R.drawable.ic_discord, "https://discord.gg/kXhtQfWvK"),
+        Triple(StringKey.HOME_DISCORD_LINK, R.drawable.ic_discord, "https://discord.gg/UFn9RdynPu"),
         Triple(StringKey.HOME_FACEBOOK_LINK, R.drawable.ic_facebook, "https://www.facebook.com/profile.php?id=61589036184924"),
         Triple(StringKey.HOME_INSTAGRAM_LINK, R.drawable.ic_instagram, "https://www.instagram.com/taigikeyboardtw/"),
         Triple(StringKey.HOME_THREADS_LINK, R.drawable.ic_threads, "https://www.threads.com/@siansiansu"),

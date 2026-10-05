@@ -50,7 +50,7 @@ struct AboutPage: View {
 
     private static let websiteURL = URL(string: "https://taigikeyboard.tw")
     private static let githubURL = URL(string: "https://github.com/taigikeyboard")
-    private static let discordURL = URL(string: "https://discord.gg/kXhtQfWvK")
+    private static let discordURL = URL(string: "https://discord.gg/UFn9RdynPu")
     private static let facebookURL = URL(string: "https://www.facebook.com/profile.php?id=61589036184924")
     private static let instagramURL = URL(string: "https://www.instagram.com/taigikeyboardtw/")
     private static let threadsURL = URL(string: "https://www.threads.com/@siansiansu")

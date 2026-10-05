@@ -15,7 +15,7 @@ pub const WEBSITE_URL: &str = "https://taigikeyboard.tw";
 /// `AboutPage.githubURL`.
 pub const GITHUB_URL: &str = "https://github.com/taigikeyboard";
 /// `AboutPage.discordURL`.
-pub const DISCORD_URL: &str = "https://discord.gg/kXhtQfWvK";
+pub const DISCORD_URL: &str = "https://discord.gg/UFn9RdynPu";
 /// `AboutPage.facebookURL`.
 pub const FACEBOOK_URL: &str = "https://www.facebook.com/profile.php?id=61589036184924";
 /// `AboutPage.instagramURL`.
