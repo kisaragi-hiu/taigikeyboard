@@ -15,6 +15,16 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * to Idle). Programmer-error inputs (out-of-range / non-char-boundary
  * `consumed_bytes`, no `script`, empty `canonical_text`) collapse to noop.
  *
+ * Under a Hanji conversion the request asks for (`AppConfig.hanji_conversion`,
+ * a TPS composition), the pick is of the word `FetchAtPos` listed: the
+ * engine resolves the same anchor, nails what precedes it as shown (words and
+ * glyphs, not picked), nails the pick, walks the rest again with the caret at
+ * its end, and never finalizes — also when the pick reaches the end of the
+ * tail. `consumed_bytes` is the span end; a pick that does not end after the
+ * anchor is ignored. Effects: `UpdatePreedit`, `NextWordUpdateLastSelectedWord`,
+ * `ClearCandidates` (the window closes). The list a conversion answers is
+ * always that word's, so a pick can only be of it.
+ *
  * **Platform contract**: when committing the user's tap on a candidate
  * returned by `FetchAtPos`, `consumed_bytes` MUST equal the chosen
  * `CandidateMessage.consumed_span_end` and `syllable_count` MUST equal
@@ -688,6 +698,16 @@ public  final class CommitContinuous extends
    * tail. `consumed_bytes &gt;= pending.len()` becomes a final commit (exit
    * to Idle). Programmer-error inputs (out-of-range / non-char-boundary
    * `consumed_bytes`, no `script`, empty `canonical_text`) collapse to noop.
+   *
+   * Under a Hanji conversion the request asks for (`AppConfig.hanji_conversion`,
+   * a TPS composition), the pick is of the word `FetchAtPos` listed: the
+   * engine resolves the same anchor, nails what precedes it as shown (words and
+   * glyphs, not picked), nails the pick, walks the rest again with the caret at
+   * its end, and never finalizes — also when the pick reaches the end of the
+   * tail. `consumed_bytes` is the span end; a pick that does not end after the
+   * anchor is ignored. Effects: `UpdatePreedit`, `NextWordUpdateLastSelectedWord`,
+   * `ClearCandidates` (the window closes). The list a conversion answers is
+   * always that word's, so a pick can only be of it.
    *
    * **Platform contract**: when committing the user's tap on a candidate
    * returned by `FetchAtPos`, `consumed_bytes` MUST equal the chosen

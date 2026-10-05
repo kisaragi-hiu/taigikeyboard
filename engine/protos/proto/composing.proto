@@ -55,10 +55,13 @@ message ComposingRequest {
     FetchAtPos                      fetch_at_pos                         = 31;
     CommitContinuous                commit_continuous                    = 32;
 
-    // --- Desktop editing keys (40s: Telex tone keys, composing caret, TPS keys) ---
+    // --- Desktop keys (40s: Telex tone keys, composing caret, TPS keys, the
+    // commits of a Hanji conversion) ---
     TelexKey                        telex_key                            = 40;
     MoveCaret                       move_caret                           = 41;
     TpsKey                          tps_key                              = 42;
+    CommitAsShown                   commit_as_shown                      = 43;
+    CommitAsTyped                   commit_as_typed                      = 44;
   }
 }
 
@@ -147,6 +150,14 @@ message Reset {}
 // `literalRomanCandidateEnabled` Android, `is_literal_roman_candidate_enabled`
 // Windows); the platform sets `disabled = !enabled` — mobile in
 // `ComposingManager`, desktop in the engine bridge.
+//
+// Under a Hanji conversion the request asks for (`AppConfig.hanji_conversion`,
+// a TPS composition) the list is the word before the caret's, never the whole
+// tail's: the engine resolves its start from its own words — the word ending
+// at the caret, else the start of the glyphs the caret is in, `0` at the
+// start of the tail — and lists from there to the end of the tail, longer
+// words first, never a phrase of several words. Spans stay in the pending
+// tail's byte coordinates.
 message FetchAtPos {
   // Was `uint32 position` — always 0, never a partial fetch.
   reserved 1;
@@ -176,6 +187,16 @@ message FetchAtPos {
 // tail. `consumed_bytes >= pending.len()` becomes a final commit (exit
 // to Idle). Programmer-error inputs (out-of-range / non-char-boundary
 // `consumed_bytes`, no `script`, empty `canonical_text`) collapse to noop.
+//
+// Under a Hanji conversion the request asks for (`AppConfig.hanji_conversion`,
+// a TPS composition), the pick is of the word `FetchAtPos` listed: the
+// engine resolves the same anchor, nails what precedes it as shown (words and
+// glyphs, not picked), nails the pick, walks the rest again with the caret at
+// its end, and never finalizes — also when the pick reaches the end of the
+// tail. `consumed_bytes` is the span end; a pick that does not end after the
+// anchor is ignored. Effects: `UpdatePreedit`, `NextWordUpdateLastSelectedWord`,
+// `ClearCandidates` (the window closes). The list a conversion answers is
+// always that word's, so a pick can only be of it.
 //
 // **Platform contract**: when committing the user's tap on a candidate
 // returned by `FetchAtPos`, `consumed_bytes` MUST equal the chosen
@@ -311,6 +332,24 @@ message TpsKey { string key = 1; }
 // answering as `DeleteBackward`'s un-nail does (NextWord handshake,
 // `UpdatePreedit`, `RefreshCandidates`).
 message MoveCaret { CaretDirection direction = 1; }
+
+// Desktop, under a Hanji conversion (TPS): commit the composition as the
+// preedit shows it — the nailed segments, the converted words and the glyphs
+// of what is not converted — and go idle. Nothing is learned unless every
+// segment was picked from the list and nothing is pending: then the
+// composition teaches as a final pick does (§50 phrase,
+// `NextWordWordSelected`). Otherwise the response carries
+// `NextWordClearForNewComposing` and no `NextWordWordSelected`, and the
+// platform forgets its next-word context, so the next commit does not pair
+// across words the user never picked. Records no usage.
+message CommitAsShown {}
+
+// Desktop, under a Hanji conversion (TPS): commit the glyphs of the whole
+// composition as typed — every nailed segment's raw text and the pending
+// tail, separators dropped — and go idle. Teaches nothing; the response
+// carries `NextWordClearForNewComposing`, as `CommitAsShown` does when it
+// learns nothing.
+message CommitAsTyped {}
 
 enum CaretDirection {
   CARET_DIRECTION_UNSPECIFIED = 0;  // treated as a no-op

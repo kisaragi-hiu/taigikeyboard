@@ -54,6 +54,14 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * `literalRomanCandidateEnabled` Android, `is_literal_roman_candidate_enabled`
  * Windows); the platform sets `disabled = !enabled` — mobile in
  * `ComposingManager`, desktop in the engine bridge.
+ *
+ * Under a Hanji conversion the request asks for (`AppConfig.hanji_conversion`,
+ * a TPS composition) the list is the word before the caret's, never the whole
+ * tail's: the engine resolves its start from its own words — the word ending
+ * at the caret, else the start of the glyphs the caret is in, `0` at the
+ * start of the tail — and lists from there to the end of the tail, longer
+ * words first, never a phrase of several words. Spans stay in the pending
+ * tail's byte coordinates.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.FetchAtPos}
@@ -342,6 +350,14 @@ public  final class FetchAtPos extends
    * `literalRomanCandidateEnabled` Android, `is_literal_roman_candidate_enabled`
    * Windows); the platform sets `disabled = !enabled` — mobile in
    * `ComposingManager`, desktop in the engine bridge.
+   *
+   * Under a Hanji conversion the request asks for (`AppConfig.hanji_conversion`,
+   * a TPS composition) the list is the word before the caret's, never the whole
+   * tail's: the engine resolves its start from its own words — the word ending
+   * at the caret, else the start of the glyphs the caret is in, `0` at the
+   * start of the tail — and lists from there to the end of the tail, longer
+   * words first, never a phrase of several words. Spans stay in the pending
+   * tail's byte coordinates.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.FetchAtPos}

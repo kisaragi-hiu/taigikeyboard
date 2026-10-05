@@ -8,52 +8,22 @@
 //! included); the non-BMP case adds 𪜶 (in) with its strict-prefix control
 //! 伊 (i).
 
-use composing::api::{CaretDirection, CommitScript};
+use composing::api::CaretDirection;
 use composing::{Engine, Intent, Phase};
-use protos::engine::{AppConfig, ComposingResponse, DictionarySourceToggles, HanjiConversion};
+use protos::engine::{AppConfig, DictionarySourceToggles, HanjiConversion};
 use test_support::engine_install_lock;
 
 use crate::common::{config, config_converting, converted_words, effect_kinds};
 use crate::tps_hanji_conversion::{
-    caret_utf16, composing_engine, conversion_of, display, install_fixture_with, preedit_writes,
-    raw_input, tps_key,
+    caret_utf16, composing_engine, conversion_of, display, install_fixture_with, nailed, pick,
+    preedit_writes, raw_input, step, tps_key,
 };
-
-fn step(engine: &mut Engine, direction: CaretDirection, config: &AppConfig) -> ComposingResponse {
-    engine.apply(
-        Intent::MoveCaret {
-            direction: Some(direction),
-        },
-        config,
-    )
-}
 
 /// The raw caret the engine holds.
 fn raw_caret(engine: &Engine) -> usize {
     match engine.snapshot_state().phase {
         Phase::Continuous { caret, .. } => caret,
         Phase::Idle => 0,
-    }
-}
-
-fn nailed_count(engine: &Engine) -> usize {
-    match engine.snapshot_state().phase {
-        Phase::Continuous { nailed, .. } => nailed.len(),
-        Phase::Idle => 0,
-    }
-}
-
-/// A `CommitContinuous` of `hanji` (one syllable, TL `tl`) over the first
-/// `consumed_bytes` of the tail.
-fn pick(hanji: &str, tl: &str, consumed_bytes: usize) -> Intent {
-    Intent::CommitContinuous {
-        canonical_text: hanji.into(),
-        association_tl: tl.into(),
-        hanji: Some(hanji.into()),
-        consumed_bytes,
-        syllable_count: 1,
-        script: Some(CommitScript::Lead),
-        roman: tl.into(),
     }
 }
 
@@ -280,8 +250,9 @@ fn glyphs_left_between_words_are_walked_again_from_the_end() {
 }
 
 // A step left from the start of the tail re-opens the last nailed segment
-// (H3) and answers as Backspace's un-nail does. trace: "ㄒㄧˋㄒㄧ " → pick 是
-// over 8 bytes → nailed 是, tail "ㄒㄧ " → 詩 (0, 7); display "是詩". Left →
+// (H3) and answers as Backspace's un-nail does. trace: "ㄒㄧˋㄒㄧ " → Left
+// (caret 8, after 死) → pick 是 over 8 bytes → nailed 是, tail "ㄒㄧ " → 詩
+// (0, 7), caret at its end; display "是詩". Left →
 // 0 (display 1, after the nailed 是). Left → the glyphs "ㄒㄧˋ" go back in
 // front: raw "ㄒㄧˋㄒㄧ ", caret 0, walked again → 死詩 (the pick is
 // dropped), nothing nailed. A further Left is an edge.
@@ -291,12 +262,13 @@ fn a_step_left_from_the_start_reopens_the_last_nailed_segment() {
     install_fixture_with(&[]);
     let config = config_converting("tps");
     let (mut engine, _) = composing_engine("ㄒㄧˋㄒㄧ ", &config);
+    step(&mut engine, CaretDirection::Left, &config);
     let response = engine.apply(pick("是", "sī", 8), &config);
     assert_eq!(display(&response), "是詩");
 
     let response = step(&mut engine, CaretDirection::Left, &config);
     assert_eq!(caret_utf16(&response), 1);
-    assert_eq!(nailed_count(&engine), 1);
+    assert_eq!(nailed(&engine).len(), 1);
 
     let response = step(&mut engine, CaretDirection::Left, &config);
     assert_eq!(
@@ -310,7 +282,7 @@ fn a_step_left_from_the_start_reopens_the_last_nailed_segment() {
     assert_eq!(raw_input(&response), "ㄒㄧˋㄒㄧ ");
     assert_eq!(display(&response), "死詩");
     assert_eq!(caret_utf16(&response), 0);
-    assert_eq!(nailed_count(&engine), 0);
+    assert_eq!(nailed(&engine).len(), 0);
     assert_eq!(
         converted_words(&engine),
         vec![((0, 8), "死".to_string()), ((8, 15), "詩".to_string())]
@@ -321,7 +293,8 @@ fn a_step_left_from_the_start_reopens_the_last_nailed_segment() {
 }
 
 // With two segments nailed, the re-open keeps the first and the handshake
-// names it. trace: "ㄒㄧˋㄒㄧˋㄒㄧ " → pick 是 (8), pick 是 (8) → tail "ㄒㄧ " →
+// names it. trace: "ㄒㄧˋㄒㄧˋㄒㄧ " → each pick of 是 (8) is made with the
+// caret after the first word (Left until 8) → tail "ㄒㄧ " →
 // "是是詩"; Left, Left → the second 是's glyphs re-open: "是" + 死詩, caret
 // after the nailed 是 (display 1).
 #[test]
@@ -330,7 +303,10 @@ fn a_reopen_keeps_the_segments_before_the_last() {
     install_fixture_with(&[]);
     let config = config_converting("tps");
     let (mut engine, _) = composing_engine("ㄒㄧˋㄒㄧˋㄒㄧ ", &config);
+    step(&mut engine, CaretDirection::Left, &config);
+    step(&mut engine, CaretDirection::Left, &config);
     engine.apply(pick("是", "sī", 8), &config);
+    step(&mut engine, CaretDirection::Left, &config);
     let response = engine.apply(pick("是", "sī", 8), &config);
     assert_eq!(display(&response), "是是詩");
 
@@ -342,7 +318,7 @@ fn a_reopen_keeps_the_segments_before_the_last() {
     );
     assert_eq!(display(&response), "是死詩");
     assert_eq!(caret_utf16(&response), 1);
-    assert_eq!(nailed_count(&engine), 1);
+    assert_eq!(nailed(&engine).len(), 1);
 }
 
 // Without the switch, and on a romanization buffer with it, the start of the
@@ -363,7 +339,7 @@ fn without_a_converted_tps_tail_the_start_stays_an_edge() {
         }
         let response = step(&mut engine, CaretDirection::Left, &config);
         assert!(response.effect.is_empty(), "{raw:?}");
-        assert_eq!(nailed_count(&engine), 1, "{raw:?}");
+        assert_eq!(nailed(&engine).len(), 1, "{raw:?}");
     }
 }
 
@@ -499,7 +475,7 @@ fn a_reopen_that_closes_nothing_shows_the_glyphs() {
     assert_eq!(display(&response), "ㄒㄧㄒ");
     assert_eq!((raw_caret(&engine), caret_utf16(&response)), (0, 0));
     assert_eq!(conversion_of(&engine), None);
-    assert_eq!(nailed_count(&engine), 0);
+    assert_eq!(nailed(&engine).len(), 0);
 }
 
 // A separator typed between two words is a reading's close on its own.

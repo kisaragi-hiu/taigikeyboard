@@ -19,23 +19,36 @@
 //! and leaves both the state and `last_generation` alone. A matching one
 //! runs against a clone of the engine with the mutex released, so the (up
 //! to tens of ms) dictionary scan never blocks a concurrent main-thread
-//! `Append` / `DeleteBackward`.
+//! `Append` / `DeleteBackward`. A fetch that runs in passes (the user-data
+//! re-rank) takes that clone once ([`EngineHandle::engine_at`]) and answers
+//! every pass from it, so the rows it read describe the state it answers.
 
-use crate::api::{Applied, ComposingError, Engine, Intent};
+use crate::api::{Applied, ComposingError, ConversionFrequency, Engine, Intent};
 use crate::requests;
 use once_cell::sync::OnceCell;
 use protos::engine::{AppConfig, ComposingRequest, ComposingResponse};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 
-/// The composing state a fetch is answered for (`EngineHandle::pending_snapshot`).
+/// The composing state a fetch is answered for (`Engine::pending_snapshot`).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PendingSnapshot {
-    /// The pending raw buffer.
-    pub raw: String,
-    /// The last nailed segment as `(canonical text, association roman)`, or
-    /// `None` when the pending tail follows no nailed segment.
-    pub previous_word: Option<(String, String)>,
+    /// The part of the pending buffer the fetch lists: the user's rows are
+    /// read for it.
+    pub listed_raw: String,
+    /// The word the listed part follows.
+    pub context: ListContext,
+}
+
+/// The word a fetch's list follows (§56).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ListContext {
+    /// A word of the composition, as `(canonical text, association roman)`.
+    Word(String, String),
+    /// Nothing in the composition: the last committed word.
+    Committed,
+    /// Glyphs the user did not convert: no context.
+    Cut,
 }
 
 pub struct EngineHandle {
@@ -83,6 +96,18 @@ impl EngineHandle {
         config: &AppConfig,
         generation: u64,
     ) -> Result<Applied, ComposingError> {
+        self.handle_ranked(req, config, generation, None)
+    }
+
+    /// [`handle_learning`](Self::handle_learning), a Hanji conversion walk
+    /// ranking with the user's learned counts `frequency` supplies (H5).
+    pub fn handle_ranked(
+        &self,
+        req: &ComposingRequest,
+        config: &AppConfig,
+        generation: u64,
+        frequency: Option<&dyn ConversionFrequency>,
+    ) -> Result<Applied, ComposingError> {
         let intent = requests::decode_intent(req)?;
         if intent.is_read_only() {
             return Ok(self.query(&intent, config, generation).into());
@@ -96,7 +121,7 @@ impl EngineHandle {
             engine.reset();
             self.last_generation.store(generation, Ordering::Release);
         }
-        Ok(engine.apply_learning(intent, config))
+        Ok(engine.apply_ranked(intent, config, frequency))
     }
 
     /// Answers a read-only intent (`Intent::is_read_only`) — a `FetchAtPos`
@@ -104,23 +129,19 @@ impl EngineHandle {
     /// from the wire. A stale generation answers the idle snapshot (module
     /// doc).
     pub fn query(&self, intent: &Intent, config: &AppConfig, generation: u64) -> ComposingResponse {
-        match self.read_at(generation, Engine::clone) {
+        match self.engine_at(generation) {
             Some(snapshot) => requests::query(intent, &snapshot, config),
             None => Engine::idle_snapshot(config),
         }
     }
 
-    /// What a `FetchAtPos` for `generation` ranks against — the pending raw
-    /// buffer (`Preedit.raw_input`, what a user-data lookup keys on) and the
-    /// word it follows inside the composition — or `None` when `generation`
-    /// is stale. Lets the engine's own `FetchAtPos` read the user-data
-    /// stores and the bigram tables before the fetch the rows ride
-    /// (user-data-engine-roadmap P3b, bigram-lm-roadmap P5).
-    pub fn pending_snapshot(&self, generation: u64) -> Option<PendingSnapshot> {
-        self.read_at(generation, |engine| PendingSnapshot {
-            raw: engine.pending_raw().to_owned(),
-            previous_word: engine.pending_context(),
-        })
+    /// A clone of the engine as of `generation`, or `None` when `generation`
+    /// is stale. A `FetchAtPos` reads what it ranks against from it
+    /// (`Engine::pending_snapshot`) — the user-data stores and the bigram
+    /// tables (user-data-engine-roadmap P3b, bigram-lm-roadmap P5) — and
+    /// answers every pass from it (`requests::query`).
+    pub fn engine_at(&self, generation: u64) -> Option<Engine> {
+        self.read_at(generation, Engine::clone)
     }
 
     /// Runs `read` on the engine as of `generation`, or answers `None` when a

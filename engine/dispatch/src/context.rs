@@ -5,7 +5,7 @@
 //! the stores open, and in a build without them, the bundled ones rank alone.
 
 use composing::requests::fetch_at_pos_intent;
-use composing::{EngineHandle as ComposingHandle, PendingSnapshot, UserRows};
+use composing::{EngineHandle as ComposingHandle, ListContext, PendingSnapshot, UserRows};
 use lexicon::search::AssociationHit;
 use protos::engine::{composing_request, AppConfig, ComposingRequest, ComposingResponse};
 use ranking::{ContextRanks, CONTEXT_RANK_BUNDLED};
@@ -13,13 +13,15 @@ use ranking::{ContextRanks, CONTEXT_RANK_BUNDLED};
 /// Continuations read per layer — what the next-word strip would show.
 pub(crate) const CONTEXT_ROWS: usize = nextword::api::DEFAULT_PREDICTION_LIMIT;
 
-/// The word the pending tail follows: the composition's last nailed segment,
-/// else the last committed word inside its association window (§56).
+/// The word the listed buffer follows: a word of the composition, else —
+/// when the list starts the composition — the last committed word inside its
+/// association window (§56).
 pub(crate) fn context_word(snapshot: &PendingSnapshot, now_ms: i64) -> Option<(String, String)> {
-    snapshot
-        .previous_word
-        .clone()
-        .or_else(|| nextword::EngineHandle::instance().context_snapshot(now_ms))
+    match &snapshot.context {
+        ListContext::Word(word, roman) => Some((word.clone(), roman.clone())),
+        ListContext::Committed => nextword::EngineHandle::instance().context_snapshot(now_ms),
+        ListContext::Cut => None,
+    }
 }
 
 /// The bundled `association.bin` continuations of a committed word — the
@@ -78,14 +80,15 @@ pub(crate) fn handle_composing_without_stores(
     let Some(composing_request::Method::FetchAtPos(sent)) = request.method.as_ref() else {
         return composing.handle(request, config, generation);
     };
-    // A stale generation answers the idle snapshot inside `query`.
-    let context = composing
-        .pending_snapshot(generation)
-        .map(|snapshot| bundled_ranks(context_word(&snapshot, sent.now_ms).as_ref()))
-        .unwrap_or_default();
-    Ok(composing.query(
+    // One copy of the engine reads the context and answers the fetch.
+    let Some(engine) = composing.engine_at(generation) else {
+        return Ok(composing::Engine::idle_snapshot(config));
+    };
+    let snapshot = engine.pending_snapshot(config);
+    let context = bundled_ranks(context_word(&snapshot, sent.now_ms).as_ref());
+    Ok(composing::requests::query(
         &fetch_at_pos_intent(sent, UserRows::default(), context),
+        &engine,
         config,
-        generation,
     ))
 }

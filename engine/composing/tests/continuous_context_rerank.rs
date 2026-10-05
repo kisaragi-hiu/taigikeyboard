@@ -9,7 +9,7 @@ use composing::CommitScript;
 
 use crate::common::{config_tl, fetch_at_pos_response, fetch_cells, Fetch};
 use composing::api::Engine;
-use composing::Intent;
+use composing::{Intent, ListContext};
 use ranking::{ContextRanks, CONTEXT_RANK_BUNDLED};
 
 /// The bundled continuations of 真/tsin that read `tse`: 濟 under both its
@@ -93,7 +93,7 @@ fn context_never_changes_the_segmentation() {
 }
 
 // Inside a composition the pending tail follows the last nailed segment:
-// `Engine::pending_context` names it by the identity the final commit's
+// `Engine::pending_snapshot` names it by the identity the final commit's
 // `preceding` carries (canonical text + association roman).
 #[test]
 fn pending_context_is_the_last_nailed_segment() {
@@ -102,14 +102,19 @@ fn pending_context_is_the_last_nailed_segment() {
     }
     let config = config_tl();
     let mut engine = Engine::new();
-    assert_eq!(engine.pending_context(), None);
+    let context = |engine: &Engine| engine.pending_snapshot(&config).context;
+    assert_eq!(context(&engine), ListContext::Committed);
     engine.apply(
         Intent::Start {
             text: "tsintse".to_string(),
         },
         &config,
     );
-    assert_eq!(engine.pending_context(), None, "nothing nailed yet");
+    assert_eq!(
+        context(&engine),
+        ListContext::Committed,
+        "nothing nailed yet"
+    );
     engine.apply(
         Intent::CommitContinuous {
             canonical_text: "真".to_string(),
@@ -123,8 +128,8 @@ fn pending_context_is_the_last_nailed_segment() {
         &config,
     );
     assert_eq!(
-        engine.pending_context(),
-        Some(("真".to_string(), "tsin".to_string()))
+        context(&engine),
+        ListContext::Word("真".to_string(), "tsin".to_string())
     );
     let response = fetch_at_pos_response(&config, "tse", Fetch::default());
     assert!(response.continuous.is_some(), "the fixture still fetches");

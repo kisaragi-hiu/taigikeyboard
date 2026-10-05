@@ -149,7 +149,8 @@ public interface ComposingRequestOrBuilder extends
 
   /**
    * <pre>
-   * --- Desktop editing keys (40s: Telex tone keys, composing caret, TPS keys) ---
+   * --- Desktop keys (40s: Telex tone keys, composing caret, TPS keys, the
+   * commits of a Hanji conversion) ---
    * </pre>
    *
    * <code>.taigi.engine.TelexKey telex_key = 40;</code>
@@ -158,7 +159,8 @@ public interface ComposingRequestOrBuilder extends
   boolean hasTelexKey();
   /**
    * <pre>
-   * --- Desktop editing keys (40s: Telex tone keys, composing caret, TPS keys) ---
+   * --- Desktop keys (40s: Telex tone keys, composing caret, TPS keys, the
+   * commits of a Hanji conversion) ---
    * </pre>
    *
    * <code>.taigi.engine.TelexKey telex_key = 40;</code>
@@ -187,6 +189,28 @@ public interface ComposingRequestOrBuilder extends
    * @return The tpsKey.
    */
   com.siansiansu.taigikeyboard.engine.proto.TpsKey getTpsKey();
+
+  /**
+   * <code>.taigi.engine.CommitAsShown commit_as_shown = 43;</code>
+   * @return Whether the commitAsShown field is set.
+   */
+  boolean hasCommitAsShown();
+  /**
+   * <code>.taigi.engine.CommitAsShown commit_as_shown = 43;</code>
+   * @return The commitAsShown.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.CommitAsShown getCommitAsShown();
+
+  /**
+   * <code>.taigi.engine.CommitAsTyped commit_as_typed = 44;</code>
+   * @return Whether the commitAsTyped field is set.
+   */
+  boolean hasCommitAsTyped();
+  /**
+   * <code>.taigi.engine.CommitAsTyped commit_as_typed = 44;</code>
+   * @return The commitAsTyped.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.CommitAsTyped getCommitAsTyped();
 
   public com.siansiansu.taigikeyboard.engine.proto.ComposingRequest.MethodCase getMethodCase();
 }

@@ -34,6 +34,8 @@ public  final class ComposingRequest extends
     TELEX_KEY(40),
     MOVE_CARET(41),
     TPS_KEY(42),
+    COMMIT_AS_SHOWN(43),
+    COMMIT_AS_TYPED(44),
     METHOD_NOT_SET(0);
     private final int value;
     private MethodCase(int value) {
@@ -63,6 +65,8 @@ public  final class ComposingRequest extends
         case 40: return TELEX_KEY;
         case 41: return MOVE_CARET;
         case 42: return TPS_KEY;
+        case 43: return COMMIT_AS_SHOWN;
+        case 44: return COMMIT_AS_TYPED;
         case 0: return METHOD_NOT_SET;
         default: return null;
       }
@@ -677,7 +681,8 @@ public  final class ComposingRequest extends
   public static final int TELEX_KEY_FIELD_NUMBER = 40;
   /**
    * <pre>
-   * --- Desktop editing keys (40s: Telex tone keys, composing caret, TPS keys) ---
+   * --- Desktop keys (40s: Telex tone keys, composing caret, TPS keys, the
+   * commits of a Hanji conversion) ---
    * </pre>
    *
    * <code>.taigi.engine.TelexKey telex_key = 40;</code>
@@ -688,7 +693,8 @@ public  final class ComposingRequest extends
   }
   /**
    * <pre>
-   * --- Desktop editing keys (40s: Telex tone keys, composing caret, TPS keys) ---
+   * --- Desktop keys (40s: Telex tone keys, composing caret, TPS keys, the
+   * commits of a Hanji conversion) ---
    * </pre>
    *
    * <code>.taigi.engine.TelexKey telex_key = 40;</code>
@@ -702,7 +708,8 @@ public  final class ComposingRequest extends
   }
   /**
    * <pre>
-   * --- Desktop editing keys (40s: Telex tone keys, composing caret, TPS keys) ---
+   * --- Desktop keys (40s: Telex tone keys, composing caret, TPS keys, the
+   * commits of a Hanji conversion) ---
    * </pre>
    *
    * <code>.taigi.engine.TelexKey telex_key = 40;</code>
@@ -714,7 +721,8 @@ public  final class ComposingRequest extends
   }
   /**
    * <pre>
-   * --- Desktop editing keys (40s: Telex tone keys, composing caret, TPS keys) ---
+   * --- Desktop keys (40s: Telex tone keys, composing caret, TPS keys, the
+   * commits of a Hanji conversion) ---
    * </pre>
    *
    * <code>.taigi.engine.TelexKey telex_key = 40;</code>
@@ -732,7 +740,8 @@ public  final class ComposingRequest extends
   }
   /**
    * <pre>
-   * --- Desktop editing keys (40s: Telex tone keys, composing caret, TPS keys) ---
+   * --- Desktop keys (40s: Telex tone keys, composing caret, TPS keys, the
+   * commits of a Hanji conversion) ---
    * </pre>
    *
    * <code>.taigi.engine.TelexKey telex_key = 40;</code>
@@ -839,6 +848,106 @@ public  final class ComposingRequest extends
    */
   private void clearTpsKey() {
     if (methodCase_ == 42) {
+      methodCase_ = 0;
+      method_ = null;
+    }
+  }
+
+  public static final int COMMIT_AS_SHOWN_FIELD_NUMBER = 43;
+  /**
+   * <code>.taigi.engine.CommitAsShown commit_as_shown = 43;</code>
+   */
+  @java.lang.Override
+  public boolean hasCommitAsShown() {
+    return methodCase_ == 43;
+  }
+  /**
+   * <code>.taigi.engine.CommitAsShown commit_as_shown = 43;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.CommitAsShown getCommitAsShown() {
+    if (methodCase_ == 43) {
+       return (com.siansiansu.taigikeyboard.engine.proto.CommitAsShown) method_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.CommitAsShown.getDefaultInstance();
+  }
+  /**
+   * <code>.taigi.engine.CommitAsShown commit_as_shown = 43;</code>
+   */
+  private void setCommitAsShown(com.siansiansu.taigikeyboard.engine.proto.CommitAsShown value) {
+    java.util.Objects.requireNonNull(value);
+    method_ = value;
+    methodCase_ = 43;
+  }
+  /**
+   * <code>.taigi.engine.CommitAsShown commit_as_shown = 43;</code>
+   */
+  private void mergeCommitAsShown(com.siansiansu.taigikeyboard.engine.proto.CommitAsShown value) {
+    java.util.Objects.requireNonNull(value);
+    if (methodCase_ == 43 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.CommitAsShown.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.CommitAsShown.newBuilder((com.siansiansu.taigikeyboard.engine.proto.CommitAsShown) method_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      method_ = value;
+    }
+    methodCase_ = 43;
+  }
+  /**
+   * <code>.taigi.engine.CommitAsShown commit_as_shown = 43;</code>
+   */
+  private void clearCommitAsShown() {
+    if (methodCase_ == 43) {
+      methodCase_ = 0;
+      method_ = null;
+    }
+  }
+
+  public static final int COMMIT_AS_TYPED_FIELD_NUMBER = 44;
+  /**
+   * <code>.taigi.engine.CommitAsTyped commit_as_typed = 44;</code>
+   */
+  @java.lang.Override
+  public boolean hasCommitAsTyped() {
+    return methodCase_ == 44;
+  }
+  /**
+   * <code>.taigi.engine.CommitAsTyped commit_as_typed = 44;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.CommitAsTyped getCommitAsTyped() {
+    if (methodCase_ == 44) {
+       return (com.siansiansu.taigikeyboard.engine.proto.CommitAsTyped) method_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.CommitAsTyped.getDefaultInstance();
+  }
+  /**
+   * <code>.taigi.engine.CommitAsTyped commit_as_typed = 44;</code>
+   */
+  private void setCommitAsTyped(com.siansiansu.taigikeyboard.engine.proto.CommitAsTyped value) {
+    java.util.Objects.requireNonNull(value);
+    method_ = value;
+    methodCase_ = 44;
+  }
+  /**
+   * <code>.taigi.engine.CommitAsTyped commit_as_typed = 44;</code>
+   */
+  private void mergeCommitAsTyped(com.siansiansu.taigikeyboard.engine.proto.CommitAsTyped value) {
+    java.util.Objects.requireNonNull(value);
+    if (methodCase_ == 44 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.CommitAsTyped.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.CommitAsTyped.newBuilder((com.siansiansu.taigikeyboard.engine.proto.CommitAsTyped) method_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      method_ = value;
+    }
+    methodCase_ = 44;
+  }
+  /**
+   * <code>.taigi.engine.CommitAsTyped commit_as_typed = 44;</code>
+   */
+  private void clearCommitAsTyped() {
+    if (methodCase_ == 44) {
       methodCase_ = 0;
       method_ = null;
     }
@@ -1531,7 +1640,8 @@ public  final class ComposingRequest extends
 
     /**
      * <pre>
-     * --- Desktop editing keys (40s: Telex tone keys, composing caret, TPS keys) ---
+     * --- Desktop keys (40s: Telex tone keys, composing caret, TPS keys, the
+     * commits of a Hanji conversion) ---
      * </pre>
      *
      * <code>.taigi.engine.TelexKey telex_key = 40;</code>
@@ -1542,7 +1652,8 @@ public  final class ComposingRequest extends
     }
     /**
      * <pre>
-     * --- Desktop editing keys (40s: Telex tone keys, composing caret, TPS keys) ---
+     * --- Desktop keys (40s: Telex tone keys, composing caret, TPS keys, the
+     * commits of a Hanji conversion) ---
      * </pre>
      *
      * <code>.taigi.engine.TelexKey telex_key = 40;</code>
@@ -1553,7 +1664,8 @@ public  final class ComposingRequest extends
     }
     /**
      * <pre>
-     * --- Desktop editing keys (40s: Telex tone keys, composing caret, TPS keys) ---
+     * --- Desktop keys (40s: Telex tone keys, composing caret, TPS keys, the
+     * commits of a Hanji conversion) ---
      * </pre>
      *
      * <code>.taigi.engine.TelexKey telex_key = 40;</code>
@@ -1565,7 +1677,8 @@ public  final class ComposingRequest extends
     }
     /**
      * <pre>
-     * --- Desktop editing keys (40s: Telex tone keys, composing caret, TPS keys) ---
+     * --- Desktop keys (40s: Telex tone keys, composing caret, TPS keys, the
+     * commits of a Hanji conversion) ---
      * </pre>
      *
      * <code>.taigi.engine.TelexKey telex_key = 40;</code>
@@ -1578,7 +1691,8 @@ public  final class ComposingRequest extends
     }
     /**
      * <pre>
-     * --- Desktop editing keys (40s: Telex tone keys, composing caret, TPS keys) ---
+     * --- Desktop keys (40s: Telex tone keys, composing caret, TPS keys, the
+     * commits of a Hanji conversion) ---
      * </pre>
      *
      * <code>.taigi.engine.TelexKey telex_key = 40;</code>
@@ -1590,7 +1704,8 @@ public  final class ComposingRequest extends
     }
     /**
      * <pre>
-     * --- Desktop editing keys (40s: Telex tone keys, composing caret, TPS keys) ---
+     * --- Desktop keys (40s: Telex tone keys, composing caret, TPS keys, the
+     * commits of a Hanji conversion) ---
      * </pre>
      *
      * <code>.taigi.engine.TelexKey telex_key = 40;</code>
@@ -1697,6 +1812,102 @@ public  final class ComposingRequest extends
       return this;
     }
 
+    /**
+     * <code>.taigi.engine.CommitAsShown commit_as_shown = 43;</code>
+     */
+    @java.lang.Override
+    public boolean hasCommitAsShown() {
+      return instance.hasCommitAsShown();
+    }
+    /**
+     * <code>.taigi.engine.CommitAsShown commit_as_shown = 43;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.CommitAsShown getCommitAsShown() {
+      return instance.getCommitAsShown();
+    }
+    /**
+     * <code>.taigi.engine.CommitAsShown commit_as_shown = 43;</code>
+     */
+    public Builder setCommitAsShown(com.siansiansu.taigikeyboard.engine.proto.CommitAsShown value) {
+      copyOnWrite();
+      instance.setCommitAsShown(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.CommitAsShown commit_as_shown = 43;</code>
+     */
+    public Builder setCommitAsShown(
+        com.siansiansu.taigikeyboard.engine.proto.CommitAsShown.Builder builderForValue) {
+      copyOnWrite();
+      instance.setCommitAsShown(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.CommitAsShown commit_as_shown = 43;</code>
+     */
+    public Builder mergeCommitAsShown(com.siansiansu.taigikeyboard.engine.proto.CommitAsShown value) {
+      copyOnWrite();
+      instance.mergeCommitAsShown(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.CommitAsShown commit_as_shown = 43;</code>
+     */
+    public Builder clearCommitAsShown() {
+      copyOnWrite();
+      instance.clearCommitAsShown();
+      return this;
+    }
+
+    /**
+     * <code>.taigi.engine.CommitAsTyped commit_as_typed = 44;</code>
+     */
+    @java.lang.Override
+    public boolean hasCommitAsTyped() {
+      return instance.hasCommitAsTyped();
+    }
+    /**
+     * <code>.taigi.engine.CommitAsTyped commit_as_typed = 44;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.CommitAsTyped getCommitAsTyped() {
+      return instance.getCommitAsTyped();
+    }
+    /**
+     * <code>.taigi.engine.CommitAsTyped commit_as_typed = 44;</code>
+     */
+    public Builder setCommitAsTyped(com.siansiansu.taigikeyboard.engine.proto.CommitAsTyped value) {
+      copyOnWrite();
+      instance.setCommitAsTyped(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.CommitAsTyped commit_as_typed = 44;</code>
+     */
+    public Builder setCommitAsTyped(
+        com.siansiansu.taigikeyboard.engine.proto.CommitAsTyped.Builder builderForValue) {
+      copyOnWrite();
+      instance.setCommitAsTyped(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.CommitAsTyped commit_as_typed = 44;</code>
+     */
+    public Builder mergeCommitAsTyped(com.siansiansu.taigikeyboard.engine.proto.CommitAsTyped value) {
+      copyOnWrite();
+      instance.mergeCommitAsTyped(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.CommitAsTyped commit_as_typed = 44;</code>
+     */
+    public Builder clearCommitAsTyped() {
+      copyOnWrite();
+      instance.clearCommitAsTyped();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.ComposingRequest)
   }
   @java.lang.Override
@@ -1729,11 +1940,13 @@ public  final class ComposingRequest extends
             com.siansiansu.taigikeyboard.engine.proto.TelexKey.class,
             com.siansiansu.taigikeyboard.engine.proto.MoveCaret.class,
             com.siansiansu.taigikeyboard.engine.proto.TpsKey.class,
+            com.siansiansu.taigikeyboard.engine.proto.CommitAsShown.class,
+            com.siansiansu.taigikeyboard.engine.proto.CommitAsTyped.class,
           };
           java.lang.String info =
-              "\u0000\u000e\u0001\u0000\n*\u000e\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f<\u0000" +
+              "\u0000\u0010\u0001\u0000\n,\u0010\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f<\u0000" +
               "\r<\u0000\u000e<\u0000\u0010<\u0000\u0011<\u0000\u0012<\u0000\u0013<\u0000\u001f" +
-              "<\u0000 <\u0000(<\u0000)<\u0000*<\u0000";
+              "<\u0000 <\u0000(<\u0000)<\u0000*<\u0000+<\u0000,<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

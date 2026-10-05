@@ -3,7 +3,8 @@
 //! transitions lives in `transition.rs`; this module is the stable surface
 //! that `requests.rs` and external crates consume.
 
-pub use crate::conversion::{Conversion, ConvertedSegment};
+pub use crate::conversion::{Conversion, ConversionFrequency, ConvertedSegment};
+use crate::handle::{ListContext, PendingSnapshot};
 use lexicon::{compound_hanji_exists, EngineHandle as LexiconHandle};
 use protos::engine::{AppConfig, ComposingResponse};
 use thiserror::Error;
@@ -167,6 +168,26 @@ pub struct NailedSegment {
     pub hanji: Option<String>,
     pub raw_span: (usize, usize),
     pub syllable_count: u8,
+    // Whether the user picked this segment from the list. A Hanji conversion's
+    // pick nails the words before it as shown (`roadmap` H4), not picked: such
+    // a segment records no usage, keeps the composition from teaching a §50
+    // phrase, and is never one end of a next-word pair (B4, H7).
+    pub is_picked: bool,
+}
+
+impl NailedSegment {
+    /// The segment as a context word — `(canonical text, association roman)`,
+    /// the identity a final commit's `preceding` carries — or `None` for one
+    /// with no word identity: nailed as shown without a canonical TL (glyphs,
+    /// a reading the dictionary has no word for).
+    pub(crate) fn context_word(&self) -> Option<(String, String)> {
+        (self.is_picked || !self.association_tl.is_empty()).then(|| {
+            (
+                self.canonical_text.clone(),
+                crate::transition::association_roman(&self.association_tl, &self.raw_text),
+            )
+        })
+    }
 }
 
 /// v3.5.8 — word-boundary separator policy for the Model B continuous
@@ -632,6 +653,12 @@ pub enum Intent {
     MoveCaret {
         direction: Option<CaretDirection>,
     },
+    /// Desktop, under a Hanji conversion — commit the composition as the
+    /// preedit shows it; see the `CommitAsShown` proto comment.
+    CommitAsShown,
+    /// Desktop, under a Hanji conversion — commit the glyphs of the whole
+    /// composition as typed; see the `CommitAsTyped` proto comment.
+    CommitAsTyped,
 }
 
 impl Intent {
@@ -677,30 +704,65 @@ impl Engine {
         crate::transition::snapshot(&self.state, config)
     }
 
-    /// The pending raw buffer as typed — `Preedit.raw_input` without
-    /// building the preedit (not [`Phase::raw_input`], which is the derived
-    /// display). Empty when idle.
-    pub fn pending_raw(&self) -> &str {
-        match &self.state.phase {
-            Phase::Idle => "",
-            Phase::Continuous { raw, .. } => raw,
+    /// What a `FetchAtPos` ranks against (`PendingSnapshot`): the part of the
+    /// pending tail it lists ([`Self::word_list_start`]) and the word that part
+    /// follows — the converted word ending where it starts, else, at the start
+    /// of the tail, the last nailed segment — when that is a word
+    /// ([`NailedSegment::context_word`]). With no segment before it, the list
+    /// starts the composition and follows the committed context (§56);
+    /// anything else before it — glyphs — cuts the context.
+    pub fn pending_snapshot(&self, config: &AppConfig) -> PendingSnapshot {
+        let Phase::Continuous {
+            raw,
+            nailed,
+            conversion,
+            ..
+        } = &self.state.phase
+        else {
+            return PendingSnapshot {
+                listed_raw: String::new(),
+                context: ListContext::Committed,
+            };
+        };
+        let list_start = self.word_list_start(config).unwrap_or(0);
+        let segment_before = if list_start > 0 {
+            conversion
+                .as_ref()
+                .and_then(|conversion| conversion.word_ending_at(list_start))
+                .map(|word| word.nailed_as_shown(raw, &[]))
+        } else {
+            nailed.last().cloned()
+        };
+        let context = match segment_before {
+            None if list_start == 0 => ListContext::Committed,
+            segment => segment
+                .and_then(|segment| segment.context_word())
+                .map_or(ListContext::Cut, |(word, roman)| {
+                    ListContext::Word(word, roman)
+                }),
+        };
+        PendingSnapshot {
+            listed_raw: raw[list_start..].to_string(),
+            context,
         }
     }
 
-    /// The word the pending tail follows inside this composition: the last
-    /// nailed segment as `(canonical text, association roman)` — the
-    /// identity the final commit's `preceding` carries — or `None` when no
-    /// segment is nailed (the committed context applies then, §56).
-    pub fn pending_context(&self) -> Option<(String, String)> {
-        let Phase::Continuous { nailed, .. } = &self.state.phase else {
-            return None;
-        };
-        nailed.last().map(|segment| {
-            (
-                segment.canonical_text.clone(),
-                crate::transition::association_roman(&segment.association_tl, &segment.raw_text),
-            )
-        })
+    /// Byte offset in the pending tail where the list of the word before the
+    /// caret starts, under a Hanji conversion the request asks for
+    /// (`crate::conversion::word_list_start`); `None` for the whole tail's
+    /// list. A pick resolves the same start (`transition::commit_continuous`).
+    pub fn word_list_start(&self, config: &AppConfig) -> Option<usize> {
+        match &self.state.phase {
+            Phase::Continuous {
+                raw,
+                caret,
+                nailed,
+                conversion,
+            } => {
+                crate::conversion::word_list_start(nailed, raw, *caret, conversion.as_ref(), config)
+            }
+            Phase::Idle => None,
+        }
     }
 
     /// Apply `intent` against the current state, mutate, and return the
@@ -712,7 +774,19 @@ impl Engine {
 
     /// [`apply`](Self::apply), with the phrase a final commit taught (§50).
     pub fn apply_learning(&mut self, intent: Intent, config: &AppConfig) -> Applied {
-        crate::transition::apply(&mut self.state, intent, config)
+        self.apply_ranked(intent, config, None)
+    }
+
+    /// [`apply_learning`](Self::apply_learning), a Hanji conversion walk
+    /// ranking with the user's learned counts `frequency` supplies (H5);
+    /// `None` walks neutral.
+    pub fn apply_ranked(
+        &mut self,
+        intent: Intent,
+        config: &AppConfig,
+        frequency: Option<&dyn ConversionFrequency>,
+    ) -> Applied {
+        crate::transition::apply(&mut self.state, intent, config, frequency)
     }
 
     /// Pure-Rust observability of the engine's `EngineState`. Returns a
@@ -762,6 +836,7 @@ mod tests {
             hanji: None,
             raw_span: (0, display.len()),
             syllable_count: 1,
+            is_picked: true,
         }
     }
 
@@ -777,6 +852,7 @@ mod tests {
             hanji: None,
             raw_span: (0, display.len()),
             syllable_count,
+            is_picked: true,
         }
     }
 

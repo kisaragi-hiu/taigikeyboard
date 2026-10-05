@@ -13,17 +13,34 @@
 //! The caret moves by word over the converted words and by glyph inside the
 //! text between them (H3). A reading typed inside the tail keeps the words
 //! on both sides until it closes; then the whole tail is walked again.
+//!
+//! The list of the word before the caret starts at [`word_list_start`];
+//! its pick nails what the preedit shows before that start (H4). A walk
+//! ranks with the user's learned counts when the request supplies them
+//! ([`ConversionFrequency`], H5).
 
 use lexicon::{ContinuousFetchCtx, EngineHandle as LexiconHandle, SyllableInventory};
 use phonetics::InputMode;
 use protos::engine::AppConfig;
 
-use crate::api::CaretDirection;
-use crate::continuous::{synth_consumed_span, walk_buffer};
+use crate::api::{CaretDirection, NailedSegment};
+use crate::continuous::{edge_homophone_words, synth_consumed_span, walk_buffer};
 use crate::derived::{buffer_input_mode, tps_slice_display};
 use crate::shadow::{
-    build_continuous_keys, build_shadow_lattice_with_barriers, whole_buffer_tone_pin, ShadowLattice,
+    build_continuous_keys, build_shadow_lattice_with_barriers, whole_buffer_tone_pin,
+    ContinuousKeys, ShadowLattice,
 };
+
+/// The user's learned counts a conversion walk ranks with (H5). The engine
+/// holds neither the user-data stores nor a clock; the dispatch layer, which
+/// holds both, supplies one with a mutation's request.
+pub trait ConversionFrequency {
+    /// The learned rows for `words`, keyed by the `(word, canonical TL)`
+    /// pair the ranking reads.
+    fn rows_for_words(&self, words: &[String]) -> ranking::FrequencyMap;
+    /// The wall clock (epoch ms) the recency ranking reads.
+    fn now_ms(&self) -> i64;
+}
 
 /// The converted words of a pending tail. The raw text no word covers — the
 /// reading being typed, a reading typed inside the tail and not closed yet,
@@ -48,6 +65,49 @@ pub struct ConvertedSegment {
     pub raw_span: (usize, usize),
     /// The word's Hanji, or its glyphs when the dictionary has none.
     pub display_text: String,
+    /// The word's Hanji; `None` for a word the dictionary has none for.
+    pub hanji: Option<String>,
+    /// The word's canonical TL, the other half of its `(Hanji, canonical-TL)`
+    /// identity; empty for a word the dictionary has none for.
+    pub canonical_tl: String,
+    pub syllable_count: u8,
+}
+
+impl ConvertedSegment {
+    /// Raw text no word covers, `raw[start..end]`, as the preedit shows it:
+    /// its glyphs, with no word identity — no Hanji, no TL, no syllables.
+    fn glyphs(raw: &str, start: usize, end: usize) -> Self {
+        Self {
+            raw_span: (start, end),
+            display_text: tps_slice_display(&raw[start..end]),
+            hanji: None,
+            canonical_tl: String::new(),
+            syllable_count: 0,
+        }
+    }
+
+    /// This piece of the pending `raw`, nailed as shown after `nailed`: not
+    /// picked, its raw text byte for byte (H4).
+    pub(crate) fn nailed_as_shown(&self, raw: &str, nailed: &[NailedSegment]) -> NailedSegment {
+        let (start, end) = self.raw_span;
+        NailedSegment {
+            display_text: self.display_text.clone(),
+            canonical_text: self.display_text.clone(),
+            raw_text: raw[start..end].to_string(),
+            association_tl: self.canonical_tl.clone(),
+            hanji: self.hanji.clone(),
+            raw_span: next_raw_span(nailed, end - start),
+            syllable_count: self.syllable_count,
+            is_picked: false,
+        }
+    }
+}
+
+/// The composition span of a segment of `len` raw bytes nailed after
+/// `nailed`.
+pub(crate) fn next_raw_span(nailed: &[NailedSegment], len: usize) -> (usize, usize) {
+    let start = nailed.last().map_or(0, |segment| segment.raw_span.1);
+    (start, start + len)
 }
 
 impl Conversion {
@@ -77,26 +137,52 @@ impl Conversion {
         }
         let mut display = String::new();
         let mut caret_utf16 = None;
-        // Glyphs of `raw[start..end]`, the text before, between or after the
-        // words; a caret inside them or on either edge, not placed yet,
-        // lands among them — the caret is never inside a word.
-        let mut push_glyphs = |display: &mut String, start: usize, end: usize| {
-            if (start..=end).contains(&caret) && caret_utf16.is_none() {
+        for piece in self.pieces_before(raw, raw.len()) {
+            let (start, end) = piece.raw_span;
+            // The caret is never inside a word: strictly inside a piece, it
+            // is among glyphs.
+            if caret_utf16.is_none() && (start..end).contains(&caret) {
                 let before_caret = tps_slice_display(&raw[start..caret]);
-                caret_utf16 = Some(utf16_len(display) + utf16_len(&before_caret));
+                caret_utf16 = Some(utf16_len(&display) + utf16_len(&before_caret));
             }
-            display.push_str(&tps_slice_display(&raw[start..end]));
-        };
-        let mut position = 0;
-        for segment in &self.segments {
-            let (start, end) = segment.raw_span;
-            push_glyphs(&mut display, position, start);
-            display.push_str(&segment.display_text);
-            position = end;
+            display.push_str(&piece.display_text);
         }
-        push_glyphs(&mut display, position, raw.len());
         let caret_utf16 = caret_utf16.unwrap_or_else(|| utf16_len(&display));
         Some((display, caret_utf16))
+    }
+
+    /// Where the list of the word before `caret` starts (H4): the start of the
+    /// word ending at the caret, else the start of the text no word covers
+    /// that the caret is in — the reading being typed, whose own list it is.
+    /// At the start of the tail, `0`: the first word, or the first reading.
+    fn anchor(&self, caret: usize) -> usize {
+        self.step_over_word(caret, CaretDirection::Left)
+            .unwrap_or_else(|| gap_start(&self.segments, caret))
+    }
+
+    /// The word whose raw span ends at `offset`.
+    pub(crate) fn word_ending_at(&self, offset: usize) -> Option<&ConvertedSegment> {
+        self.segments.iter().find(|word| word.raw_span.1 == offset)
+    }
+
+    /// The pending `raw` up to `end` cut into the pieces the preedit shows,
+    /// in order and covering every byte: the words, and the text between them
+    /// as [`ConvertedSegment::glyphs`]. `end` is a boundary no word crosses
+    /// (a list start, or the end of the tail).
+    pub(crate) fn pieces_before(&self, raw: &str, end: usize) -> Vec<ConvertedSegment> {
+        let mut pieces = Vec::new();
+        let mut position = 0;
+        for word in self.segments.iter().filter(|word| word.raw_span.1 <= end) {
+            if position < word.raw_span.0 {
+                pieces.push(ConvertedSegment::glyphs(raw, position, word.raw_span.0));
+            }
+            pieces.push(word.clone());
+            position = word.raw_span.1;
+        }
+        if position < end {
+            pieces.push(ConvertedSegment::glyphs(raw, position, end));
+        }
+        pieces
     }
 
     /// Where the caret goes from `caret` when a word lies on the side it
@@ -133,6 +219,42 @@ pub(crate) fn is_requested(raw: &str, config: &AppConfig) -> bool {
     requested_sources(config).is_some() && buffer_input_mode(raw, config) == InputMode::Tps
 }
 
+/// Whether `config` asks for the conversion of the composition of `nailed`
+/// segments and the pending `raw` — judged on the whole composition, so a
+/// tail a pick left with tone marks only is still a TPS composition's.
+pub(crate) fn is_requested_for_composition(
+    nailed: &[NailedSegment],
+    raw: &str,
+    config: &AppConfig,
+) -> bool {
+    let composition: String = nailed
+        .iter()
+        .map(|segment| segment.raw_text.as_str())
+        .chain([raw])
+        .collect();
+    is_requested(&composition, config)
+}
+
+/// Where the list of the word before the caret starts in the pending `raw`
+/// (H4) — the one rule a fetch, its context and its pick read — or `None`
+/// when `config` asks for no conversion of the composition: the whole tail's
+/// list, a legacy pick. [`Conversion::anchor`] of the conversion the tail
+/// holds for `config`; `0` when it holds none (a reading open from the start,
+/// or a tail of tone marks).
+pub(crate) fn word_list_start(
+    nailed: &[NailedSegment],
+    raw: &str,
+    caret: usize,
+    conversion: Option<&Conversion>,
+    config: &AppConfig,
+) -> Option<usize> {
+    is_requested_for_composition(nailed, raw, config).then(|| {
+        conversion
+            .filter(|conversion| conversion.is_for(config))
+            .map_or(0, |conversion| conversion.anchor(caret))
+    })
+}
+
 /// The pending tail a mutation replaces, with the conversion it held.
 pub(crate) struct PreviousTail<'a> {
     pub raw: &'a str,
@@ -153,11 +275,15 @@ pub(crate) struct PreviousTail<'a> {
 ///   as typing forward does;
 /// - an edit inside the tail keeps the words it did not touch until the
 ///   reading at the caret closes, then walks the whole tail again.
+///
+/// A walk ranks with `frequency`'s rows for every word any edge of the
+/// closed part could take; `None` walks neutral.
 pub(crate) fn convert(
     previous: Option<PreviousTail<'_>>,
     raw: &str,
     caret: usize,
     config: &AppConfig,
+    frequency: Option<&dyn ConversionFrequency>,
 ) -> (Option<Conversion>, usize) {
     let Some(enabled_sources_bitmask) = requested_sources(config) else {
         return (None, caret);
@@ -177,8 +303,18 @@ pub(crate) fn convert(
         };
         let walk = |closed: &str| {
             let (prefix_index, dict) = (state.prefix_index.as_ref()?, state.dictionary.as_ref()?);
-            // Neutral ranking: no user rows and no previous-word context.
-            let ctx = ContinuousFetchCtx {
+            let continuous_keys = build_continuous_keys(closed, inventory, InputMode::Tps);
+            // The path spans the shadow; it covers the closed part only when
+            // the shadow's end maps to its end — the slot-0 synthesis's own
+            // gate. Checked before the user's counts are read.
+            synth_consumed_span(
+                &continuous_keys.shadow_to_raw_end,
+                continuous_keys.shadow.len(),
+                closed.len() as u32,
+            )?;
+            // No custom or learned rows (TPS keys neither as a walker edge)
+            // and no previous-word context.
+            let mut ctx = ContinuousFetchCtx {
                 enabled_sources_bitmask,
                 freq_map: &ranking::FrequencyMap::new(),
                 context: ranking::ContextRanks::empty(),
@@ -190,7 +326,17 @@ pub(crate) fn convert(
                 mode: InputMode::Tps,
                 tone_pin: whole_buffer_tone_pin(closed, InputMode::Tps),
             };
-            walk_closed_part(closed, inventory, &ctx)
+            // The user's counts for every word an edge could take: user
+            // weight both picks an edge's word and prices its span.
+            let rows = frequency
+                .map(|frequency| {
+                    let words = edge_homophone_words(&continuous_keys, &ctx);
+                    (frequency.rows_for_words(&words), frequency.now_ms())
+                })
+                .unwrap_or_default();
+            ctx.freq_map = &rows.0;
+            ctx.now_ms = rows.1;
+            walk_closed_part(closed, &continuous_keys, inventory, &ctx)
         };
         // The closed part runs to the furthest closing end; it is walked
         // as a buffer of its own.
@@ -339,12 +485,7 @@ fn common_prefix_len(a: &str, b: &str) -> usize {
 /// before it (or the start of the tail) to the start of the word after it (or
 /// the end of the tail).
 fn gap_around(words: &[ConvertedSegment], raw_len: usize, caret: usize) -> (usize, usize) {
-    let start = words
-        .iter()
-        .map(|word| word.raw_span.1)
-        .filter(|&end| end <= caret)
-        .max()
-        .unwrap_or(0);
+    let start = gap_start(words, caret);
     let end = words
         .iter()
         .map(|word| word.raw_span.0)
@@ -352,6 +493,17 @@ fn gap_around(words: &[ConvertedSegment], raw_len: usize, caret: usize) -> (usiz
         .min()
         .unwrap_or(raw_len);
     (start, end)
+}
+
+/// The end of the last word ending at or before `caret`, else `0`: where the
+/// text no word covers around the caret starts.
+fn gap_start(words: &[ConvertedSegment], caret: usize) -> usize {
+    words
+        .iter()
+        .map(|word| word.raw_span.1)
+        .filter(|&end| end <= caret)
+        .max()
+        .unwrap_or(0)
 }
 
 /// `caret`, or the end of the word it falls inside: after a walk the caret
@@ -375,24 +527,18 @@ fn covers_from_start(words: &[ConvertedSegment]) -> bool {
     })
 }
 
-/// The walker's best path over `closed`, as words in raw coordinates: they
-/// cover it from 0, and a separator run belongs to the word before it.
-/// `None` when no edge chain spans it.
+/// The walker's best path over `closed` (its `continuous_keys`, whose shadow
+/// spans it), as words in raw coordinates: they cover it from 0, and a
+/// separator run belongs to the word before it. `None` when no edge chain
+/// spans it.
 fn walk_closed_part(
     closed: &str,
+    continuous_keys: &ContinuousKeys,
     inventory: &SyllableInventory,
     ctx: &ContinuousFetchCtx<'_>,
 ) -> Option<Vec<ConvertedSegment>> {
-    let continuous_keys = build_continuous_keys(closed, inventory, InputMode::Tps);
     let shadow_to_raw_end = &continuous_keys.shadow_to_raw_end;
-    // The path spans the shadow; it covers the closed part only when the
-    // shadow's end maps to its end — the slot-0 synthesis's own gate.
-    synth_consumed_span(
-        shadow_to_raw_end,
-        continuous_keys.shadow.len(),
-        closed.len() as u32,
-    )?;
-    let path = walk_buffer(&continuous_keys, inventory, ctx)?;
+    let path = walk_buffer(continuous_keys, inventory, ctx)?;
     let mut start = 0;
     Some(
         path.edges
@@ -403,10 +549,14 @@ fn walk_closed_part(
                 start = raw_span.1;
                 let display_text = choice
                     .hanji
+                    .clone()
                     .unwrap_or_else(|| tps_slice_display(&closed[raw_span.0..raw_span.1]));
                 ConvertedSegment {
                     raw_span,
                     display_text,
+                    hanji: choice.hanji,
+                    canonical_tl: choice.canonical_tl,
+                    syllable_count: choice.syllable_count,
                 }
             })
             .collect(),

@@ -23,7 +23,7 @@
 //! `build_keys_tps` `tl:`-folded path is retired).
 
 use crate::api::{CaretDirection, CommitScript, ComposingError, Engine, Intent, Phase, UserRows};
-use crate::continuous::{assemble_candidates, retain_first_by_key, roman_reading_eq};
+use crate::continuous::{assemble_candidates, retain_first_by_key, roman_reading_eq, ListShape};
 use crate::derived::buffer_input_mode;
 use lexicon::{
     classification::is_hanji, derive_script_kind, ConsumedSpan, LearnedEntry, RawCandidate,
@@ -71,6 +71,8 @@ pub fn decode_intent(req: &ComposingRequest) -> Result<Intent, ComposingError> {
         },
         Method::TelexKey(m) => Intent::TelexKey { key: m.key },
         Method::TpsKey(m) => Intent::TpsKey { key: m.key },
+        Method::CommitAsShown(_) => Intent::CommitAsShown,
+        Method::CommitAsTyped(_) => Intent::CommitAsTyped,
         Method::MoveCaret(m) => Intent::MoveCaret {
             direction: match m.direction() {
                 protos::engine::CaretDirection::Left => Some(CaretDirection::Left),
@@ -172,6 +174,10 @@ pub fn query(intent: &Intent, engine: &Engine, config: &AppConfig) -> ComposingR
 /// v3.5.9 A2: the candidate-assembly 6-step seam lives in
 /// [`crate::continuous::assemble_candidates`]; this fn does the
 /// phase/hanji guards and the wire encoding around it.
+///
+/// Under a Hanji conversion the request asks for, the list is the word
+/// before the caret's (H4): the tail from [`Engine::word_list_start`] as
+/// [`ListShape::Word`], spans shifted back into the tail's coordinates.
 fn handle_fetch_at_pos(
     engine: &Engine,
     now_ms: i64,
@@ -183,9 +189,16 @@ fn handle_fetch_at_pos(
 ) -> ComposingResponse {
     let snapshot = engine.snapshot(config);
     let state = engine.snapshot_state();
-    let Phase::Continuous { raw, .. } = &state.phase else {
+    let Phase::Continuous { raw: tail, .. } = &state.phase else {
         return snapshot;
     };
+    let word_list_start = engine.word_list_start(config);
+    let shape = match word_list_start {
+        Some(_) => ListShape::Word,
+        None => ListShape::Sentence,
+    };
+    let list_start = word_list_start.unwrap_or(0);
+    let raw = &tail[list_start..];
     // v3.5.8 Phase 9 Item 11 — hanji guard (§15.3.E). The only input
     // modes are TL/POJ/TPS romanization; CJK never legitimately enters
     // the composing buffer. When it leaks in (paste, stale selection
@@ -209,8 +222,9 @@ fn handle_fetch_at_pos(
     // derives every TPS-gated branch from `mode == InputMode::Tps`
     // internally — pre-C-3b had a parallel `is_tps: bool` arg that
     // duplicated this axis (`is_tps = contains_tps(raw)`, dual source
-    // of truth). Dropping the bool eliminates split-brain risk.
-    let mode = buffer_input_mode(raw, config);
+    // of truth). Dropping the bool eliminates split-brain risk. The whole
+    // tail decides, also for a list starting inside it.
+    let mode = buffer_input_mode(tail, config);
     // Learned phrases (§50): one row per reading, the most-learned
     // separator form first.
     let learned = first_learned_per_reading(&user_rows.learned);
@@ -232,6 +246,7 @@ fn handle_fetch_at_pos(
         context,
         config.renders_hyphenless(),
         config.force_lowercase_nasal_marker,
+        shape,
     );
     // INVARIANT_CONTINUOUS_LITERAL_ROMAN_CANDIDATE (§34): whenever composing
     // in TL/POJ — tone or no tone — surface the current composing result
@@ -268,6 +283,13 @@ fn handle_fetch_at_pos(
         && matches!(mode, phonetics::InputMode::Tl | phonetics::InputMode::Poj)
     {
         dedupe_display_roman(&mut candidates);
+    }
+    if list_start > 0 {
+        let list_start = list_start as u32;
+        for candidate in &mut candidates {
+            candidate.consumed_span.0 += list_start;
+            candidate.consumed_span.1 += list_start;
+        }
     }
     with_continuous(
         snapshot,

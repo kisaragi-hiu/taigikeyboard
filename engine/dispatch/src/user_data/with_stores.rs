@@ -6,9 +6,10 @@
 //! `nextword`, which only `dispatch` sees together.
 
 use std::collections::HashSet;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use composing::api::ComposingError;
-use composing::{PendingSnapshot, UserRows};
+use composing::{ConversionFrequency, PendingSnapshot, UserRows};
 use nextword::NextWordError;
 use protos::engine::{
     composing_request, next_word_request, response, AppConfig, ComposingRequest, ComposingResponse,
@@ -18,7 +19,8 @@ use protos::engine::{
 use ranking::{ContextRanks, FrequencyData, FrequencyMap, CONTEXT_RANK_USER};
 use userdata::{
     AssociationPair, CustomDictionaryCSV, CustomDictionaryRow, CustomDictionaryStore, FollowingRow,
-    LearnedPhraseRow, LearnedPhraseStore, RequestError, UserDataHandle, UserDataStores,
+    FrequencyRow, LearnedPhraseRow, LearnedPhraseStore, RequestError, UserDataHandle,
+    UserDataStores,
 };
 
 // The limit a platform may check before the read is the codec's own.
@@ -47,11 +49,15 @@ pub(crate) fn respond(id: u32, generation: u64, request: &UserDataRequest) -> Re
 
 /// A composing request, answered with the open stores. `FetchAtPos` runs
 /// two passes in-process (roadmap P3b, brainstorm R5): the custom and
-/// learned rows for the pending buffer, a neutral fetch that discovers the
-/// candidates, their frequency rows, and a re-ranked fetch. Every other
-/// request goes to composing; the phrase a final commit taught (§50) is
-/// written to `learned_phrases.db` here (P3c), then the pick a
-/// `CommitContinuous` counts (R5).
+/// learned rows for the listed buffer, a neutral fetch that discovers the
+/// candidates, their frequency rows, and a re-ranked fetch — both passes
+/// answered by one copy of the engine as of the request, so the rows read
+/// for its buffer and list start rank that buffer and list. Every other
+/// request goes to composing, a Hanji conversion walk ranking with the
+/// user's counts ([`StoredFrequency`]); the phrase a final commit taught
+/// (§50) is written to `learned_phrases.db` here (P3c), then the pick a
+/// `CommitContinuous` counts (R5) — after the request's own walk, so a pick
+/// ranks the walks that follow it.
 pub(super) fn handle_composing(
     stores: &UserDataStores,
     request: &ComposingRequest,
@@ -60,7 +66,8 @@ pub(super) fn handle_composing(
 ) -> Result<ComposingResponse, ComposingError> {
     let composing = composing::EngineHandle::instance();
     let Some(composing_request::Method::FetchAtPos(sent)) = request.method.as_ref() else {
-        let applied = composing.handle_learning(request, config, generation)?;
+        let frequency = StoredFrequency { stores };
+        let applied = composing.handle_ranked(request, config, generation, Some(&frequency))?;
         if let Some(learned) = applied.learned {
             stores
                 .learned_phrases
@@ -75,55 +82,59 @@ pub(super) fn handle_composing(
         }
         return Ok(applied.response);
     };
-    // The buffer can grow between reading it and fetching (the main thread
-    // keeps typing while a worker fetches): rows chosen for one buffer must
-    // not rank another, so a fetch that answers for a different buffer is
-    // redone once with that buffer's rows.
-    let mut rows = UserRows::default();
-    let mut context = ContextRanks::new();
-    let mut neutral = None;
-    for _ in 0..2 {
-        // A stale generation answers the idle snapshot inside `query`.
-        let Some(snapshot) = composing.pending_snapshot(generation) else {
-            return Ok(composing.query(
-                &composing::requests::fetch_at_pos_intent(
-                    sent,
-                    UserRows::default(),
-                    ContextRanks::new(),
-                ),
-                config,
-                generation,
-            ));
-        };
-        rows = buffer_rows(
-            stores,
-            &snapshot.raw,
+    // The main thread keeps typing while a worker fetches: the passes answer
+    // from one copy of the engine, so rows read for one buffer never rank
+    // another. A stale generation answers the idle snapshot.
+    let Some(engine) = composing.engine_at(generation) else {
+        return Ok(composing::Engine::idle_snapshot(config));
+    };
+    let snapshot = engine.pending_snapshot(config);
+    let mut rows = buffer_rows(
+        stores,
+        &snapshot.listed_raw,
+        config,
+        sent.custom_dictionary_disabled,
+    );
+    let context = context_ranks(stores, &snapshot, sent.now_ms);
+    let fetch = |rows, context| {
+        composing::requests::query(
+            &composing::requests::fetch_at_pos_intent(sent, rows, context),
+            &engine,
             config,
-            sent.custom_dictionary_disabled,
-        );
-        context = context_ranks(stores, &snapshot, sent.now_ms);
-        let answer = composing.query(
-            &composing::requests::fetch_at_pos_intent(sent, rows.clone(), context.clone()),
-            config,
-            generation,
-        );
-        let answered_for = answer.preedit.as_ref().map(|p| p.raw_input.as_str());
-        let current = answered_for.unwrap_or("") == snapshot.raw;
-        neutral = Some(answer);
-        if current {
-            break;
-        }
-    }
-    let neutral = neutral.expect("the loop fetches at least once");
+        )
+    };
+    let neutral = fetch(rows.clone(), context.clone());
     let Some(frequency) = frequency_map(stores, &neutral) else {
         return Ok(neutral);
     };
     rows.frequency = frequency;
-    Ok(composing.query(
-        &composing::requests::fetch_at_pos_intent(sent, rows, context),
-        config,
-        generation,
-    ))
+    Ok(fetch(rows, context))
+}
+
+/// The learned counts a Hanji conversion walk ranks with: the open
+/// `user_frequency.db`, at the wall clock (the composing engine keeps none).
+struct StoredFrequency<'a> {
+    stores: &'a UserDataStores,
+}
+
+impl ConversionFrequency for StoredFrequency<'_> {
+    fn rows_for_words(&self, words: &[String]) -> FrequencyMap {
+        self.stores
+            .frequency
+            .rows_for_words(words)
+            .into_iter()
+            .flatten()
+            .map(frequency_entry)
+            .collect()
+    }
+
+    fn now_ms(&self) -> i64 {
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_or(0, |elapsed| {
+                i64::try_from(elapsed.as_millis()).unwrap_or(i64::MAX)
+            })
+    }
 }
 
 /// The continuations of the word the pending tail follows (§56): the
@@ -201,17 +212,16 @@ fn frequency_map(stores: &UserDataStores, neutral: &ComposingResponse) -> Option
     if rows.is_empty() {
         return None;
     }
-    Some(
-        rows.into_iter()
-            .map(|row| {
-                let data = FrequencyData {
-                    count: ranked_count(row.count),
-                    last_used_ms: row.last_used_ms,
-                };
-                (row.word, row.tl, data)
-            })
-            .collect(),
-    )
+    Some(rows.into_iter().map(frequency_entry).collect())
+}
+
+/// A stored row as the `(word, canonical TL)`-keyed entry ranking reads.
+fn frequency_entry(row: FrequencyRow) -> (String, String, FrequencyData) {
+    let data = FrequencyData {
+        count: ranked_count(row.count),
+        last_used_ms: row.last_used_ms,
+    };
+    (row.word, row.tl, data)
 }
 
 /// A stored count as ranking reads it: saturated at `i32::MAX`; a negative

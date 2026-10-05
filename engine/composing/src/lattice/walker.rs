@@ -45,6 +45,10 @@ pub(crate) struct EdgeChoice {
     /// Hanji for this edge if the chosen dict candidate had one;
     /// `None` for a pure-roman (no dict hit) edge.
     pub hanji: Option<String>,
+    /// The chosen word's canonical TL — the reading half of its
+    /// `(Hanji, canonical-TL)` identity (`AGENTS.md` Core Principle 6). Empty
+    /// for a synthesized OOV edge, which has none.
+    pub canonical_tl: String,
     /// `true` iff this edge resolved to a **lexicon-backed hit**: a
     /// `dict.bin` record (provider `Some(c)` branch) or a
     /// `custom_dictionary.db` entry (v3.5.8 S6 custom-precedence
@@ -239,6 +243,7 @@ mod tests {
         EdgeChoice {
             roman: roman.to_owned(),
             hanji: Some(hanji.to_owned()),
+            canonical_tl: roman.to_owned(),
             dict_hit: true,
             is_custom: false,
             frequency: freq,
@@ -260,6 +265,7 @@ mod tests {
         EdgeChoice {
             roman: r.to_owned(),
             hanji: None,
+            canonical_tl: String::new(),
             dict_hit: false,
             is_custom: false,
             frequency: 0,
@@ -275,6 +281,7 @@ mod tests {
         EdgeChoice {
             roman: roman.to_owned(),
             hanji: Some(hanji.to_owned()),
+            canonical_tl: roman.to_owned(),
             dict_hit: true,
             is_custom: true,
             frequency: freq,

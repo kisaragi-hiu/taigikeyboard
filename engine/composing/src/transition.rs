@@ -4,7 +4,9 @@
 //! lexicon in two places — the compound oracle of the nailed join
 //! (`api::nailed_prefix`) and, when the request asks for it, the Hanji
 //! conversion of a TPS tail (`crate::conversion`) — so the preedit depends on
-//! the lexicon as well as on `(state, intent, config)`.
+//! the lexicon as well as on `(state, intent, config)`, and, through a
+//! conversion walk, on the user's learned counts the request supplies
+//! ([`Frequency`]).
 //!
 //! Effect ordering matters; iOS/Android downstream wrappers consume effects
 //! in proto-list order. `prost` preserves order on `repeated Effect` fields.
@@ -20,15 +22,17 @@
 //! segment inside the composition (no document write). `ComposingResponse.
 //! preedit` therefore carries the **whole composition** during Continuous;
 //! tests inspect `nailed` via `Engine::snapshot_state`. Under a Hanji
-//! conversion the preedit shows the tail converted ([`phase_preedit`]); what
-//! a commit writes is unchanged.
+//! conversion the preedit shows the tail converted ([`phase_preedit`]): a
+//! pick keeps composing ([`nail_pick_keeping_composition`]), and the desktop
+//! commits with `CommitAsShown` / `CommitAsTyped`; `CommitRaw` and the legacy
+//! pick write what they always wrote.
 
 use crate::api::{
     combined_display, join_nailed_prefix_and_tail, nailed_prefix, Applied, CaretDirection,
-    CommitScript, EngineState, Intent, NailedSegment, Phase, Usage,
+    CommitScript, ConversionFrequency, EngineState, Intent, NailedSegment, Phase, Usage,
 };
 use crate::commit_text::{commit_resolution, resolve_commit_text};
-use crate::conversion::PreviousTail;
+use crate::conversion::{next_raw_span, PreviousTail};
 use crate::derived::{
     buffer_input_mode, derived_display, display_caret_utf16, strip_tps_separator_markers,
 };
@@ -49,21 +53,42 @@ use protos::engine::{
 /// syllables is a clause, not a word.
 const MAX_LEARNED_PHRASE_SYLLABLES: usize = 6;
 
+/// The user's learned counts a Hanji conversion walk ranks with; `None` walks
+/// neutral (`crate::conversion::convert`).
+type Frequency<'a> = Option<&'a dyn ConversionFrequency>;
+
 /// Apply `intent` against `state`, mutate, return the proto response and
 /// the phrase a final commit taught (§50).
-pub(crate) fn apply(state: &mut EngineState, intent: Intent, config: &AppConfig) -> Applied {
+pub(crate) fn apply(
+    state: &mut EngineState,
+    intent: Intent,
+    config: &AppConfig,
+    frequency: Frequency<'_>,
+) -> Applied {
     let response = match intent {
         Intent::Start { text } => match &state.phase {
-            Phase::Continuous { .. } => start_under_continuous(state, text, config),
+            Phase::Continuous { .. } => start_under_continuous(state, text, config, frequency),
             // §21: a leading `--` neutral-tone marker typed from Idle is a document
             // literal, not composing input (see helper).
-            Phase::Idle => begin_composition_or_insert_leading_hyphens(state, text, config),
+            Phase::Idle => {
+                begin_composition_or_insert_leading_hyphens(state, text, config, frequency)
+            }
         },
         Intent::Append { ch } => match &state.phase {
-            Phase::Idle => begin_composition_or_insert_leading_hyphens(state, ch, config),
+            Phase::Idle => {
+                begin_composition_or_insert_leading_hyphens(state, ch, config, frequency)
+            }
             Phase::Continuous {
                 raw, caret, nailed, ..
-            } => append_continuous(state, raw.clone(), *caret, nailed.clone(), &ch, config),
+            } => append_continuous(
+                state,
+                raw.clone(),
+                *caret,
+                nailed.clone(),
+                &ch,
+                config,
+                frequency,
+            ),
         },
         Intent::AppendHyphen => {
             return apply(
@@ -72,10 +97,11 @@ pub(crate) fn apply(state: &mut EngineState, intent: Intent, config: &AppConfig)
                     ch: "-".to_string(),
                 },
                 config,
+                frequency,
             )
         }
-        Intent::ReplaceLast { replacement } => replace_last(state, replacement, config),
-        Intent::DeleteBackward => delete_backward(state, config),
+        Intent::ReplaceLast { replacement } => replace_last(state, replacement, config, frequency),
+        Intent::DeleteBackward => delete_backward(state, config, frequency),
         Intent::CommitRaw => commit_raw(state, config),
         Intent::SelectCandidate { text } => match &state.phase {
             Phase::Continuous { nailed, .. } => {
@@ -119,11 +145,13 @@ pub(crate) fn apply(state: &mut EngineState, intent: Intent, config: &AppConfig)
                 consumed_bytes,
                 syllable_count,
             };
-            return commit_continuous(state, pick, script, &roman, config);
+            return commit_continuous(state, pick, script, &roman, config, frequency);
         }
-        Intent::TelexKey { key } => telex_key(state, &key, config),
-        Intent::TpsKey { key } => tps_key(state, &key, config),
-        Intent::MoveCaret { direction } => move_caret(state, direction, config),
+        Intent::TelexKey { key } => telex_key(state, &key, config, frequency),
+        Intent::TpsKey { key } => tps_key(state, &key, config, frequency),
+        Intent::MoveCaret { direction } => move_caret(state, direction, config, frequency),
+        Intent::CommitAsShown => return commit_as_shown(state, config),
+        Intent::CommitAsTyped => commit_as_typed(state, config),
     };
     response.into()
 }
@@ -134,17 +162,24 @@ pub(crate) fn apply(state: &mut EngineState, intent: Intent, config: &AppConfig)
 /// `None` edit is a no-op. Under Continuous the nailed segments stay
 /// untouched and the preedit re-renders the whole composition; selection
 /// resets as a fresh typing step does.
-fn telex_key(state: &mut EngineState, key: &str, config: &AppConfig) -> ComposingResponse {
+fn telex_key(
+    state: &mut EngineState,
+    key: &str,
+    config: &AppConfig,
+    frequency: Frequency<'_>,
+) -> ComposingResponse {
     let mode = phonetics::api::composing_mode(config);
     match &state.phase {
         Phase::Idle => match crate::telex::apply_telex_key("", key, mode) {
-            Some(text) => begin_composition(state, text, config),
+            Some(text) => begin_composition(state, text, config, frequency),
             None => noop(state, config),
         },
         Phase::Continuous {
             raw, caret, nailed, ..
         } => match telex_before_caret(raw, *caret, key, mode) {
-            Some((next, caret)) => step_continuous(state, next, caret, nailed.clone(), config),
+            Some((next, caret)) => {
+                step_continuous(state, next, caret, nailed.clone(), config, frequency)
+            }
             None => noop(state, config),
         },
     }
@@ -165,6 +200,7 @@ fn move_caret(
     state: &mut EngineState,
     direction: Option<CaretDirection>,
     config: &AppConfig,
+    frequency: Frequency<'_>,
 ) -> ComposingResponse {
     if let Phase::Continuous {
         raw, caret, nailed, ..
@@ -172,12 +208,18 @@ fn move_caret(
     {
         let reopens = direction == Some(CaretDirection::Left)
             && *caret == 0
-            && nailed.last().is_some_and(|last| {
-                crate::conversion::is_requested(&format!("{}{raw}", last.raw_text), config)
-            });
+            && !nailed.is_empty()
+            && crate::conversion::is_requested_for_composition(nailed, raw, config);
         if reopens {
             let (nailed, tail) = (nailed.clone(), raw.clone());
-            return unnail_last(state, nailed, tail, UnnailedCaret::BeforeIt, config);
+            return unnail_last(
+                state,
+                nailed,
+                tail,
+                UnnailedCaret::BeforeIt,
+                config,
+                frequency,
+            );
         }
     }
     // A tail the request converts that holds no conversion for it (another
@@ -196,7 +238,7 @@ fn move_caret(
             .is_some_and(|conversion| conversion.is_for(config));
         if !is_shown && crate::conversion::is_requested(raw, config) {
             let (raw, caret, nailed) = (raw.clone(), *caret, nailed.clone());
-            set_continuous_walked_afresh(state, raw, caret, nailed, config);
+            set_continuous_walked_afresh(state, raw, caret, nailed, config, frequency);
             is_newly_converted = matches!(
                 state.phase,
                 Phase::Continuous {
@@ -225,7 +267,7 @@ fn move_caret(
     };
     let has_moved = moved.is_some();
     if let Some((raw, caret, nailed)) = moved {
-        set_continuous(state, raw, caret, nailed, config);
+        set_continuous(state, raw, caret, nailed, config, frequency);
     }
     let mut resp = snapshot(state, config);
     if has_moved || is_newly_converted {
@@ -385,6 +427,7 @@ fn set_continuous(
     caret: usize,
     nailed: Vec<NailedSegment>,
     config: &AppConfig,
+    frequency: Frequency<'_>,
 ) {
     let previous = match &state.phase {
         Phase::Continuous {
@@ -399,7 +442,7 @@ fn set_continuous(
         }),
         _ => None,
     };
-    let (conversion, caret) = crate::conversion::convert(previous, &raw, caret, config);
+    let (conversion, caret) = crate::conversion::convert(previous, &raw, caret, config, frequency);
     state.phase = Phase::Continuous {
         raw,
         caret,
@@ -416,10 +459,11 @@ fn set_continuous_walked_afresh(
     caret: usize,
     nailed: Vec<NailedSegment>,
     config: &AppConfig,
+    frequency: Frequency<'_>,
 ) {
     // With the phase dropped first, nothing lends a conversion.
     state.phase = Phase::Idle;
-    set_continuous(state, raw, caret, nailed, config);
+    set_continuous(state, raw, caret, nailed, config, frequency);
 }
 
 /// Begin a composition from Idle: the buffer becomes `raw` with nothing
@@ -429,12 +473,13 @@ fn begin_composition(
     state: &mut EngineState,
     raw: String,
     config: &AppConfig,
+    frequency: Frequency<'_>,
 ) -> ComposingResponse {
     if raw.is_empty() {
         return noop(state, config);
     }
     let caret = raw.len();
-    step_continuous(state, raw, caret, Vec::new(), config)
+    step_continuous(state, raw, caret, Vec::new(), config, frequency)
 }
 
 /// One `Phase::Continuous` step on the pending tail: `nailed` is untouched,
@@ -445,8 +490,9 @@ fn step_continuous(
     caret: usize,
     nailed: Vec<NailedSegment>,
     config: &AppConfig,
+    frequency: Frequency<'_>,
 ) -> ComposingResponse {
-    set_continuous(state, pending, caret, nailed, config);
+    set_continuous(state, pending, caret, nailed, config, frequency);
     step_response(phase_preedit(&state.phase, config))
 }
 
@@ -470,10 +516,11 @@ fn begin_composition_or_insert_leading_hyphens(
     state: &mut EngineState,
     text: String,
     config: &AppConfig,
+    frequency: Frequency<'_>,
 ) -> ComposingResponse {
     let hyphen_len = text.bytes().take_while(|&b| b == b'-').count();
     if hyphen_len == 0 {
-        return begin_composition(state, text, config);
+        return begin_composition(state, text, config, frequency);
     }
     let (run, remainder) = text.split_at(hyphen_len);
     if remainder.is_empty() {
@@ -489,7 +536,7 @@ fn begin_composition_or_insert_leading_hyphens(
     // a mixed transition can desync Android's `onUpdateSelection` clear-hook
     // (commit fires before the preedit lands). Engine/proto level is correct
     // and tested; the contract is char-by-char at the platform boundary.
-    let mut resp = begin_composition(state, remainder.to_string(), config);
+    let mut resp = begin_composition(state, remainder.to_string(), config, frequency);
     resp.effect
         .insert(0, commit_text_replacing_preedit(run.to_string()));
     resp
@@ -498,16 +545,25 @@ fn begin_composition_or_insert_leading_hyphens(
 /// `Intent::TpsKey` — see the `TpsKey` proto comment. From Idle a glyph begins
 /// the composition as `Append` does (a leading hyphen stays a document
 /// literal, §21); under Continuous the nailed segments stay untouched.
-fn tps_key(state: &mut EngineState, key: &str, config: &AppConfig) -> ComposingResponse {
+fn tps_key(
+    state: &mut EngineState,
+    key: &str,
+    config: &AppConfig,
+    frequency: Frequency<'_>,
+) -> ComposingResponse {
     match &state.phase {
         Phase::Idle => match tps_key_before_caret("", 0, key) {
-            Some((text, _)) => begin_composition_or_insert_leading_hyphens(state, text, config),
+            Some((text, _)) => {
+                begin_composition_or_insert_leading_hyphens(state, text, config, frequency)
+            }
             None => noop(state, config),
         },
         Phase::Continuous {
             raw, caret, nailed, ..
         } => match tps_key_before_caret(raw, *caret, key) {
-            Some((next, caret)) => step_continuous(state, next, caret, nailed.clone(), config),
+            Some((next, caret)) => {
+                step_continuous(state, next, caret, nailed.clone(), config, frequency)
+            }
             None => noop(state, config),
         },
     }
@@ -520,6 +576,7 @@ fn replace_last(
     state: &mut EngineState,
     replacement: String,
     config: &AppConfig,
+    frequency: Frequency<'_>,
 ) -> ComposingResponse {
     match &state.phase {
         Phase::Continuous {
@@ -533,17 +590,28 @@ fn replace_last(
             if new_pending.is_empty() && nailed.is_empty() {
                 return exit_to_idle(state, abort_continuous_effects());
             }
-            step_continuous(state, new_pending, caret, nailed.clone(), config)
+            step_continuous(state, new_pending, caret, nailed.clone(), config, frequency)
         }
         Phase::Idle => noop(state, config),
     }
 }
 
-fn delete_backward(state: &mut EngineState, config: &AppConfig) -> ComposingResponse {
+fn delete_backward(
+    state: &mut EngineState,
+    config: &AppConfig,
+    frequency: Frequency<'_>,
+) -> ComposingResponse {
     match &state.phase {
         Phase::Continuous {
             raw, caret, nailed, ..
-        } => delete_backward_continuous(state, raw.clone(), *caret, nailed.clone(), config),
+        } => delete_backward_continuous(
+            state,
+            raw.clone(),
+            *caret,
+            nailed.clone(),
+            config,
+            frequency,
+        ),
         Phase::Idle => noop(state, config),
     }
 }
@@ -572,6 +640,7 @@ fn delete_backward_continuous(
     caret: usize,
     nailed: Vec<NailedSegment>,
     config: &AppConfig,
+    frequency: Frequency<'_>,
 ) -> ComposingResponse {
     if !pending.is_empty() {
         let Some((new_pending, caret)) = delete_before_caret(&pending, caret) else {
@@ -580,14 +649,21 @@ fn delete_backward_continuous(
         if new_pending.is_empty() && nailed.is_empty() {
             return exit_to_idle(state, abort_continuous_effects());
         }
-        return step_continuous(state, new_pending, caret, nailed, config);
+        return step_continuous(state, new_pending, caret, nailed, config, frequency);
     }
 
     // pending empty branches
     if nailed.is_empty() {
         return exit_to_idle(state, abort_continuous_effects());
     }
-    unnail_last(state, nailed, String::new(), UnnailedCaret::AfterIt, config)
+    unnail_last(
+        state,
+        nailed,
+        String::new(),
+        UnnailedCaret::AfterIt,
+        config,
+        frequency,
+    )
 }
 
 /// Where an un-nailed segment's raw text leaves the caret.
@@ -609,6 +685,7 @@ fn unnail_last(
     tail: String,
     caret: UnnailedCaret,
     config: &AppConfig,
+    frequency: Frequency<'_>,
 ) -> ComposingResponse {
     // JUSTIFICATION: both callers checked `nailed` is non-empty; popping a
     // non-empty Vec is a programmer-invariant guarantee, not a data path.
@@ -630,15 +707,17 @@ fn unnail_last(
     // no longer reach NextWord at all, because only the final commit's
     // `preceding` carries nailed segments. Kept for platforms that read the
     // effect stream; canonical key per v3.5.8 Phase 9 Bug 1 (Option A).
+    // A segment nailed as shown is no word the user selected (B4): the
+    // handshake names only a picked one.
     let nextword_correction = match nailed.last() {
-        Some(prev) => next_word_update_last_selected_word(
+        Some(prev) if prev.is_picked => next_word_update_last_selected_word(
             prev.canonical_text.clone(),
             // R2: canonical TL (raw-slice fallback), as the commit path.
             association_roman(&prev.association_tl, &prev.raw_text),
         ),
-        None => next_word_clear_for_new_composing(),
+        _ => next_word_clear_for_new_composing(),
     };
-    set_continuous_walked_afresh(state, new_pending, caret, nailed, config);
+    set_continuous_walked_afresh(state, new_pending, caret, nailed, config, frequency);
 
     let preedit = phase_preedit(&state.phase, config);
     let effects = vec![
@@ -712,27 +791,14 @@ fn commit_raw_continuous(
             &strip_tps_separator_markers(&raw),
             buffer_input_mode(&raw, config),
         );
-        next_word_word_selected(tail_display, tail_roman, true, &nailed)
+        next_word_terminal(tail_display, tail_roman, &nailed)
     } else {
         // raw empty → all input is nailed; the last nailed segment is the
         // final word. `nailed` is non-empty here (combined non-empty with
         // empty raw implies a nailed segment exists).
-        match nailed.split_last() {
-            Some((last, preceding)) => next_word_word_selected(
-                last.canonical_text.clone(),
-                // R2: this segment had a candidate selected at nail time →
-                // use its canonical TL (raw-slice fallback). The pending-tail
-                // branch above stays raw — there is no candidate there.
-                association_roman(&last.association_tl, &last.raw_text),
-                true,
-                preceding,
-            ),
-            None => next_word_clear_for_new_composing(),
-        }
+        next_word_nailed_terminal(&nailed)
     };
-    let mut effects = finalize_effects(combined);
-    effects.push(terminal_nextword);
-    exit_to_idle(state, effects)
+    finalize(state, combined, terminal_nextword)
 }
 
 /// `Intent::CommitPreeditThenInsertExternal` from Idle — a plain insert
@@ -801,11 +867,12 @@ fn start_under_continuous(
     state: &mut EngineState,
     text: String,
     config: &AppConfig,
+    frequency: Frequency<'_>,
 ) -> ComposingResponse {
     // Drop continuous state to Idle first.
     state.phase = Phase::Idle;
     let mut effects = abort_continuous_effects();
-    let resp = begin_composition(state, text, config);
+    let resp = begin_composition(state, text, config, frequency);
     effects.extend(resp.effect);
     ComposingResponse {
         effect: effects,
@@ -880,6 +947,7 @@ fn nail_segment(
     display_text: String,
     pick: SegmentPick,
     config: &AppConfig,
+    frequency: Frequency<'_>,
 ) -> (Applied, CommitOutcome) {
     let SegmentPick {
         canonical_text: canonical,
@@ -891,32 +959,24 @@ fn nail_segment(
     let Phase::Continuous { raw, nailed, .. } = &state.phase else {
         return (noop(state, config).into(), CommitOutcome::Ignored);
     };
-    if display_text.is_empty()
-        || consumed_bytes == 0
-        || consumed_bytes > raw.len()
-        || !raw.is_char_boundary(consumed_bytes)
-    {
+    if !is_pick_of(raw, 0, consumed_bytes, &display_text) {
         return (noop(state, config).into(), CommitOutcome::Ignored);
     }
-    let pending = raw.clone();
     let mut new_nailed = nailed.clone();
-    let raw_text = pending[..consumed_bytes].to_string();
-    let prev_end = new_nailed.last().map(|s| s.raw_span.1).unwrap_or(0);
-    let raw_span = (prev_end, prev_end + consumed_bytes);
-    let new_pending = pending[consumed_bytes..].to_string();
+    let new_pending = raw[consumed_bytes..].to_string();
     // R2: the NextWord `roman` arg — canonical TL when the platform sent
     // it, else the raw committed slice (legacy / TPS-OOV fallback). Used
     // for whichever single effect this commit fires below (final OR mid).
-    let next_word_roman = association_roman(&association_tl, &raw_text);
-    let segment = NailedSegment {
-        display_text: display_text.clone(),
-        canonical_text: canonical.clone(),
-        raw_text: raw_text.clone(),
+    let next_word_roman = association_roman(&association_tl, &raw[..consumed_bytes]);
+    let segment = picked_segment(
+        &new_nailed,
+        raw[..consumed_bytes].to_string(),
+        display_text,
+        canonical.clone(),
         association_tl,
-        hanji: hanji.filter(|h| !h.is_empty()),
-        raw_span,
+        hanji,
         syllable_count,
-    };
+    );
     new_nailed.push(segment);
 
     if new_pending.is_empty() {
@@ -928,19 +988,13 @@ fn nail_segment(
         // Pending is empty here, so the whole composition is just the
         // nailed prefix (combined_display would append derived("") = "").
         let combined = nailed_prefix(&new_nailed, config);
-        let mut effects = finalize_effects(combined);
         // `nailed` = every segment before the one just pushed.
-        effects.push(next_word_word_selected(
-            canonical,
-            next_word_roman,
-            true,
-            nailed,
-        ));
+        let terminal = next_word_terminal(canonical, next_word_roman, nailed);
         // Learned phrases (§50): the whole composition, if it was a
         // sequence of hanji picks, becomes one learned pair.
         let learned = learned_phrase(&new_nailed);
         let applied = Applied {
-            response: exit_to_idle(state, effects),
+            response: finalize(state, combined, terminal),
             learned,
             usage: None,
         };
@@ -952,21 +1006,195 @@ fn nail_segment(
     // Accepting a candidate is a flush of what was typed, so the caret goes
     // to the end of the tail that is left.
     let caret = new_pending.len();
-    set_continuous(state, new_pending, caret, new_nailed, config);
+    set_continuous(state, new_pending, caret, new_nailed, config, frequency);
+    let response = nailed_response(
+        state,
+        config,
+        canonical,
+        next_word_roman,
+        refresh_candidates(),
+    );
+    (response.into(), CommitOutcome::Nailed)
+}
+
+/// Whether a pick ending at `consumed_bytes` of the pending `raw`, of a list
+/// starting at `start`, can be nailed: something to write, a non-empty span
+/// after the start, on a char boundary.
+fn is_pick_of(raw: &str, start: usize, consumed_bytes: usize, display_text: &str) -> bool {
+    !display_text.is_empty()
+        && consumed_bytes > start
+        && consumed_bytes <= raw.len()
+        && raw.is_char_boundary(consumed_bytes)
+}
+
+/// The segment a pick of `raw_text` nails after `nailed`.
+fn picked_segment(
+    nailed: &[NailedSegment],
+    raw_text: String,
+    display_text: String,
+    canonical_text: String,
+    association_tl: String,
+    hanji: Option<String>,
+    syllable_count: u8,
+) -> NailedSegment {
+    NailedSegment {
+        display_text,
+        canonical_text,
+        raw_span: next_raw_span(nailed, raw_text.len()),
+        raw_text,
+        association_tl,
+        hanji: hanji.filter(|hanji| !hanji.is_empty()),
+        syllable_count,
+        is_picked: true,
+    }
+}
+
+/// The answer of a pick that keeps composing: the preedit, the nail
+/// handshake, then `list_effect` — what becomes of the candidate list.
+fn nailed_response(
+    state: &EngineState,
+    config: &AppConfig,
+    canonical_text: String,
+    next_word_roman: String,
+    list_effect: Effect,
+) -> ComposingResponse {
     let preedit = phase_preedit(&state.phase, config);
     let effects = vec![
         update_preedit(&preedit),
-        next_word_update_last_selected_word(canonical, next_word_roman),
-        refresh_candidates(),
+        next_word_update_last_selected_word(canonical_text, next_word_roman),
+        list_effect,
     ];
-    let response = ComposingResponse {
+    ComposingResponse {
         preedit: Some(preedit),
         effect: effects,
         is_composing: true,
         continuous: None,
         commit: None,
+    }
+}
+
+/// Write `text` out of the composition — the finalize trio, then the
+/// NextWord handshake `terminal` — and go idle.
+fn finalize(state: &mut EngineState, text: String, terminal: Effect) -> ComposingResponse {
+    let mut effects = finalize_effects(text);
+    effects.push(terminal);
+    exit_to_idle(state, effects)
+}
+
+/// A pick under a Hanji conversion the request asks for (H4): the list it
+/// came from started at the word before the caret
+/// (`crate::conversion::word_list_start`, `start`), so what the preedit shows before that start
+/// is nailed as shown and not picked — each word and the glyphs between them,
+/// byte for byte, so un-nailing restores what was typed — then the pick is
+/// nailed, and the rest of the tail is walked again with the caret at its
+/// end. Never finalizes: with nothing left the composition stays, all of it
+/// nailed, until a commit. The window closes (`ClearCandidates`, not
+/// `RefreshCandidates`). A pick not ending after the start is ignored.
+fn nail_pick_keeping_composition(
+    state: &mut EngineState,
+    display_text: String,
+    pick: SegmentPick,
+    start: usize,
+    config: &AppConfig,
+    frequency: Frequency<'_>,
+) -> (Applied, CommitOutcome) {
+    let SegmentPick {
+        canonical_text,
+        association_tl,
+        hanji,
+        consumed_bytes,
+        syllable_count,
+    } = pick;
+    let Phase::Continuous {
+        raw,
+        nailed,
+        conversion,
+        ..
+    } = &state.phase
+    else {
+        return (noop(state, config).into(), CommitOutcome::Ignored);
     };
+    if !is_pick_of(raw, start, consumed_bytes, &display_text) {
+        return (noop(state, config).into(), CommitOutcome::Ignored);
+    }
+    let mut new_nailed = nailed.clone();
+    let shown = conversion
+        .iter()
+        .flat_map(|conversion| conversion.pieces_before(raw, start));
+    for piece in shown {
+        let segment = piece.nailed_as_shown(raw, &new_nailed);
+        new_nailed.push(segment);
+    }
+    let raw_text = raw[start..consumed_bytes].to_string();
+    let next_word_roman = association_roman(&association_tl, &raw_text);
+    let segment = picked_segment(
+        &new_nailed,
+        raw_text,
+        display_text,
+        canonical_text.clone(),
+        association_tl,
+        hanji,
+        syllable_count,
+    );
+    new_nailed.push(segment);
+    let rest = raw[consumed_bytes..].to_string();
+    let caret = rest.len();
+    set_continuous_walked_afresh(state, rest, caret, new_nailed, config, frequency);
+    let response = nailed_response(
+        state,
+        config,
+        canonical_text,
+        next_word_roman,
+        clear_candidates(),
+    );
     (response.into(), CommitOutcome::Nailed)
+}
+
+/// `Intent::CommitAsShown` — write the composition as the preedit shows it
+/// ([`phase_preedit`]: nailed segments, converted words, unconverted glyphs)
+/// and go idle. It teaches what a final pick teaches — the §50 phrase and the
+/// next-word sequence — only when nothing is pending and the user picked
+/// every segment (B4, H7); otherwise it teaches nothing and answers
+/// `NextWordClearForNewComposing`, after which the platform forgets its
+/// next-word context. Records no usage.
+fn commit_as_shown(state: &mut EngineState, config: &AppConfig) -> Applied {
+    let Phase::Continuous { raw, nailed, .. } = &state.phase else {
+        return noop(state, config).into();
+    };
+    let text = phase_preedit(&state.phase, config).display_text;
+    if text.is_empty() {
+        return noop(state, config).into();
+    }
+    let (terminal, learned) = if raw.is_empty() {
+        (next_word_nailed_terminal(nailed), learned_phrase(nailed))
+    } else {
+        (next_word_clear_for_new_composing(), None)
+    };
+    Applied {
+        response: finalize(state, text, terminal),
+        learned,
+        usage: None,
+    }
+}
+
+/// `Intent::CommitAsTyped` — write the glyphs of the whole composition as
+/// typed (every nailed segment's raw text, then the pending tail, through
+/// the derived display: TPS drops the separators) and go idle. Teaches
+/// nothing.
+fn commit_as_typed(state: &mut EngineState, config: &AppConfig) -> ComposingResponse {
+    let Phase::Continuous { raw, nailed, .. } = &state.phase else {
+        return noop(state, config);
+    };
+    let typed: String = nailed
+        .iter()
+        .map(|segment| segment.raw_text.as_str())
+        .chain([raw.as_str()])
+        .collect();
+    let text = derived_display(&typed, config);
+    if text.is_empty() {
+        return noop(state, config);
+    }
+    finalize(state, text, next_word_clear_for_new_composing())
 }
 
 /// The pick a `CommitContinuous` names, apart from what it writes.
@@ -989,6 +1217,7 @@ fn commit_continuous(
     script: Option<CommitScript>,
     roman: &str,
     config: &AppConfig,
+    frequency: Frequency<'_>,
 ) -> Applied {
     let hanji = pick.hanji.clone().filter(|hanji| !hanji.is_empty());
     let resolved = script
@@ -1004,7 +1233,26 @@ fn commit_continuous(
         canonical_tl: pick.association_tl.clone(),
         hanji,
     };
-    let (mut applied, outcome) = nail_segment(state, resolved.text.clone(), pick, config);
+    let word_list_start = match &state.phase {
+        Phase::Continuous {
+            raw,
+            caret,
+            nailed,
+            conversion,
+        } => crate::conversion::word_list_start(nailed, raw, *caret, conversion.as_ref(), config),
+        Phase::Idle => None,
+    };
+    let (mut applied, outcome) = match word_list_start {
+        Some(start) => nail_pick_keeping_composition(
+            state,
+            resolved.text.clone(),
+            pick,
+            start,
+            config,
+            frequency,
+        ),
+        None => nail_segment(state, resolved.text.clone(), pick, config, frequency),
+    };
     if outcome != CommitOutcome::Ignored {
         applied.usage = Some(usage);
     }
@@ -1022,12 +1270,13 @@ fn append_continuous(
     nailed: Vec<NailedSegment>,
     ch: &str,
     config: &AppConfig,
+    frequency: Frequency<'_>,
 ) -> ComposingResponse {
     if ch.is_empty() {
         return noop(state, config);
     }
     let (new_pending, caret) = insert_at_caret(&pending, caret, ch);
-    step_continuous(state, new_pending, caret, nailed, config)
+    step_continuous(state, new_pending, caret, nailed, config, frequency)
 }
 
 // ---- Effect constructors ------------------------------------------
@@ -1126,6 +1375,35 @@ fn next_word_update_last_selected_word(text: String, roman: String) -> Effect {
     }
 }
 
+/// The NextWord handshake of a commit whose last word is `text` / `roman`,
+/// after the nailed `preceding`: [`next_word_word_selected`] when the user
+/// picked every one of them, else `NextWordClearForNewComposing` — a segment
+/// nailed as shown is never one end of a next-word pair, and the chain would
+/// bridge across it (B4, H7). Every legacy segment is picked.
+fn next_word_terminal(text: String, roman: String, preceding: &[NailedSegment]) -> Effect {
+    if preceding.iter().all(|segment| segment.is_picked) {
+        next_word_word_selected(text, roman, true, preceding)
+    } else {
+        next_word_clear_for_new_composing()
+    }
+}
+
+/// [`next_word_terminal`] of a composition that is all nailed: its last
+/// segment is the last word — learned only when it was picked too.
+fn next_word_nailed_terminal(nailed: &[NailedSegment]) -> Effect {
+    match nailed.split_last() {
+        Some((last, preceding)) if last.is_picked => next_word_terminal(
+            last.canonical_text.clone(),
+            // R2: this segment had a candidate selected at nail time → use
+            // its canonical TL (raw-slice fallback). A pending tail has no
+            // candidate and keys on its raw form.
+            association_roman(&last.association_tl, &last.raw_text),
+            preceding,
+        ),
+        _ => next_word_clear_for_new_composing(),
+    }
+}
+
 /// Final-commit NextWord handshake: the terminal word, with the nailed
 /// segments committed before it (`preceding`, document order) so NextWord
 /// learns the whole composition as one sequence (behavioral-invariants §40).
@@ -1154,8 +1432,9 @@ fn next_word_word_selected(
 
 /// Learned phrases (§50) — the `(Hanji, canonical-TL)` pair a final
 /// continuous commit learns from its nailed segments, or `None` when the
-/// composition is not one: fewer than two segments, any segment without
-/// a hanji pick or without a canonical TL, or more than
+/// composition is not one: fewer than two segments, any segment the user
+/// did not pick (B4), any segment without a hanji pick or without a
+/// canonical TL, or more than
 /// [`MAX_LEARNED_PHRASE_SYLLABLES`] in total. The TL pieces join under
 /// the commit's word boundaries ([`crate::api::learned_reading`]): a
 /// dictionary compound with `-`, separate words with a space, and the
@@ -1171,6 +1450,9 @@ fn learned_phrase(nailed: &[NailedSegment]) -> Option<LearnedEntry> {
     }
     let mut hanji = String::new();
     for seg in nailed {
+        if !seg.is_picked {
+            return None;
+        }
         // `commit_continuous` stored an empty hanji as `None` already.
         let h = seg.hanji.as_deref()?;
         if seg.association_tl.is_empty() {

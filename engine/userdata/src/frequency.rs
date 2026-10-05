@@ -17,6 +17,9 @@ const ROW_COLUMNS: &str = "word, tl, count, CAST(strftime('%s', last_used) AS IN
 /// One order, most-used first, `(word, tl)` as the final tie-break so equal
 /// counts keep a stable order between two reads.
 const LIST_ORDER: &str = "count DESC, last_used DESC, word ASC, tl ASC";
+/// Words bound per `rows_for_words` statement — one parameter each, well
+/// under SQLite's limit on bound parameters.
+const WORDS_PER_QUERY: usize = 500;
 
 /// The table as the Learning Records page reads it.
 pub(crate) const LEARNING_TABLE: crate::learning_records::Table = crate::learning_records::Table {
@@ -146,18 +149,24 @@ impl UserFrequencyStore {
     }
 
     /// Every learned row for any of `words`, or `None` when the store could
-    /// not be read.
+    /// not be read. Any number of words: they are bound
+    /// [`WORDS_PER_QUERY`] at a time, one read.
     pub fn rows_for_words(&self, words: &[String]) -> Option<Vec<FrequencyRow>> {
         if words.is_empty() {
             return Some(Vec::new());
         }
-        let placeholders = vec!["?"; words.len()].join(",");
         self.database.read(|connection| {
-            let mut statement = connection.prepare(&format!(
-                "SELECT {ROW_COLUMNS} FROM {TABLE_NAME}\nWHERE word IN ({placeholders});"
-            ))?;
-            let rows = statement.query_map(params_from_iter(words.iter()), decode_row)?;
-            rows.collect()
+            let mut rows = Vec::new();
+            for chunk in words.chunks(WORDS_PER_QUERY) {
+                let placeholders = vec!["?"; chunk.len()].join(",");
+                let mut statement = connection.prepare(&format!(
+                    "SELECT {ROW_COLUMNS} FROM {TABLE_NAME}\nWHERE word IN ({placeholders});"
+                ))?;
+                for row in statement.query_map(params_from_iter(chunk.iter()), decode_row)? {
+                    rows.push(row?);
+                }
+            }
+            Ok(rows)
         })
     }
 

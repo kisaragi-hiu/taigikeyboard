@@ -424,19 +424,22 @@ impl Default for Fetch {
     }
 }
 
+/// `rows` as the frequency map a ranking reads.
+pub fn frequency_map(rows: impl IntoIterator<Item = Selected>) -> ranking::FrequencyMap {
+    rows.into_iter()
+        .map(|row| {
+            let data = FrequencyData {
+                count: row.count,
+                last_used_ms: row.last_used_ms,
+            };
+            (row.hanji, row.canonical_tl, data)
+        })
+        .collect()
+}
+
 impl Fetch {
     pub fn intent(self) -> Intent {
-        let frequency = self
-            .frequency
-            .into_iter()
-            .map(|row| {
-                let data = FrequencyData {
-                    count: row.count,
-                    last_used_ms: row.last_used_ms,
-                };
-                (row.hanji, row.canonical_tl, data)
-            })
-            .collect();
+        let frequency = frequency_map(self.frequency);
         Intent::FetchAtPos {
             now_ms: self.now_ms,
             enabled_sources_bitmask: self.enabled_sources_bitmask,
