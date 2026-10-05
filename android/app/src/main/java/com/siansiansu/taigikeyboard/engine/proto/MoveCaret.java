@@ -17,6 +17,12 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * `ReplaceLast` act on the character before it, `TelexKey` and `TpsKey` on
  * the chunk before it. Mobile never sends this, so its caret stays at the end and
  * every mutator behaves as before.
+ * Under a Hanji conversion the request asks for (`AppConfig.hanji_conversion`,
+ * a TPS tail): a step over a converted word moves past the whole word, and a
+ * step left from the start of the tail with a segment nailed re-opens that
+ * segment — its glyphs go back in front of the tail, the caret before them —
+ * answering as `DeleteBackward`'s un-nail does (NextWord handshake,
+ * `UpdatePreedit`, `RefreshCandidates`).
  * </pre>
  *
  * Protobuf type {@code taigi.engine.MoveCaret}
@@ -167,6 +173,12 @@ public  final class MoveCaret extends
    * `ReplaceLast` act on the character before it, `TelexKey` and `TpsKey` on
    * the chunk before it. Mobile never sends this, so its caret stays at the end and
    * every mutator behaves as before.
+   * Under a Hanji conversion the request asks for (`AppConfig.hanji_conversion`,
+   * a TPS tail): a step over a converted word moves past the whole word, and a
+   * step left from the start of the tail with a segment nailed re-opens that
+   * segment — its glyphs go back in front of the tail, the caret before them —
+   * answering as `DeleteBackward`'s un-nail does (NextWord handshake,
+   * `UpdatePreedit`, `RefreshCandidates`).
    * </pre>
    *
    * Protobuf type {@code taigi.engine.MoveCaret}
