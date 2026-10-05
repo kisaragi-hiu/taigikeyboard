@@ -10,29 +10,37 @@
 :root {
   --ink: #1d1d1f;
   --ink2: #86868b;
-  --ink3: #a1a1a6;
+  --ink3: #c7c7cc;
   --accent: #0071e3;
   --bg: #fbfbfd;
+  /* desktop window + candidate panel (light); the theme scene overrides these per frame */
+  --wbg: #ffffff; --wink: #1d1d1f; --pbg: rgba(250,250,252,.92); --pink2: rgba(60,60,67,.62); --psep: rgba(0,0,0,.09);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); }
+/* 4:5 portrait — the largest frame a feed post gets on Threads / Instagram / Facebook / X */
+html, body { width: 1080px; height: 1350px; overflow: hidden; background: var(--bg); }
 #stage { position: absolute; inset: 0; overflow: hidden; background: var(--bg); }
 .layer { position: absolute; inset: 0; will-change: transform, opacity, filter; }
-.center { position: absolute; left: 50%; top: 50%; }
 .sf { font-family: "SF Pro Display", "SF Pro Text", -apple-system, sans-serif; }
+.ui { font-family: "SF Pro Text", "SF Pro Display", GenGo, "PingFang TC", sans-serif; }
+
+/* section caption — the film is silent, so every section names itself on screen */
+.capt { position: absolute; left: 0; right: 0; top: 92px; text-align: center; }
+.capt .en { font: 500 22px "SF Pro Display", sans-serif; letter-spacing: .34em; text-indent: .34em; color: var(--ink2); text-transform: uppercase; }
+.capt .zh { margin-top: 12px; font: 84px GenMin; color: var(--ink); letter-spacing: .1em; text-indent: .1em; line-height: 1.2; }
 
 /* hero typing */
-.label { position: absolute; left: 0; right: 0; text-align: center; top: 300px;
+.label { position: absolute; left: 0; right: 0; text-align: center; top: 400px;
   font: 500 24px "SF Pro Display", sans-serif; letter-spacing: .42em; color: var(--ink2); text-indent: .42em; }
-.hero { position: absolute; left: 0; right: 0; top: 476px; height: 150px; text-align: center; transform-origin: 50% 50%; }
+.hero { position: absolute; left: 0; right: 0; top: 590px; height: 150px; text-align: center; transform-origin: 50% 50%; }
 .line { display: inline-block; position: relative; font-family: Huninn; color: var(--ink); white-space: pre; line-height: 150px; }
 .cl { display: inline-block; position: relative; }
 .cl .sz { visibility: hidden; }
 .cl span.l { position: absolute; left: 0; top: 0; }
 .caret { position: absolute; top: 34px; width: 4px; height: 94px; border-radius: 2px; background: var(--accent); }
 .uline { position: absolute; top: 128px; height: 3px; border-radius: 2px; background: #c7c7cc; left: 0; }
-.hanji { position: absolute; left: 0; right: 0; top: 380px; text-align: center; font-family: GenMin; color: var(--ink); white-space: nowrap; }
-.keys { position: absolute; left: 50%; top: 760px; width: 0; height: 0; }
+.hanji { position: absolute; left: 0; right: 0; top: 480px; text-align: center; font-family: GenMin; color: var(--ink); white-space: nowrap; }
+.keys { position: absolute; left: 50%; top: 900px; width: 0; height: 0; }
 .cap { position: absolute; left: -34px; top: 0; width: 68px; height: 76px; border-radius: 13px; background: #fff;
   box-shadow: 0 1px 0 rgba(0,0,0,.18), 0 8px 24px rgba(0,0,0,.06); display: flex; align-items: center; justify-content: center;
   font-family: Huninn; font-size: 36px; color: var(--ink); }
@@ -40,14 +48,13 @@ html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--
 .cap.tone .d { margin-top: 10px; }
 
 /* triptych */
-.tri-h { position: absolute; left: 0; right: 0; top: 250px; text-align: center; font: 150px GenMin; color: var(--ink); }
+.tri-h { position: absolute; left: 0; right: 0; top: 330px; text-align: center; font: 150px GenMin; color: var(--ink); }
 .tri-row { position: absolute; left: 0; right: 0; height: 90px; display: flex; justify-content: center; align-items: baseline; }
-.tri-row .k { width: 150px; text-align: right; padding-right: 44px; font: 500 22px "SF Pro Display"; letter-spacing: .3em; color: var(--ink2); }
-.tri-row .v { width: 760px; font: 62px Huninn; color: var(--ink); white-space: pre; }
-.tri-row .v span { transition: none; }
+.tri-row .k { width: 150px; text-align: right; padding-right: 40px; font: 500 22px "SF Pro Display"; letter-spacing: .3em; color: var(--ink2); }
+.tri-row .v { width: 700px; font: 56px Huninn; color: var(--ink); white-space: pre; }
 
 /* phone */
-#phone { position: absolute; left: 50%; top: 50%; width: 486px; height: 1000px; margin-left: -243px; margin-top: -500px; }
+.phone { position: absolute; width: 486px; height: 1000px; transform-origin: 0 0; }
 .bezel { position: absolute; inset: 0; border-radius: 76px; background: #111113;
   box-shadow: 0 0 0 2px #2c2c2e inset, 0 50px 120px rgba(0,0,0,.18), 0 12px 32px rgba(0,0,0,.12); }
 .screen { position: absolute; left: 13px; top: 13px; right: 13px; bottom: 13px; border-radius: 64px; overflow: hidden; background: #fff; }
@@ -70,7 +77,7 @@ html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--
 .cell { padding: 0 11px; display: flex; flex-direction: column; align-items: center; line-height: 1; }
 .cell .h { font-size: 26px; }
 .cell .r { font-size: 16px; margin-top: 5px; opacity: .55; }
-.chev { width: 52px; flex: none; height: 40px; display: flex; align-items: center; justify-content: center; border-left: 1px solid rgba(0,0,0,.13); }
+.chev { width: 52px; flex: none; height: 40px; display: flex; align-items: center; justify-content: center; border-left: 1px solid rgba(128,128,128,.35); }
 .keyarea { position: absolute; left: 0; right: 0; }
 .key { position: absolute; display: flex; align-items: center; justify-content: center; font-family: Huninn; }
 .key .tm { position: absolute; left: 0; right: 0; text-align: center; }
@@ -79,46 +86,84 @@ html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--
 .sysrow { position: absolute; left: 0; right: 0; bottom: 0; height: 64px; }
 .homebar { position: absolute; left: 50%; bottom: 9px; width: 150px; height: 5px; margin-left: -75px; border-radius: 3px; background: #000; }
 
-/* platforms + end */
-.plat { position: absolute; left: 0; right: 0; top: 505px; text-align: center; font: 500 46px "SF Pro Display"; color: var(--ink); letter-spacing: .01em; }
-.plat span { display: inline-block; margin: 0 30px; }
+/* desktop window (logical points; scaled onto the frame) */
+.desk { position: absolute; width: 600px; height: 325px; transform-origin: 0 0; }
+.dwin { position: absolute; inset: 0; border-radius: 16px; background: var(--wbg); overflow: hidden;
+  box-shadow: 0 0 0 .5px rgba(0,0,0,.16), 0 22px 56px rgba(30,40,70,.20), 0 5px 14px rgba(30,40,70,.10); }
+.mtitle { height: 40px; display: flex; align-items: center; gap: 7px; padding-left: 14px; }
+.tl { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+.tl.r { background: #ff5f57; } .tl.y { background: #febc2e; } .tl.g { background: #28c840; }
+.mdoc { position: absolute; left: 32px; top: 62px; right: 32px; font: 20px "SF Pro Text", "SF Pro Display", "PingFang TC", sans-serif; color: var(--wink); white-space: pre; }
+.mcomp { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 5px; }
+.mcaret { display: inline-block; width: 2px; height: 24px; background: var(--wink); vertical-align: -5px; margin-left: 1px; }
+.mpanel { position: absolute; border-radius: 16px; padding: 4px; background: var(--pbg);
+  box-shadow: 0 0 0 .5px rgba(0,0,0,.16), inset 0 0 0 1px rgba(255,255,255,.14), 0 12px 36px rgba(0,0,0,.16), 0 2px 6px rgba(0,0,0,.08);
+  font-family: "SF Pro Text", "SF Pro Display", "PingFang TC", sans-serif; color: var(--wink); transform-origin: 0 0; }
+.mrow { display: flex; align-items: stretch; }
+.mcell { display: flex; align-items: center; gap: 2px; padding: 9px 7px; border-radius: 12px; white-space: nowrap; }
+.mcell.lit { font-size: 17px; }
+.mcell .ix { font-size: 11px; color: var(--pink2); align-self: flex-start; margin-top: 3px; min-width: 13px; text-align: center; }
+.mcell .st { display: flex; flex-direction: column; align-items: flex-start; }
+.mcell .h { font-size: 17px; line-height: 21px; }
+.mcell .r { font-size: 15px; line-height: 18px; margin-top: 2px; color: var(--pink2); }
+.mcell.on { background: #0088ff; color: #fff; }
+.mcell.on .ix, .mcell.on .r { color: rgba(255,255,255,.85); }
+.msep { width: 1px; margin: 9px 0; background: var(--psep); }
+.mcell.on + .msep, .msep:has(+ .mcell.on) { opacity: 0; }
+.mchev { display: flex; align-items: center; padding: 0 9px 0 7px; color: var(--pink2); }
+/* vertical layout: one row per candidate, annotations aligned on one x */
+.mcol { display: grid; grid-template-columns: auto auto; }
+.mcol .vr { display: contents; }
+.mcol .vr > span { padding: 7px 12px; font-size: 17px; line-height: 21px; white-space: nowrap; }
+.mcol .vr > span:first-child { border-radius: 12px 0 0 12px; }
+.mcol .vr > span:last-child { border-radius: 0 12px 12px 0; color: var(--pink2); font-size: 15px; padding-left: 6px; }
+.mcol .vr.on > span { background: #0088ff; color: #fff; }
+
+/* segmented control */
+.segc { position: absolute; border-radius: 18px; background: #e9e9ee; }
+.segc .thumb { position: absolute; top: 4px; bottom: 4px; border-radius: 14px; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.12), 0 0 0 .5px rgba(0,0,0,.05); }
+.segc .opts { position: absolute; inset: 0; display: flex; }
+.segc .opts span { flex: 1; display: flex; align-items: center; justify-content: center; font-family: GenGo, sans-serif; color: var(--ink); }
+.eyebrow { position: absolute; font: 500 22px "SF Pro Display", GenGo, sans-serif; letter-spacing: .2em; color: var(--ink2); white-space: nowrap; }
+
+/* candidate-display showcase bar (mobile candidate bar, enlarged) */
+.showbar { position: absolute; left: 60px; width: 960px; height: 150px; border-radius: 30px; background: #cbd3e0; overflow: hidden; font-family: Huninn; color: #1c1c1e; }
+.showbar .srow { position: absolute; left: 28px; top: 0; height: 150px; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.showbar .chip { height: 76px; border-radius: 20px; padding: 0 24px; font-size: 46px; background: #ecedf1; margin-right: 10px; }
+.showbar .cell { padding: 0 20px; }
+.showbar .cell .h { font-size: 52px; }
+.showbar .cell .r { font-size: 31px; margin-top: 10px; }
+.showbar .one { padding: 0 18px; font-size: 48px; }
+.showbar .one.rm { font-size: 42px; }
+
+/* settings / dictionary lists (iOS grouped-list shape) */
+.card { position: absolute; left: 90px; width: 900px; border-radius: 40px; background: #f2f2f7; overflow: hidden; box-shadow: 0 0 0 1px rgba(0,0,0,.04), 0 24px 60px rgba(30,40,70,.10); }
+.scroll { position: absolute; left: 0; right: 0; top: 0; padding: 26px 30px; }
+.sech { font: 26px GenGo, sans-serif; color: #6d6d72; padding: 28px 22px 12px; }
+.grp { border-radius: 24px; background: #fff; overflow: hidden; }
+.row { height: 84px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font: 32px GenGo, "SF Pro Text", sans-serif; color: var(--ink); white-space: nowrap; }
+.row + .row { box-shadow: inset 0 1px 0 rgba(60,60,67,.12); }
+.row .val { color: #8e8e93; font-size: 30px; display: flex; align-items: center; gap: 12px; }
+.row .rm { font-family: Huninn; color: #8e8e93; font-size: 28px; margin-left: 18px; }
+.tg { width: 76px; height: 46px; border-radius: 23px; position: relative; flex: none; }
+.tg i { position: absolute; left: 3px; top: 3px; width: 40px; height: 40px; border-radius: 50%; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,.2); }
+.addbtn { width: 52px; height: 52px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; }
+.pills { position: absolute; left: 0; right: 0; display: flex; justify-content: center; gap: 16px; }
+.pills span { height: 68px; padding: 0 30px; border-radius: 34px; background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.06), 0 8px 22px rgba(30,40,70,.08);
+  display: flex; align-items: center; font: 30px GenGo, sans-serif; color: var(--ink); }
+
+/* platforms + theme side column */
+.pname { position: absolute; left: 84px; font: 600 62px "SF Pro Display", sans-serif; letter-spacing: -.01em; }
+.dots { position: absolute; display: flex; gap: 12px; }
+.dot { width: 64px; height: 64px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0,0,0,.10); position: relative; }
+.dot b { position: absolute; inset: -7px; border-radius: 50%; border: 4px solid var(--accent); }
+.tname { position: absolute; font: 40px GenGo, sans-serif; color: var(--ink); white-space: nowrap; }
+
+/* end */
 .icon { position: absolute; left: 50%; top: 50%; border-radius: 22.37%; overflow: hidden; background: #fff;
   box-shadow: 0 0 0 1px rgba(0,0,0,.06), 0 24px 60px rgba(0,0,0,.10), 0 6px 16px rgba(0,0,0,.06); }
 .icon img { width: 100%; height: 100%; display: block; }
 .brand { position: absolute; left: 0; right: 0; text-align: center; }
-
-/* macOS desktop (logical points) */
-.mac { position: absolute; left: 0; top: 0; width: 1440px; height: 810px; transform-origin: 0 0; overflow: hidden; border-radius: 0; }
-.wall { position: absolute; inset: 0; background: radial-gradient(120% 90% at 20% 10%, #eef1f8 0%, #dfe5f1 45%, #cfd8ea 100%); }
-.menubar { position: absolute; left: 0; right: 0; top: 0; height: 30px; background: rgba(255,255,255,.35); backdrop-filter: blur(20px);
-  font: 500 13px "SF Pro Text", "SF Pro Display"; color: #1d1d1f; }
-.mb-r { position: absolute; right: 16px; top: 0; height: 30px; display: flex; align-items: center; gap: 16px; }
-.mb-ime { width: 22px; height: 16px; filter: brightness(0); opacity: .85; }
-.mwin { position: absolute; left: 250px; top: 110px; width: 940px; height: 600px; border-radius: 26px; background: #fff;
-  box-shadow: 0 0 0 .5px rgba(0,0,0,.14), 0 28px 70px rgba(30,40,70,.22), 0 6px 18px rgba(30,40,70,.10); overflow: hidden; }
-.mtitle { height: 52px; display: flex; align-items: center; gap: 9px; padding-left: 20px; }
-.tl { width: 13px; height: 13px; border-radius: 50%; display: inline-block; }
-.tl.r { background: #ff5f57; } .tl.y { background: #febc2e; } .tl.g { background: #28c840; }
-.mdoc { position: absolute; left: 64px; top: 92px; right: 64px; font: 22px "SF Pro Text", "SF Pro Display", "PingFang TC", sans-serif; color: #1d1d1f; white-space: pre; }
-.mcomp { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 5px; }
-.mcaret { display: inline-block; width: 2px; height: 26px; background: #1d1d1f; vertical-align: -5px; margin-left: 1px; }
-.mpanel { position: absolute; left: 306px; top: 238px; border-radius: 16px; padding: 4px;
-  background: rgba(250,250,252,.82); backdrop-filter: blur(24px) saturate(1.6);
-  box-shadow: 0 0 0 .5px rgba(0,0,0,.16), inset 0 0 0 1px rgba(255,255,255,.6), 0 12px 36px rgba(0,0,0,.16), 0 2px 6px rgba(0,0,0,.08);
-  font-family: "SF Pro Text", "SF Pro Display", "PingFang TC", sans-serif; color: #1d1d1f; }
-.mrow { display: flex; align-items: stretch; }
-.mcell { display: flex; align-items: center; gap: 2px; padding: 9px 7px; border-radius: 12px; white-space: nowrap; }
-.mcell.lit { color: #1d1d1f; font-size: 17px; }
-.mcell .ix { font-size: 11px; color: rgba(60,60,67,.55); align-self: flex-start; margin-top: 3px; min-width: 13px; text-align: center; }
-.mcell .st { display: flex; flex-direction: column; align-items: flex-start; }
-.mcell .h { font-size: 17px; line-height: 21px; }
-.mcell .r { font-size: 15px; line-height: 18px; margin-top: 2px; color: rgba(60,60,67,.62); }
-.mcell.on { background: #0088ff; color: #fff; }
-.mcell.on .ix, .mcell.on .r { color: rgba(255,255,255,.85); }
-.msep { width: 1px; margin: 9px 0; background: rgba(0,0,0,.09); }
-.mcell.on + .msep, .msep:has(+ .mcell.on) { opacity: 0; }
-.mchev { display: flex; align-items: center; padding: 0 9px 0 7px; color: rgba(60,60,67,.6); }
-.mkeys { top: 900px; }
 </style>
 </head>
 <body>
@@ -131,22 +176,24 @@ const lerp = (a, b, p) => a + (b - a) * p;
 const eOut = p => 1 - Math.pow(1 - p, 3);
 const eOut5 = p => 1 - Math.pow(1 - p, 5);
 const eIO = p => p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
-const eExpo = p => p >= 1 ? 1 : 1 - Math.pow(2, -10 * p);
 const eBack = p => { const c1 = 1.25, c3 = c1 + 1; return 1 + c3 * Math.pow(p - 1, 3) + c1 * Math.pow(p - 1, 2); };
 function rng(seed) { let s = seed >>> 0; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
 const $ = (tag, cls, parent, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; if (parent) parent.appendChild(e); return e; };
 const hex = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
-const mix = (a, b, p) => { const A = hex(a), B = hex(b); return `rgb(${A.map((v, i) => Math.round(lerp(v, B[i], p))).join(',')})`; };
-const mixA = (a, b, p, alpha) => { const A = hex(a), B = hex(b); return `rgba(${A.map((v, i) => Math.round(lerp(v, B[i], p))).join(',')},${alpha})`; };
+const mixRGB = (a, b, p) => { const A = hex(a), B = hex(b); return A.map((v, i) => Math.round(lerp(v, B[i], p))); };
+const mix = (a, b, p) => `rgb(${mixRGB(a, b, p).join(',')})`;
+const blinkOn = (t, tLast) => t - tLast < .5 || Math.cos((t - tLast - .5) * Math.PI * 2 / 1.06) > -.1;
+// index of the last step whose time has passed, plus eased progress into it
+const stepAt = (t, times, d = .5) => { let i = 0; for (let j = 1; j < times.length; j++) if (t >= times[j]) i = j; return { i, p: i === 0 ? 1 : eIO(seg(t, times[i], times[i] + d)) }; };
 
 const stage = document.getElementById('stage');
-const EVENTS = []; // sound cues: {t, type, ...}
 const scenes = [];
-const DURATION = 44.5;
+const SIZE = { width: 1080, height: 1350 };
+const DURATION = 32.6;
 
 // fade a whole layer in/out with blur and drift
 function presence(el, t, tin, tout, opts = {}) {
-  const dIn = opts.dIn ?? .9, dOut = opts.dOut ?? .8, rise = opts.rise ?? 24, blur = opts.blur ?? 14;
+  const dIn = opts.dIn ?? .7, dOut = opts.dOut ?? .6, rise = opts.rise ?? 0, blur = opts.blur ?? 14;
   const pi = eOut(seg(t, tin, tin + dIn));
   const po = eIO(seg(t, tout, tout + dOut));
   const o = pi * (1 - po);
@@ -159,256 +206,68 @@ function presence(el, t, tin, tout, opts = {}) {
   el.style.filter = b > .05 ? `blur(${b}px)` : 'none';
   return o;
 }
-
-// ---------- Scene A: icon open ----------
-(function () {
-  const L = $('div', 'layer', stage);
-  const ic = $('div', 'icon', L, '<img src="assets/icon.png">');
-  const S = 230; Object.assign(ic.style, { width: S + 'px', height: S + 'px', marginLeft: -S / 2 + 'px', marginTop: -S / 2 + 'px' });
-  EVENTS.push({ t: 0.35, type: 'bloom', level: .7 });
-  scenes.push(t => {
-    const o = presence(L, t, 0.3, 2.3, { dIn: 1.4, dOut: .75, rise: 0, blur: 18, scaleIn: .9, scaleOut: 1.06 });
-    if (o) ic.style.transform = `scale(${lerp(1, 1.025, seg(t, .35, 2.6))})`;
-  });
-})();
-
-// ---------- typing scenes ----------
-const MARKS = { '2': 'ˊ', '3': 'ˋ', '5': 'ˆ', '6': 'ˇ', '7': 'ˉ', '8': 'ˈ', '9': '˝' };
-function typingScene(o) {
-  const L = $('div', 'layer', stage);
-  const label = $('div', 'label', L, o.label);
-  const hero = $('div', 'hero', L);
-  const line = $('div', 'line', hero);
-  line.style.fontSize = o.size + 'px';
-  if (o.spacing) line.style.letterSpacing = o.spacing;
-  const hanji = $('div', 'hanji', L, o.hanji);
-  hanji.style.fontSize = o.hanjiSize + 'px';
-  const keysEl = $('div', 'keys', L);
-
-  // timeline of keystrokes
-  const r = rng(o.seed);
-  let t = o.tType;
-  const clusters = [], keys = [];
-  for (const st of o.steps) {
-    const gap = (st.pauseBefore || 0);
-    t += gap;
-    keys.push({ t, label: st.k, tone: !!st.tone, mk: st.tone ? (st.keyMark ?? MARKS[st.k]) : null });
-    if (st.add != null) clusters.push({ pre: st.add, fin: st.add, tA: t, tM: null, gapAfter: st.gapAfter || 0 });
-    if (st.mark) { const c = clusters[clusters.length + st.mark.at]; c.fin = st.mark.g; c.tM = t; }
-    EVENTS.push({ t, type: st.tone ? 'tonekey' : 'key', v: r() });
-    if (st.mark) EVENTS.push({ t: t + .2, type: 'chime', note: st.note ?? 0, level: .55 });
-    t += o.beat * (0.78 + r() * 0.5);
-  }
-  const tDone = t;
-  // DOM for clusters
-  const cls = clusters.map(c => {
-    const s = $('span', 'cl', line);
-    $('span', 'sz', s, c.fin === ' ' ? ' ' : c.fin);
-    const pre = $('span', 'l', s, c.pre === ' ' ? ' ' : c.pre);
-    let fin = null, mk = null;
-    if (c.tM != null) { fin = $('span', 'l', s, c.fin); mk = $('span', 'l', s, c.fin); }
-    if (c.gapAfter) s.style.marginRight = c.gapAfter;
-    return { c, s, pre, fin, mk };
-  });
-  const caret = $('div', 'caret', line);
-  const ul = $('div', 'uline', line);
-  const caps = keys.map(k => {
-    const e = $('div', 'cap' + (k.tone ? ' tone' : ''), keysEl);
-    if (k.tone && k.mk) { $('div', 'mk', e, k.mk); $('div', 'd', e, k.label); }
-    else e.textContent = k.label === ' ' ? '' : k.label;
-    if (k.label === ' ') e.style.width = '150px', e.style.left = '-75px';
-    if (o.tps) e.style.fontSize = '34px';
-    return e;
-  });
-
-  let measured = false, xs = [], zone = 0;
-  function measure() {
-    const lr = line.getBoundingClientRect();
-    xs = cls.map(q => { const b = q.s.getBoundingClientRect(); return { x0: (b.left - lr.left) / 1, x1: (b.right - lr.left) }; });
-    // mark zone height: above x-height (latin) / above glyph top (TPS)
-    const cv = document.createElement('canvas').getContext('2d');
-    cv.font = `${o.size}px Huninn`;
-    const m = cv.measureText(o.tps ? 'ㆷ' : 'x');
-    const A = m.fontBoundingBoxAscent, D = m.fontBoundingBoxDescent;
-    const base = (150 - (A + D)) / 2 + A;
-    zone = base - m.actualBoundingBoxAscent - o.size * 0.035;
-    cls.forEach(q => { if (q.mk) q.mk.style.clipPath = `inset(-60% -40% calc(100% - ${zone}px) -40%)`; });
-    measured = true;
-  }
-
-  const tRev = o.tReveal;
-  if (o.hanji) EVENTS.push({ t: tRev, type: 'reveal', level: .8 });
-  EVENTS.push({ t: o.tIn, type: 'whoosh', level: .35 });
-
-  scenes.push(tt => {
-    const vis = presence(L, tt, o.tIn, o.tOut, { dIn: .7, dOut: .8, rise: 0, blur: 16 });
-    if (!vis) return;
-    if (!measured) measure();
-    // label
-    const pl = eOut(seg(tt, o.tIn + .1, o.tIn + 1.1));
-    label.style.opacity = pl * (1 - eIO(seg(tt, tRev, tRev + .6)) * .0);
-    label.style.transform = `translateY(${(1 - pl) * 10}px)`;
-    // clusters
-    let last = -1;
-    cls.forEach((q, i) => {
-      const a = eOut(seg(tt, q.c.tA - .02, q.c.tA + .16));
-      if (tt >= q.c.tA - .02) last = i;
-      q.s.style.opacity = a;
-      q.s.style.transform = `translateY(${(1 - a) * 16}px)`;
-      q.s.style.filter = a < .999 ? `blur(${(1 - a) * 6}px)` : 'none';
-      if (q.c.tM != null) {
-        const p = seg(tt, q.c.tM, q.c.tM + .34);
-        const land = seg(tt, q.c.tM + .3, q.c.tM + .38);
-        const fall = eOut5(p);
-        q.mk.style.opacity = p > 0 ? (1 - land) * clamp(p * 4) : 0;
-        q.mk.style.transform = `translateY(${-(1 - fall) * o.size * .55}px)`;
-        q.mk.style.color = mix('#0071e3', '#1d1d1f', seg(tt, q.c.tM + .3, q.c.tM + 1.1));
-        q.fin.style.opacity = land;
-        q.fin.style.color = mix('#0071e3', '#1d1d1f', eIO(seg(tt, q.c.tM + .3, q.c.tM + 1.1)));
-        q.pre.style.opacity = 1 - land;
-      }
-    });
-    // caret + composing underline
-    const rev = eIO(seg(tt, tRev, tRev + 1.0));
-    let cx = 0;
-    if (last >= 0) {
-      // slide caret smoothly from previous cluster end
-      const q = cls[last];
-      const prevX = last > 0 ? xs[last - 1].x1 : xs[0].x0;
-      cx = lerp(prevX, xs[last].x1, eOut(seg(tt, q.c.tA - .02, q.c.tA + .08)));
-    } else cx = xs.length ? xs[0].x0 : 0;
-    const blink = tt < tDone + .25 ? 1 : (Math.cos((tt - tDone - .25) * Math.PI * 2 / 1.06) > -0.1 ? 1 : 0);
-    caret.style.left = (cx + 3) + 'px';
-    { const x0 = xs[0].x0, full = xs[xs.length - 1].x1 - x0; line.style.transform = `translateX(${(full - (cx - x0)) / 2}px)`; }
-    caret.style.opacity = seg(tt, o.tIn + .2, o.tIn + .6) * blink * (1 - seg(tt, tRev, tRev + .25));
-    ul.style.left = (xs.length ? xs[0].x0 : 0) + 'px';
-    ul.style.width = Math.max(0, cx - (xs.length ? xs[0].x0 : 0)) + 'px';
-    ul.style.opacity = (last >= 0 ? 1 : 0) * (1 - seg(tt, tRev, tRev + .4));
-    // reveal: roman becomes the subtitle under the Hanji (candidate-cell shape)
-    const sc = lerp(1, o.subScale, rev);
-    hero.style.transform = `translateY(${rev * o.subDrop}px) scale(${sc})`;
-    line.style.color = mix('#1d1d1f', '#86868b', rev);
-    const ph = eOut(seg(tt, tRev + .12, tRev + 1.3));
-    hanji.style.opacity = ph;
-    hanji.style.transform = `translateY(${(1 - ph) * 30}px)`;
-    hanji.style.filter = ph < .999 ? `blur(${(1 - ph) * 16}px)` : 'none';
-    hanji.style.letterSpacing = lerp(.22, .06, eOut(seg(tt, tRev + .12, tRev + 2.2))) + 'em';
-    hanji.style.textIndent = lerp(.22, .06, eOut(seg(tt, tRev + .12, tRev + 2.2))) + 'em';
-    // keycap conveyor
-    const kv = 1 - eIO(seg(tt, tRev - .1, tRev + .5));
-    keysEl.style.opacity = kv;
-    let shift = 0; keys.forEach((k, i) => { if (i) shift += eOut(seg(tt, k.t, k.t + .22)); }); shift = Math.min(shift, 3.2) / 2;
-    keys.forEach((k, i) => {
-      const e = caps[i];
-      let n = 0;
-      for (let j = i + 1; j < keys.length; j++) n += eOut(seg(tt, keys[j].t, keys[j].t + .22));
-      const a = seg(tt, k.t - .01, k.t + .12);
-      const press = seg(tt, k.t, k.t + .09), rel = seg(tt, k.t + .09, k.t + .3);
-      const s = (0.85 + 0.15 * eBack(a)) * (1 - 0.06 * press + 0.06 * eOut(rel));
-      const fade = 1 - clamp((n - 3.2) / 1.6);
-      e.style.opacity = eOut(a) * fade * (k.label === ' ' ? 1 : 1);
-      e.style.display = e.style.opacity > 0.001 ? '' : 'none';
-      const w = 84;
-      e.style.transform = `translateX(${(-n + shift) * w}px) scale(${s})`;
-      e.style.background = mix('#ffffff', '#e8e8ed', press * (1 - rel));
-    });
-  });
-  return { tDone };
+function caption(L, en, zh) {
+  const c = $('div', 'capt', L); $('div', 'en', c, en); $('div', 'zh', c, zh);
+  return (t, tIn) => { const p = eOut(seg(t, tIn + .05, tIn + .9)); c.style.opacity = p; c.style.transform = `translateY(${(1 - p) * 14}px)`; };
+}
+// staggered rise-in for a block
+function rise(el, t, t0, d = .8, dy = 22) {
+  const p = eOut(seg(t, t0, t0 + d));
+  el.style.opacity = p; el.style.translate = `0 ${(1 - p) * dy}px`;
+  return p;
+}
+function segControl(parent, labels, x, y, w, h, fs) {
+  const c = $('div', 'segc', parent);
+  Object.assign(c.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' });
+  const thumb = $('div', 'thumb', c);
+  const opts = $('div', 'opts', c);
+  labels.forEach(l => { $('span', null, opts, l).style.fontSize = fs + 'px'; });
+  const cw = (w - 8) / labels.length;
+  thumb.style.width = cw + 'px';
+  return { el: c, set(pos) { thumb.style.left = (4 + cw * pos) + 'px'; } };
+}
+function toggle(parent) {
+  const e = $('div', 'tg', parent, '<i></i>');
+  return p => { e.style.background = mix('#e9e9ea', '#34c759', p); e.firstChild.style.transform = `translateX(${p * 30}px)`; };
 }
 
-// ---- Scene B: TL — tâi-gí tsin-suí / 台語真媠 ----
-const tl = typingScene({
-  label: 'TL', seed: 7, size: 124, hanjiSize: 176, subScale: .44, subDrop: 138,
-  tIn: 2.75, tType: 3.35, beat: .15, tReveal: 7.05, tOut: 9.3,
-  hanji: '台語真媠',
-  steps: [
-    { k: 't', add: 't' }, { k: 'a', add: 'a' }, { k: 'i', add: 'i' },
-    { k: '5', tone: true, mark: { at: -2, g: 'â' }, pauseBefore: .06, note: 0 },
-    { k: '-', add: '-', pauseBefore: .08 }, { k: 'g', add: 'g' }, { k: 'i', add: 'i' },
-    { k: '2', tone: true, mark: { at: -1, g: 'í' }, pauseBefore: .06, note: 2 },
-    { k: ' ', add: ' ', pauseBefore: .12 },
-    { k: 't', add: 't' }, { k: 's', add: 's' }, { k: 'i', add: 'i' }, { k: 'n', add: 'n' },
-    { k: '1', tone: true, keyMark: '', pauseBefore: .04 },
-    { k: '-', add: '-', pauseBefore: .06 }, { k: 's', add: 's' }, { k: 'u', add: 'u' }, { k: 'i', add: 'i' },
-    { k: '2', tone: true, mark: { at: -1, g: 'í' }, pauseBefore: .06, note: 4 },
-  ],
-});
+// ---------- phone (real TL layout geometry, 585-px reference screenshots) ----------
+// real engine output (candidate_dump, mode=tl) for each prefix of "tsiahpabue"
+const STRIPS = {
+  't': [['佇', 'tī'], ['台', 'tâi'], ['就', 'tō'], ['代', 'tāi'], ['大', 'tāi']],
+  'ts': [['今', 'tse'], ['即', 'tse'], ['這', 'tse'], ['做', 'tsò'], ['主', 'tsú']],
+  'tsi': [['誌', 'tsì'], ['子', 'tsí'], ['止', 'tsí'], ['只', 'tsí'], ['支', 'tsi']],
+  'tsia': [['者', 'tsiá'], ['這', 'tsia'], ['遮', 'tsia'], ['姐', 'tsiá'], ['嗟', 'tsia']],
+  'tsiah': [['吃', 'tsia̍h'], ['噍', 'tsia̍h'], ['食', 'tsia̍h'], ['即', 'tsiah'], ['者', 'tsiah']],
+  'tsiahp': [['吃', 'tsia̍h'], ['噍', 'tsia̍h'], ['食', 'tsia̍h'], ['即', 'tsiah'], ['者', 'tsiah']],
+  'tsiahpa': [['食飽', 'tsia̍h-pá'], ['吃', 'tsia̍h'], ['噍', 'tsia̍h'], ['食', 'tsia̍h'], ['即', 'tsiah']],
+  'tsiahpab': [['吃', 'tsia̍h'], ['噍', 'tsia̍h'], ['食', 'tsia̍h'], ['即', 'tsiah'], ['者', 'tsiah']],
+  'tsiahpabu': [['食飽母', 'tsia̍h-pá bú'], ['吃', 'tsia̍h'], ['噍', 'tsia̍h'], ['食', 'tsia̍h'], ['即', 'tsiah']],
+  'tsiahpabue': [['食飽未', 'tsia̍h-pá--buē'], ['吃', 'tsia̍h'], ['噍', 'tsia̍h'], ['食', 'tsia̍h'], ['即', 'tsiah']],
+};
+const PHONE_TYPED = 'tsiahpabue', PHONE_COMMIT = '食飽未';
+// built-in palettes (ios/Sources/TaigiKeyboard/Theme/BuiltInThemes.swift)
+const PALETTE = {
+  def: { zh: '預設', top: '#cbd3e0', bot: '#cbd3e0', key: '#ffffff', text: '#1c1c1e' },
+  sakura: { zh: '櫻花', top: '#e6c2d0', bot: '#eadce2', key: '#ffffff', text: '#1c1c1e' },
+  gold: { zh: '金煌', top: '#ead9a6', bot: '#ece4d2', key: '#ffffff', text: '#1c1c1e' },
+  sea: { zh: '海風', top: '#bfd2ea', bot: '#dce2ec', key: '#ffffff', text: '#1c1c1e' },
+  jade: { zh: '翠青', top: '#c3d8c8', bot: '#dce5dd', key: '#ffffff', text: '#1c1c1e' },
+  wisteria: { zh: '藤紫', top: '#cdc4e4', bot: '#dedaea', key: '#ffffff', text: '#1c1c1e' },
+  cat: { zh: '暗眠山貓', top: '#1e1e2e', bot: '#181825', key: '#313244', text: '#cdd6f4', dark: 1 },
+};
+// key styles: Filled / Outlined / Borderless → [fill, outline]
+const STYLES = [['素色', 1, 0], ['框線', 0, 1], ['無框', 0, 0]];
+const themeOf = (name, style) => ({ ...PALETTE[name], fill: STYLES[style][1], outline: STYLES[style][2], dark: PALETTE[name].dark || 0 });
+function themeMix(A, B, p) {
+  return { top: mixRGB(A.top, B.top, p), bot: mixRGB(A.bot, B.bot, p), key: mixRGB(A.key, B.key, p), text: mixRGB(A.text, B.text, p),
+    fill: lerp(A.fill, B.fill, p), outline: lerp(A.outline, B.outline, p), dark: lerp(A.dark, B.dark, p) };
+}
+const DEFAULT_THEME = themeMix(themeOf('def', 0), themeOf('def', 0), 1);
 
-// ---- Scene C: POJ — pe̍h-ōe-jī / 白話字 ----
-const poj = typingScene({
-  label: 'POJ', seed: 11, size: 132, hanjiSize: 184, subScale: .46, subDrop: 138,
-  tIn: 9.55, tType: 10.1, beat: .16, tReveal: 12.75, tOut: 14.6,
-  hanji: '白話字',
-  steps: [
-    { k: 'p', add: 'p' }, { k: 'e', add: 'e' }, { k: 'h', add: 'h' },
-    { k: '8', tone: true, mark: { at: -2, g: 'e̍' }, pauseBefore: .06, note: 1 },
-    { k: '-', add: '-', pauseBefore: .07 }, { k: 'o', add: 'o' }, { k: 'e', add: 'e' },
-    { k: '7', tone: true, mark: { at: -2, g: 'ō' }, pauseBefore: .06, note: 3 },
-    { k: '-', add: '-', pauseBefore: .07 }, { k: 'j', add: 'j' }, { k: 'i', add: 'i' },
-    { k: '7', tone: true, mark: { at: -1, g: 'ī' }, pauseBefore: .06, note: 5 },
-  ],
-});
-
-// ---- Scene D: TPS — ㄐㄧㄚㆷ̇ㄅㄚˋㆠㄨㆤ˫ / 食飽未 ----
-const tps = typingScene({
-  label: 'TPS', seed: 23, size: 116, hanjiSize: 184, subScale: .5, subDrop: 138, tps: true,
-  tIn: 14.85, tType: 15.4, beat: .165, tReveal: 18.0, tOut: 19.85,
-  hanji: '食飽未',
-  steps: [
-    { k: 'ㄐ', add: 'ㄐ' }, { k: 'ㄧ', add: 'ㄧ' }, { k: 'ㄚ', add: 'ㄚ' }, { k: 'ㆷ', add: 'ㆷ' },
-    { k: '˙', tone: true, mark: { at: -1, g: 'ㆷ̇' }, pauseBefore: .05, note: 1 },
-    { k: 'ㄅ', add: 'ㄅ', pauseBefore: .12 }, { k: 'ㄚ', add: 'ㄚ' },
-    { k: 'ˋ', add: 'ˋ', gapAfter: '.28em' },
-    { k: 'ㆠ', add: 'ㆠ', pauseBefore: .12 }, { k: 'ㄨ', add: 'ㄨ' }, { k: 'ㆤ', add: 'ㆤ' },
-    { k: '˫', add: '˫' },
-  ],
-});
-// the ㆷ̇ cluster gets a trailing gap so syllables breathe
-(function(){ const ls = document.querySelectorAll('.line'); const l = ls[2]; const c = l.querySelectorAll('.cl'); c[3].style.marginRight = '.28em'; })();
-
-// ---------- Scene E: one sentence, three scripts ----------
-(function () {
-  const L = $('div', 'layer', stage);
-  const tIn = 20.1, tOut = 23.2;
-  const h = $('div', 'tri-h', L, '台語真媠');
-  const rows = [
-    ['TL', ['tâi-gí ', ['ts', 1], 'in-', ['suí', 1]]],
-    ['POJ', ['tâi-gí ', ['ch', 1], 'in-', ['súi', 1]]],
-    ['TPS', ['ㄉㄞˊ ㆣㄧˋ ㄐㄧㄣ ㄙㄨㄧˋ']],
-  ];
-  const hl = [];
-  const rowEls = rows.map(([k, parts], i) => {
-    const r = $('div', 'tri-row', L);
-    r.style.top = (520 + i * 104) + 'px';
-    $('div', 'k', r, k);
-    const v = $('div', 'v', r);
-    parts.forEach(p => { if (typeof p === 'string') $('span', null, v, p); else hl.push($('span', null, v, p[0])); });
-    return r;
-  });
-  EVENTS.push({ t: tIn + .1, type: 'whoosh', level: .3 });
-  EVENTS.push({ t: tIn + 1.35, type: 'chime', note: 2, level: .4 });
-  EVENTS.push({ t: tIn + 1.5, type: 'chime', note: 4, level: .3 });
-  scenes.push(t => {
-    if (!presence(L, t, tIn, tOut, { dIn: .8, dOut: .8, rise: 0, blur: 16 })) return;
-    const ph = eOut(seg(t, tIn, tIn + 1.2));
-    h.style.opacity = ph; h.style.transform = `translateY(${(1 - ph) * 24}px)`;
-    h.style.letterSpacing = lerp(.2, .08, eOut(seg(t, tIn, tIn + 2))) + 'em';
-    h.style.textIndent = h.style.letterSpacing;
-    rowEls.forEach((r, i) => {
-      const p = eOut(seg(t, tIn + .45 + i * .22, tIn + 1.35 + i * .22));
-      r.style.opacity = p; r.style.transform = `translateY(${(1 - p) * 22}px)`;
-      r.style.filter = p < .999 ? `blur(${(1 - p) * 8}px)` : 'none';
-    });
-    const hp = eIO(seg(t, tIn + 1.3, tIn + 1.8)) * (1 - eIO(seg(t, tIn + 2.6, tIn + 3.2)));
-    hl.forEach(e => e.style.color = mix('#1d1d1f', '#0071e3', hp));
-  });
-})();
-
-// ---------- Scene F: the keyboard ----------
-(function () {
-  const L = $('div', 'layer', stage);
-  const tIn = 23.5, tOut = 32.2;
-  const phone = $('div', null, L); phone.id = 'phone';
+function makePhone(parent, x, y, sc) {
+  const phone = $('div', 'phone', parent);
+  Object.assign(phone.style, { left: x + 'px', top: y + 'px', transform: `scale(${sc})` });
   $('div', 'bezel', phone);
   const scr = $('div', 'screen', phone);
   $('div', 'island', phone);
@@ -434,22 +293,9 @@ const tps = typingScene({
 
   // candidate bar
   const cbar = $('div', 'cbar', kb); cbar.style.top = '6px';
-  const cplus = $('div', 'cplus', cbar, '+');
+  $('div', 'cplus', cbar, '+');
   const cands = $('div', 'cands', cbar);
   const chev = $('div', 'chev', cbar, '<svg width="22" height="14" viewBox="0 0 22 14"><path d="M2 3l9 8 9-8" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>');
-  // real engine output (candidate_dump, mode=tl) for each prefix of "tsiahpabue"
-  const STRIPS = {
-    't': [['佇', 'tī'], ['台', 'tâi'], ['就', 'tō'], ['代', 'tāi'], ['大', 'tāi']],
-    'ts': [['今', 'tse'], ['即', 'tse'], ['這', 'tse'], ['做', 'tsò'], ['主', 'tsú']],
-    'tsi': [['誌', 'tsì'], ['子', 'tsí'], ['止', 'tsí'], ['只', 'tsí'], ['支', 'tsi']],
-    'tsia': [['者', 'tsiá'], ['這', 'tsia'], ['遮', 'tsia'], ['姐', 'tsiá'], ['嗟', 'tsia']],
-    'tsiah': [['吃', 'tsia̍h'], ['噍', 'tsia̍h'], ['食', 'tsia̍h'], ['即', 'tsiah'], ['者', 'tsiah']],
-    'tsiahp': [['吃', 'tsia̍h'], ['噍', 'tsia̍h'], ['食', 'tsia̍h'], ['即', 'tsiah'], ['者', 'tsiah']],
-    'tsiahpa': [['食飽', 'tsia̍h-pá'], ['吃', 'tsia̍h'], ['噍', 'tsia̍h'], ['食', 'tsia̍h'], ['即', 'tsiah']],
-    'tsiahpab': [['吃', 'tsia̍h'], ['噍', 'tsia̍h'], ['食', 'tsia̍h'], ['即', 'tsiah'], ['者', 'tsiah']],
-    'tsiahpabu': [['食飽母', 'tsia̍h-pá bú'], ['吃', 'tsia̍h'], ['噍', 'tsia̍h'], ['食', 'tsia̍h'], ['即', 'tsiah']],
-    'tsiahpabue': [['食飽未', 'tsia̍h-pá--buē'], ['吃', 'tsia̍h'], ['噍', 'tsia̍h'], ['食', 'tsia̍h'], ['即', 'tsiah']],
-  };
   const stripEls = {};
   for (const [raw, list] of Object.entries(STRIPS)) {
     const row = $('div', 'crow', cands);
@@ -458,313 +304,563 @@ const tps = typingScene({
     stripEls[raw] = { row, chip, cells };
   }
 
-  // keys (geometry from the real TL layout preview, 585-px reference)
   const keyArea = $('div', 'keyarea', kb);
   keyArea.style.top = (6 + CB_H) + 'px'; keyArea.style.height = KB_H + 'px';
   const K = [];
   const colX = i => 30 + 58.2 * i;
   const rowY = [40, 113, 185, 258, 331];
-  const TMK = { '2': '́', '3': '̀', '5': '̂', '6': '̌', '7': '̄', '8': '̍', '9': '̋' };
+  const TMK = { '2': 'ˊ', '3': 'ˋ', '5': 'ˆ', '6': 'ˇ', '7': 'ˉ', '8': 'ˈ', '9': '˝' };
   const addKey = (id, label, cx, cy, w, opts = {}) => {
     const e = $('div', 'key', keyArea);
     const kw = w * s, kh = 58 * s;
     Object.assign(e.style, { left: (cx * s - kw / 2) + 'px', top: (cy * s - kh / 2) + 'px', width: kw + 'px', height: kh + 'px', borderRadius: (9 * s) + 'px', fontSize: (opts.fs || 31) * s + 'px' });
     if (opts.html) e.innerHTML = opts.html; else e.textContent = label;
-    const k = { id, e, cx: cx * s, cy: cy * s, kw, kh, label, special: !!opts.special };
+    const k = { id, e, cx: cx * s, cy: cy * s, kw, kh };
     K.push(k); return k;
   };
-  '1234567890'.split('').forEach((d, i) => {
-    const k = addKey(d, d, colX(i), rowY[0], 52);
-    if (TMK[d]) { k.e.innerHTML = `<span class="tm" style="top:${7 * s}px;line-height:1;font-size:${20 * s}px;opacity:.9">◌${TMK[d]}</span><span style="margin-top:${17 * s}px">${d}</span>`; }
-  });
-  // hide dotted-circle carrier used to position combining marks
+  '1234567890'.split('').forEach((d, i) => addKey(d, d, colX(i), rowY[0], 52, TMK[d] ? {
+    html: `<span class="tm" style="top:${7 * s}px;line-height:1;font-size:${20 * s}px;opacity:.9">${TMK[d]}</span><span style="margin-top:${17 * s}px">${d}</span>` } : {}));
   ['!', '?', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'].forEach((c, i) => addKey(c, c, colX(i), rowY[1], 52));
   ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', '-'].forEach((c, i) => addKey(c, c, colX(i), rowY[2], 52));
-  addKey('shift', '', 50, rowY[3], 64, { special: true, html: `<svg width="${26 * s}" height="${26 * s}" viewBox="0 0 26 26"><path d="M13 3L3 14h5.5v9h9v-9H23z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg>` });
+  addKey('shift', '', 50, rowY[3], 64, { html: `<svg width="${26 * s}" height="${26 * s}" viewBox="0 0 26 26"><path d="M13 3L3 14h5.5v9h9v-9H23z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg>` });
   [',', '.', 'c', 'v', 'b', 'n', 'm'].forEach((c, i) => addKey(c, c, 117 + 58.2 * i, rowY[3], 52));
-  addKey('bs', '', 535, rowY[3], 64, { special: true, html: `<svg width="${34 * s}" height="${26 * s}" viewBox="0 0 34 26"><path d="M11 3h19a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H11L2 13z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M15 8.5l9 9M24 8.5l-9 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>` });
-  addKey('123', '123', 38, rowY[4], 64, { special: true, fs: 25 });
-  addKey('emoji', '', 114, rowY[4], 64, { special: true, html: `<svg width="${30 * s}" height="${30 * s}" viewBox="0 0 30 30"><circle cx="15" cy="15" r="13" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="10.5" cy="12" r="1.8" fill="currentColor"/><circle cx="19.5" cy="12" r="1.8" fill="currentColor"/><path d="M8.5 17.5c3.4 4.6 9.6 4.6 13 0" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>` });
-  const space = addKey('space', '', 266, rowY[4], 217, { special: true, html: `<span class="spl" style="position:absolute;right:${14 * s}px;bottom:${8 * s}px;font-size:${18 * s}px">TL</span>` });
-  addKey('hanlo', '', 439, rowY[4], 106, { special: true, html: `<svg width="${26 * s}" height="${26 * s}" viewBox="0 0 26 26"><rect x="2" y="2" width="22" height="22" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><text x="13" y="18.5" text-anchor="middle" font-family="Huninn" font-size="15" fill="currentColor">A</text></svg>` });
-  addKey('ret', '', 541, rowY[4], 76, { special: true, html: `<svg width="${30 * s}" height="${22 * s}" viewBox="0 0 30 22"><path d="M27 2v8a4 4 0 0 1-4 4H4m0 0l6-6m-6 6l6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>` });
-  // the combining marks above digits: render the mark alone (dotted circle hidden via transparent base)
-  keyArea.querySelectorAll('.tm').forEach(e => { e.innerHTML = `<span style="color:transparent">◌</span>`.replace('◌', ' ') ; });
-  '1234567890'.split('').forEach(d => { if (!TMK[d]) return; const k = K.find(k => k.id === d); k.e.querySelector('.tm').innerHTML = { '2': 'ˊ', '3': 'ˋ', '5': 'ˆ', '6': 'ˇ', '7': 'ˉ', '8': 'ˈ', '9': '˝' }[d]; });
+  addKey('bs', '', 535, rowY[3], 64, { html: `<svg width="${34 * s}" height="${26 * s}" viewBox="0 0 34 26"><path d="M11 3h19a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H11L2 13z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M15 8.5l9 9M24 8.5l-9 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>` });
+  addKey('123', '123', 38, rowY[4], 64, { fs: 25 });
+  addKey('emoji', '', 114, rowY[4], 64, { html: `<svg width="${30 * s}" height="${30 * s}" viewBox="0 0 30 30"><circle cx="15" cy="15" r="13" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="10.5" cy="12" r="1.8" fill="currentColor"/><circle cx="19.5" cy="12" r="1.8" fill="currentColor"/><path d="M8.5 17.5c3.4 4.6 9.6 4.6 13 0" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>` });
+  addKey('space', '', 266, rowY[4], 217, { html: `<span style="position:absolute;right:${14 * s}px;bottom:${8 * s}px;font-size:${18 * s}px">TL</span>` });
+  addKey('hanlo', '', 439, rowY[4], 106, { html: `<svg width="${26 * s}" height="${26 * s}" viewBox="0 0 26 26"><rect x="2" y="2" width="22" height="22" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><text x="13" y="18.5" text-anchor="middle" font-family="Huninn" font-size="15" fill="currentColor">A</text></svg>` });
+  addKey('ret', '', 541, rowY[4], 76, { html: `<svg width="${30 * s}" height="${22 * s}" viewBox="0 0 30 22"><path d="M27 2v8a4 4 0 0 1-4 4H4m0 0l6-6m-6 6l6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>` });
 
   // system row: globe + mic
   const sys = $('div', 'sysrow', kb);
   sys.innerHTML = `<svg style="position:absolute;left:34px;top:8px" width="32" height="32" viewBox="0 0 32 32"><g fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="16" cy="16" r="13"/><ellipse cx="16" cy="16" rx="6" ry="13"/><path d="M3 16h26M5 9h22M5 23h22"/></g></svg>
   <svg style="position:absolute;right:38px;top:6px" width="24" height="34" viewBox="0 0 24 34"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="7" y="2" width="10" height="19" rx="5"/><path d="M3 15a9 9 0 0 0 18 0M12 24v6"/></g></svg>`;
   $('div', 'homebar', scr);
-
-  // callout for the pressed letter
   const callout = $('div', 'callout', keyArea);
   const tap = $('div', 'tap', scr);
 
-  // ---- choreography ----
-  const typed = 'tsiahpabue';
-  const r = rng(99);
-  let t = 25.45; const presses = [];
-  for (const c of typed) { presses.push({ t, c }); EVENTS.push({ t, type: 'key', v: r(), soft: 1 }); t += .205 + r() * .09; }
-  const tTypedEnd = t;
-  const tTap = 28.35; // tap candidate 食飽未
-  EVENTS.push({ t: tTap, type: 'tapkey' });
-  EVENTS.push({ t: tTap + .08, type: 'chime', note: 2, level: .5 });
-  // theme walk (real built-in palettes: Sakura filled, Sea Breeze outlined, Catppuccin borderless)
-  const THEMES = [
-    { at: 0, top: '#cbd3e0', bot: '#cbd3e0', fill: 1, text: '#1c1c1e', outline: 0, key: '#ffffff' },
-    { at: 28.95, top: '#e6c2d0', bot: '#eadce2', fill: 1, text: '#1c1c1e', outline: 0, key: '#ffffff' },
-    { at: 29.85, top: '#bfd2ea', bot: '#dce2ec', fill: 0, text: '#1c1c1e', outline: 1, key: '#ffffff' },
-    { at: 30.75, top: '#1e1e2e', bot: '#181825', fill: 0, text: '#cdd6f4', outline: 0, key: '#313244' },
-  ];
-  THEMES.slice(1).forEach(th => EVENTS.push({ t: th.at, type: 'theme', level: .5 }));
-  EVENTS.push({ t: tIn + .15, type: 'whoosh', level: .45 });
-
-  function themeAt(t) {
-    let i = 0;
-    for (let j = 1; j < THEMES.length; j++) if (t >= THEMES[j].at) i = j;
-    const A = THEMES[Math.max(0, i - 1)], B = THEMES[i];
-    const p = i === 0 ? 1 : eIO(seg(t, B.at, B.at + .7));
-    const m = (x, y) => hex(x).map((v, k) => Math.round(lerp(v, hex(y)[k], p)));
-    const rgb = v => `rgb(${v.join(',')})`;
-    const text = m(A.text, B.text);
-    return { top: rgb(m(A.top, B.top)), bot: rgb(m(A.bot, B.bot)), fill: lerp(A.fill, B.fill, p), outline: lerp(A.outline, B.outline, p),
-      text: rgb(text), textRGB: text, key: m(A.key, B.key), dark: lerp(A.text === '#cdd6f4' ? 1 : 0, B.text === '#cdd6f4' ? 1 : 0, p) };
-  }
-
-  scenes.push(tt => {
-    const pIn = eOut5(seg(tt, tIn, tIn + 1.5));
-    const pOut = eIO(seg(tt, tOut, tOut + .9));
-    const o = clamp(pIn * 1.4) * (1 - pOut);
-    L.style.display = o <= .001 ? 'none' : '';
-    if (o <= .001) return;
-    L.style.opacity = o;
-    const z = 1 + .6 * eIO(seg(tt, tIn + 1.1, tIn + 2.2)) * (1 - eIO(seg(tt, tOut - 1.1, tOut + .2)));
-    const y = (1 - pIn) * 520 - pOut * 40 - (z - 1) * 640;
-    const sc = lerp(.94, 1, pIn) * lerp(1, .97, pOut) * z;
-    phone.style.transform = `translateY(${y}px) scale(${sc})`;
-    L.style.filter = pOut > .01 ? `blur(${pOut * 14}px)` : 'none';
-
-    // theme
-    const th = themeAt(tt);
-    kbbg.style.background = `linear-gradient(180deg, ${th.top}, ${th.bot})`;
-    cbar.style.color = th.text;
-    sys.style.color = th.text; chev.style.color = th.text; chev.style.borderLeftColor = 'rgba(128,128,128,.35)';
+  // st: { n typed, committed, active key char, caretOn, appear 0..1, tapP 0..1 }
+  function update(th, st) {
+    const text = `rgb(${th.text.join(',')})`;
+    kbbg.style.background = `linear-gradient(180deg, rgb(${th.top.join(',')}), rgb(${th.bot.join(',')}))`;
+    cbar.style.color = text; sys.style.color = text; chev.style.color = text;
     K.forEach(k => {
-      k.e.style.color = th.text;
+      k.e.style.color = text;
       k.e.style.background = `rgba(${th.key.join(',')},${th.fill})`;
       k.e.style.boxShadow = th.fill > .01 ? `0 ${1.2 * th.fill}px 0 rgba(0,0,0,${.28 * th.fill})` : 'none';
-      k.e.style.outline = th.outline > .01 ? `1.1px solid rgba(${th.textRGB.join(',')},${th.outline * .85})` : 'none';
+      k.e.style.outline = th.outline > .01 ? `1.1px solid rgba(${th.text.join(',')},${th.outline * .85})` : 'none';
       k.e.style.outlineOffset = '-1px';
     });
-
-    // typing state
-    let n = 0; presses.forEach(p => { if (tt >= p.t) n++; });
-    const committed = tt >= tTap + .06;
-    const raw = typed.slice(0, n);
-    // pressed key + callout
-    let active = null;
-    presses.forEach(p => { if (tt >= p.t && tt < p.t + .12) active = p; });
-    K.forEach(k => { if (k.special) k.e.style.filter = 'none'; });
-    if (active) {
-      const k = K.find(k => k.id === active.c);
+    const raw = PHONE_TYPED.slice(0, st.n);
+    if (st.active) {
+      const k = K.find(k => k.id === st.active);
       const cw = k.kw * 1.42, ch = k.kh * 2.15;
-      Object.assign(callout.style, { display: 'flex', left: clamp(k.cx - cw / 2, 3, W - cw - 3) + 'px', top: (k.cy + k.kh / 2 - ch) + 'px', width: cw + 'px', height: ch + 'px', fontSize: 44 * s + 'px', paddingTop: 10 * s + 'px', background: th.dark > .5 ? '#313244' : '#fff', color: th.text, boxShadow: '0 2px 10px rgba(0,0,0,.18), 0 0 0 .5px rgba(0,0,0,.12)' });
-      callout.textContent = active.c;
+      Object.assign(callout.style, { display: 'flex', left: clamp(k.cx - cw / 2, 3, W - cw - 3) + 'px', top: (k.cy + k.kh / 2 - ch) + 'px', width: cw + 'px', height: ch + 'px', fontSize: 44 * s + 'px', paddingTop: 10 * s + 'px', background: th.dark > .5 ? '#313244' : '#fff', color: text, boxShadow: '0 2px 10px rgba(0,0,0,.18), 0 0 0 .5px rgba(0,0,0,.12)' });
+      callout.textContent = st.active;
     } else callout.style.display = 'none';
-    // host field
-    if (committed) { ptext.className = ''; ptext.textContent = '食飽未'; }
-    else { ptext.className = n ? 'comp' : ''; ptext.textContent = raw; }
-    const tLast = presses.length ? (committed ? tTap : (n ? presses[n - 1].t : tIn)) : tIn;
-    pcaret.style.opacity = (tt - tLast < .5 || Math.cos((tt - tLast - .5) * Math.PI * 2 / 1.06) > -.1) ? 1 : 0;
-    // candidate strip
+    ptext.className = !st.committed && st.n ? 'comp' : '';
+    ptext.textContent = st.committed ? PHONE_COMMIT : raw;
+    pcaret.style.opacity = st.caretOn ? 1 : 0;
     for (const [k, v] of Object.entries(stripEls)) {
-      const on = !committed && k === raw;
+      const on = !st.committed && k === raw;
       v.row.style.display = on ? 'flex' : 'none';
-      if (on) {
-        v.chip.style.background = th.fill > .5 ? '#ecedf1' : 'rgba(128,128,128,.18)';
-        const ap = eOut(seg(tt, presses[n - 1].t, presses[n - 1].t + .18));
-        v.row.style.opacity = .35 + .65 * ap;
-        v.row.style.transform = `translateX(${(1 - ap) * 6}px)`;
-        if (raw === typed) {
-          const hlp = seg(tt, tTap - .05, tTap + .05) * (1 - seg(tt, tTap + .05, tTap + .25));
-          v.cells[0].style.background = `rgba(120,120,128,${.18 * hlp})`; v.cells[0].style.borderRadius = '10px';
-        }
-      }
+      if (!on) continue;
+      v.chip.style.background = th.fill > .5 ? '#ecedf1' : 'rgba(128,128,128,.18)';
+      v.row.style.opacity = .35 + .65 * st.appear;
+      v.row.style.transform = `translateX(${(1 - st.appear) * 6}px)`;
     }
     // tap ripple on the first candidate
-    const tp = seg(tt, tTap - .08, tTap + .45);
+    const tp = st.tapP ?? 0;
     if (tp > 0 && tp < 1) {
-      const c0 = stripEls[typed].cells[0];
-      const cr = c0.getBoundingClientRect(), sr = scr.getBoundingClientRect();
+      const cr = stripEls[PHONE_TYPED].cells[0].getBoundingClientRect(), sr = scr.getBoundingClientRect();
       const scale = sr.width / scr.offsetWidth;
-      tap.style.display = 'block';
-      tap.style.left = ((cr.left + cr.width / 2 - sr.left) / scale) + 'px';
-      tap.style.top = ((cr.top + cr.height / 2 - sr.top) / scale) + 'px';
-      tap.style.opacity = Math.sin(tp * Math.PI) * .9;
-      tap.style.transform = `scale(${.7 + .5 * eOut(tp)})`;
+      Object.assign(tap.style, { display: 'block', left: ((cr.left + cr.width / 2 - sr.left) / scale) + 'px', top: ((cr.top + cr.height / 2 - sr.top) / scale) + 'px', opacity: Math.sin(tp * Math.PI) * .9, transform: `scale(${.7 + .5 * eOut(tp)})` });
     } else tap.style.display = 'none';
-  });
-})();
+  }
+  return { el: phone, update };
+}
 
-// ---------- Scene G: the Mac ----------
-(function () {
-  const L = $('div', 'layer', stage);
-  const tIn = 32.75, tOut = 40.0;
-  // logical macOS desktop in points; the camera maps it onto the 1920×1080 frame
-  const D = $('div', 'mac', L);
-  $('div', 'wall', D);
-  const menubar = $('div', 'menubar', D, '<span class="mb-r"><img src="assets/menubar.png" class="mb-ime"><span>Mon 9:41</span></span>');
-  const win = $('div', 'mwin', D);
+// ---------- desktop window + candidate panel ----------
+// real engine output (candidate_dump, mode=tl) per prefix of "tai5gi2tsin1sui2":
+// [literal, keyed…] — the literal lead cell is unkeyed, keys follow q w d f z
+const DUMP = {
+  't': ['t', ['佇', 'tī'], ['台', 'tâi'], ['就', 'tō'], ['代', 'tāi'], ['大', 'tāi']],
+  'ta': ['ta', ['乾', 'ta'], ['凋', 'ta'], ['焦', 'ta'], ['大', 'ta'], ['罩', 'tà']],
+  'tai': ['tai', ['台', 'tâi'], ['代', 'tāi'], ['大', 'tāi'], ['臺', 'tâi'], ['帶', 'tài']],
+  'tai5': ['tâi', ['台', 'tâi'], ['臺', 'tâi'], ['𧉟', 'tâi'], ['抬', 'tâi'], ['枱', 'tâi']],
+  'tai5g': ['tai5g', ['台', 'tâi'], ['臺', 'tâi'], ['𧉟', 'tâi'], ['抬', 'tâi'], ['枱', 'tâi']],
+  'tai5gi': ['tai5gi', ['台語', 'tâi-gí'], ['臺語', 'tâi-gí'], ['台', 'tâi'], ['臺', 'tâi'], ['𧉟', 'tâi']],
+  'tai5gi2': ['tai5gi2', ['台語', 'tâi-gí'], ['臺語', 'tâi-gí'], ['台', 'tâi'], ['臺', 'tâi'], ['𧉟', 'tâi']],
+  'tai5gi2t': ['tai5gi2t', ['台', 'tâi'], ['臺', 'tâi'], ['台語', 'tâi-gí'], ['𧉟', 'tâi'], ['抬', 'tâi']],
+  'tai5gi2ts': ['tai5gi2ts', ['台', 'tâi'], ['臺', 'tâi'], ['台語', 'tâi-gí'], ['𧉟', 'tâi'], ['抬', 'tâi']],
+  'tai5gi2tsi': ['tai5gi2tsi', ['台語誌', 'tâi-gí tsì'], ['台', 'tâi'], ['臺', 'tâi'], ['台語', 'tâi-gí'], ['𧉟', 'tâi']],
+  'tai5gi2tsin': ['tai5gi2tsin', ['台語真', 'tâi-gí tsin'], ['台', 'tâi'], ['臺', 'tâi'], ['台語', 'tâi-gí'], ['𧉟', 'tâi']],
+  'tai5gi2tsin1': ['tai5gi2tsin1', ['台語真', 'tâi-gí tsin'], ['台', 'tâi'], ['臺', 'tâi'], ['台語', 'tâi-gí'], ['𧉟', 'tâi']],
+  'tai5gi2tsin1s': ['tai5gi2tsin1s', ['台', 'tâi'], ['臺', 'tâi'], ['台語', 'tâi-gí'], ['𧉟', 'tâi'], ['抬', 'tâi']],
+  'tai5gi2tsin1su': ['tai5gi2tsin1su', ['台語真書', 'tâi-gí tsin-su'], ['台', 'tâi'], ['臺', 'tâi'], ['台語', 'tâi-gí'], ['𧉟', 'tâi']],
+  'tai5gi2tsin1sui': ['tai5gi2tsin1sui', ['台語真媠', 'tâi-gí tsin-suí'], ['台', 'tâi'], ['臺', 'tâi'], ['台語', 'tâi-gí'], ['𧉟', 'tâi']],
+  'tai5gi2tsin1sui2': ['tai5gi2tsin1sui2', ['台語真媠', 'tâi-gí tsin-suí'], ['台', 'tâi'], ['臺', 'tâi'], ['台語', 'tâi-gí'], ['𧉟', 'tâi']],
+};
+const DESK_TYPED = 'tai5gi2tsin1sui2', DESK_COMMIT = '台語真媠';
+const SLOT_KEYS = ['q', 'w', 'd', 'f', 'z'];
+function panelRow(panel, [lit, ...cs]) {
+  const row = $('div', 'mrow', panel);
+  $('div', 'mcell lit', row, '<span class="h">' + lit + '</span>');
+  const cells = cs.map(([hz, rm], i) => {
+    $('div', 'msep', row);
+    return $('div', 'mcell' + (i === 0 ? ' on' : ''), row, '<span class="ix">' + SLOT_KEYS[i] + '</span><span class="st"><span class="h">' + hz + '</span><span class="r">' + rm + '</span></span>');
+  });
+  $('div', 'mchev', row, '<svg width="14" height="9" viewBox="0 0 14 9"><path d="M1.5 1.5l5.5 5.5 5.5-5.5" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+  return { row, cells };
+}
+function panelColumn(panel, [, ...cs]) {
+  const col = $('div', 'mcol', panel);
+  cs.forEach(([hz, rm], i) => $('div', 'vr' + (i === 0 ? ' on' : ''), col, `<span>${hz}</span><span>${rm}</span>`));
+  return col;
+}
+// Light / Dark (the desktop Appearance setting); values follow the Windows candidate window
+const DESK_LIGHT = { wbg: '#ffffff', wink: '#1d1d1f', pbg: '#f7f7f9', pink2: '#6f6f76', psep: '#e3e3e6' };
+const DESK_DARK = { wbg: '#1c1c1e', wink: '#f5f5f7', pbg: '#2a2a2c', pink2: '#a5a5ad', psep: '#444448' };
+function makeDesk(parent, x, y, sc) {
+  const D = $('div', 'desk', parent);
+  Object.assign(D.style, { left: x + 'px', top: y + 'px', transform: `scale(${sc})` });
+  const win = $('div', 'dwin', D);
   $('div', 'mtitle', win, '<span class="tl r"></span><span class="tl y"></span><span class="tl g"></span>');
   const doc = $('div', 'mdoc', win);
   const docText = $('span', null, doc);
   const mcaret = $('span', 'mcaret', doc);
-  const panel = $('div', 'mpanel', D);
-  const keysEl = $('div', 'keys mkeys', L);
-
-  // real engine output (candidate_dump, mode=tl) per prefix of "tai5gi2tsin1sui2":
-  // [literal, keyed…] — the literal lead cell is unkeyed, keys follow q w d f z x
-  const DUMP = {
-    't': ['t', ['佇', 'tī'], ['台', 'tâi'], ['就', 'tō'], ['代', 'tāi'], ['大', 'tāi'], ['地', 'tē']],
-    'ta': ['ta', ['乾', 'ta'], ['凋', 'ta'], ['焦', 'ta'], ['大', 'ta'], ['罩', 'tà'], ['礁', 'ta']],
-    'tai': ['tai', ['台', 'tâi'], ['代', 'tāi'], ['大', 'tāi'], ['臺', 'tâi'], ['帶', 'tài'], ['事', 'tāi']],
-    'tai5': ['tâi', ['台', 'tâi'], ['臺', 'tâi'], ['𧉟', 'tâi'], ['抬', 'tâi'], ['枱', 'tâi'], ['駘', 'tâi']],
-    'tai5g': ['tai5g', ['台', 'tâi'], ['臺', 'tâi'], ['𧉟', 'tâi'], ['抬', 'tâi'], ['枱', 'tâi'], ['駘', 'tâi']],
-    'tai5gi': ['tai5gi', ['台語', 'tâi-gí'], ['臺語', 'tâi-gí'], ['台', 'tâi'], ['臺', 'tâi'], ['𧉟', 'tâi'], ['抬', 'tâi']],
-    'tai5gi2': ['tai5gi2', ['台語', 'tâi-gí'], ['臺語', 'tâi-gí'], ['台', 'tâi'], ['臺', 'tâi'], ['𧉟', 'tâi'], ['抬', 'tâi']],
-    'tai5gi2t': ['tai5gi2t', ['台', 'tâi'], ['臺', 'tâi'], ['台語', 'tâi-gí'], ['𧉟', 'tâi'], ['抬', 'tâi'], ['枱', 'tâi']],
-    'tai5gi2ts': ['tai5gi2ts', ['台', 'tâi'], ['臺', 'tâi'], ['台語', 'tâi-gí'], ['𧉟', 'tâi'], ['抬', 'tâi'], ['枱', 'tâi']],
-    'tai5gi2tsi': ['tai5gi2tsi', ['台語誌', 'tâi-gí tsì'], ['台', 'tâi'], ['臺', 'tâi'], ['台語', 'tâi-gí'], ['𧉟', 'tâi'], ['抬', 'tâi']],
-    'tai5gi2tsin': ['tai5gi2tsin', ['台語真', 'tâi-gí tsin'], ['台', 'tâi'], ['臺', 'tâi'], ['台語', 'tâi-gí'], ['𧉟', 'tâi'], ['抬', 'tâi']],
-    'tai5gi2tsin1': ['tai5gi2tsin1', ['台語真', 'tâi-gí tsin'], ['台', 'tâi'], ['臺', 'tâi'], ['台語', 'tâi-gí'], ['𧉟', 'tâi'], ['抬', 'tâi']],
-    'tai5gi2tsin1s': ['tai5gi2tsin1s', ['台', 'tâi'], ['臺', 'tâi'], ['台語', 'tâi-gí'], ['𧉟', 'tâi'], ['抬', 'tâi'], ['枱', 'tâi']],
-    'tai5gi2tsin1su': ['tai5gi2tsin1su', ['台語真書', 'tâi-gí tsin-su'], ['台', 'tâi'], ['臺', 'tâi'], ['台語', 'tâi-gí'], ['𧉟', 'tâi'], ['抬', 'tâi']],
-    'tai5gi2tsin1sui': ['tai5gi2tsin1sui', ['台語真媠', 'tâi-gí tsin-suí'], ['台', 'tâi'], ['臺', 'tâi'], ['台語', 'tâi-gí'], ['𧉟', 'tâi'], ['抬', 'tâi']],
-    'tai5gi2tsin1sui2': ['tai5gi2tsin1sui2', ['台語真媠', 'tâi-gí tsin-suí'], ['台', 'tâi'], ['臺', 'tâi'], ['台語', 'tâi-gí'], ['𧉟', 'tâi'], ['抬', 'tâi']],
-  };
-  const KEYS = ['q', 'w', 'd', 'f', 'z', 'x'];
+  const panel = $('div', 'mpanel', D); Object.assign(panel.style, { left: '26px', top: '100px' });
   const rows = {};
-  for (const [raw, [lit, ...cs]] of Object.entries(DUMP)) {
-    const row = $('div', 'mrow', panel);
-    $('div', 'mcell lit', row, '<span class="h">' + lit + '</span>');
-    const cells = cs.map(([hz, rm], i) => {
-      $('div', 'msep', row);
-      return $('div', 'mcell' + (i === 0 ? ' on' : ''), row, '<span class="ix">' + KEYS[i] + '</span><span class="st"><span class="h">' + hz + '</span><span class="r">' + rm + '</span></span>');
-    });
-    $('div', 'mchev', row, '<svg width="14" height="9" viewBox="0 0 14 9"><path d="M1.5 1.5l5.5 5.5 5.5-5.5" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>');
-    rows[raw] = { row, cells };
+  for (const [raw, d] of Object.entries(DUMP)) rows[raw] = panelRow(panel, d);
+  // st: { n typed, picked, caretOn, appear 0..1, flash 0..1, dark 0..1 }
+  function update(st) {
+    for (const k in DESK_LIGHT) D.style.setProperty('--' + k, mix(DESK_LIGHT[k], DESK_DARK[k], st.dark || 0));
+    const raw = DESK_TYPED.slice(0, st.n);
+    docText.className = !st.picked && st.n ? 'mcomp' : '';
+    docText.textContent = st.picked ? DESK_COMMIT : raw;
+    mcaret.style.opacity = st.caretOn ? 1 : 0;
+    const show = st.n > 0 && !st.picked;
+    panel.style.display = show ? 'block' : 'none';
+    for (const [k, v] of Object.entries(rows)) v.row.style.display = show && k === raw ? 'flex' : 'none';
+    if (!show) return;
+    panel.style.opacity = st.appear; panel.style.translate = `0 ${(1 - st.appear) * -4}px`;
+    rows[raw].cells[0].style.filter = `brightness(${1 - .12 * (st.flash || 0)})`;
   }
+  return { el: D, update };
+}
+// phone + desktop in one frame: window on top, phone overlapping its lower right, a free column at the lower left
+function makeDuo(L) {
+  return { desk: makeDesk(L, 60, 290, 1.6), phone: makePhone(L, 640, 545, .8) };
+}
+function duoEnter(duo, t, tIn) {
+  const a = eOut5(seg(t, tIn + .1, tIn + 1.2)), b = eOut5(seg(t, tIn + .3, tIn + 1.5));
+  duo.desk.el.style.opacity = clamp(a * 1.4); duo.desk.el.style.translate = `0 ${(1 - a) * 80}px`;
+  duo.phone.el.style.opacity = clamp(b * 1.4); duo.phone.el.style.translate = `0 ${(1 - b) * 260}px`;
+}
 
-  const typed = 'tai5gi2tsin1sui2';
-  const r = rng(314);
-  let t = 34.35; const presses = [];
-  for (const c of typed) {
-    const tone = /\d/.test(c);
-    presses.push({ t, c, tone });
-    EVENTS.push({ t, type: tone ? 'tonekey' : 'key', v: r(), mac: 1 });
-    t += .142 * (0.8 + r() * .45) + (tone ? .05 : 0);
+// ---------- Scene A: icon open (visible from frame 0 — the feed thumbnail) ----------
+(function () {
+  const L = $('div', 'layer', stage);
+  const ic = $('div', 'icon', L, '<img src="assets/icon.png">');
+  const S = 250; Object.assign(ic.style, { width: S + 'px', height: S + 'px', marginLeft: -S / 2 + 'px', marginTop: (-S / 2 - 60) + 'px' });
+  const n1 = $('div', 'brand', L, '台語齒盤'); Object.assign(n1.style, { top: '800px', font: '72px GenMin', color: '#1d1d1f', letterSpacing: '.14em', textIndent: '.14em' });
+  scenes.push(t => {
+    if (!presence(L, t, -1, 1.25, { dOut: .55, blur: 18, scaleOut: 1.06 })) return;
+    ic.style.transform = `scale(${lerp(1, 1.03, seg(t, 0, 1.8))})`;
+  });
+})();
+
+// ---------- Scene B: TL typing — tâi-gí tsin-suí / 台語真媠 ----------
+const MARKS = { '2': 'ˊ', '3': 'ˋ', '5': 'ˆ', '6': 'ˇ', '7': 'ˉ', '8': 'ˈ', '9': '˝' };
+function typingScene(o) {
+  const L = $('div', 'layer', stage);
+  const label = $('div', 'label', L, o.label);
+  const hero = $('div', 'hero', L);
+  const line = $('div', 'line', hero);
+  line.style.fontSize = o.size + 'px';
+  const hanji = $('div', 'hanji', L, o.hanji);
+  hanji.style.fontSize = o.hanjiSize + 'px';
+  const keysEl = $('div', 'keys', L);
+
+  // timeline of keystrokes
+  const r = rng(o.seed);
+  let t = o.tType;
+  const clusters = [], keys = [];
+  for (const st of o.steps) {
+    t += (st.pauseBefore || 0);
+    keys.push({ t, label: st.k, tone: !!st.tone, mk: st.tone ? (st.keyMark ?? MARKS[st.k]) : null });
+    if (st.add != null) clusters.push({ pre: st.add, fin: st.add, tA: t, tM: null });
+    if (st.mark) { const c = clusters[clusters.length + st.mark.at]; c.fin = st.mark.g; c.tM = t; }
+    t += o.beat * (0.78 + r() * 0.5);
   }
-  const tPick = t + .55; // press q → slot 0
-  EVENTS.push({ t: tPick, type: 'key', v: .5, mac: 1 });
-  EVENTS.push({ t: tPick + .08, type: 'chime', note: 4, level: .5 });
-  EVENTS.push({ t: tIn + .1, type: 'whoosh', level: .45 });
-  const allKeys = [...presses.map(p => ({ t: p.t, label: p.c, tone: p.tone })), { t: tPick, label: 'q', pick: true }];
-  const caps = allKeys.map(k => {
-    const e = $('div', 'cap', keysEl);
-    if (k.tone && MARKS[k.label]) { e.classList.add('tone'); $('div', 'mk', e, MARKS[k.label]); $('div', 'd', e, k.label); }
-    else e.textContent = k.label;
-    if (k.pick) e.style.color = '#0071e3';
+  const tDone = t;
+  const cls = clusters.map(c => {
+    const s = $('span', 'cl', line);
+    $('span', 'sz', s, c.fin);
+    const pre = $('span', 'l', s, c.pre);
+    let fin = null, mk = null;
+    if (c.tM != null) { fin = $('span', 'l', s, c.fin); mk = $('span', 'l', s, c.fin); }
+    return { c, s, pre, fin, mk };
+  });
+  const caret = $('div', 'caret', line);
+  const ul = $('div', 'uline', line);
+  const caps = keys.map(k => {
+    const e = $('div', 'cap' + (k.tone ? ' tone' : ''), keysEl);
+    if (k.tone && k.mk) { $('div', 'mk', e, k.mk); $('div', 'd', e, k.label); }
+    else e.textContent = k.label === ' ' ? '' : k.label;
+    if (k.label === ' ') e.style.width = '150px', e.style.left = '-75px';
     return e;
   });
 
-  // camera: whole desktop → push in on the insertion point
-  const S0 = 1920 / 1440;
-  scenes.push(tt => {
-    const pIn = eOut5(seg(tt, tIn, tIn + 1.3));
-    const pOut = eIO(seg(tt, tOut, tOut + .8));
-    const o = clamp(pIn * 1.3) * (1 - pOut);
-    L.style.display = o <= .001 ? 'none' : '';
-    if (o <= .001) return;
-    L.style.opacity = o;
-    L.style.filter = pOut > .01 ? 'blur(' + (pOut * 14) + 'px)' : ((1 - pIn) > .01 ? 'blur(' + ((1 - pIn) * 10) + 'px)' : 'none');
-    const zp = eIO(seg(tt, tIn + .9, tIn + 2.1)) * (1 - eIO(seg(tt, tOut - 1.0, tOut + .3)));
-    const z = lerp(1, 1.78, zp);
-    const fx = lerp(720, 590, zp), fy = lerp(405, 318, zp);
-    const s = S0 * z * lerp(1.04, 1, pIn);
-    D.style.transform = 'translate(' + (960 - fx * s) + 'px,' + (540 - fy * s + (1 - pIn) * 60) + 'px) scale(' + s + ')';
+  let measured = false, xs = [];
+  function measure() {
+    const lr = line.getBoundingClientRect();
+    xs = cls.map(q => { const b = q.s.getBoundingClientRect(); return { x0: b.left - lr.left, x1: b.right - lr.left }; });
+    // mark zone height: above the x-height, so a falling tone mark never shows the base letter twice
+    const cv = document.createElement('canvas').getContext('2d');
+    cv.font = `${o.size}px Huninn`;
+    const m = cv.measureText('x');
+    const A = m.fontBoundingBoxAscent, D = m.fontBoundingBoxDescent;
+    const zone = (150 - (A + D)) / 2 + A - m.actualBoundingBoxAscent - o.size * 0.035;
+    cls.forEach(q => { if (q.mk) q.mk.style.clipPath = `inset(-60% -40% calc(100% - ${zone}px) -40%)`; });
+    measured = true;
+  }
 
-    let n = 0; presses.forEach(p => { if (tt >= p.t) n++; });
-    const picked = tt >= tPick + .05;
-    const raw = typed.slice(0, n);
-    if (picked) { docText.className = ''; docText.textContent = '台語真媠'; }
-    else { docText.className = n ? 'mcomp' : ''; docText.textContent = raw; }
-    const tLast = picked ? tPick : (n ? presses[n - 1].t : tIn);
-    mcaret.style.opacity = (tt - tLast < .5 || Math.cos((tt - tLast - .5) * Math.PI * 2 / 1.06) > -.1) ? 1 : 0;
-    // candidate panel under the marked text
-    const show = n > 0 && !picked;
-    panel.style.display = show ? 'block' : 'none';
-    for (const [k, v] of Object.entries(rows)) v.row.style.display = show && k === raw ? 'flex' : 'none';
-    if (show) {
-      const ap = eOut(seg(tt, presses[0].t, presses[0].t + .2));
-      panel.style.opacity = ap; panel.style.transform = 'translateY(' + ((1 - ap) * -4) + 'px)';
-      if (raw === typed) {
-        const fl = seg(tt, tPick - .09, tPick - .02);
-        rows[raw].cells[0].style.filter = 'brightness(' + (1 - .12 * fl) + ')';
+  const tRev = o.tReveal;
+  scenes.push(tt => {
+    if (!presence(L, tt, o.tIn, o.tOut, { dIn: .6, dOut: .6, blur: 16 })) return;
+    if (!measured) measure();
+    const pl = eOut(seg(tt, o.tIn + .1, o.tIn + 1.0));
+    label.style.opacity = pl;
+    label.style.transform = `translateY(${(1 - pl) * 10}px)`;
+    let last = -1;
+    cls.forEach((q, i) => {
+      const a = eOut(seg(tt, q.c.tA - .02, q.c.tA + .16));
+      if (tt >= q.c.tA - .02) last = i;
+      q.s.style.opacity = a;
+      q.s.style.transform = `translateY(${(1 - a) * 16}px)`;
+      q.s.style.filter = a < .999 ? `blur(${(1 - a) * 6}px)` : 'none';
+      if (q.c.tM != null) {
+        const p = seg(tt, q.c.tM, q.c.tM + .34);
+        const land = seg(tt, q.c.tM + .3, q.c.tM + .38);
+        q.mk.style.opacity = p > 0 ? (1 - land) * clamp(p * 4) : 0;
+        q.mk.style.transform = `translateY(${-(1 - eOut5(p)) * o.size * .55}px)`;
+        q.mk.style.color = '#0071e3';
+        q.fin.style.opacity = land;
+        q.fin.style.color = mix('#0071e3', '#1d1d1f', eIO(seg(tt, q.c.tM + .3, q.c.tM + 1.1)));
+        q.pre.style.opacity = 1 - land;
       }
+    });
+    // caret + composing underline
+    const rev = eIO(seg(tt, tRev, tRev + .9));
+    let cx = xs[0].x0;
+    if (last >= 0) {
+      const q = cls[last];
+      const prevX = last > 0 ? xs[last - 1].x1 : xs[0].x0;
+      cx = lerp(prevX, xs[last].x1, eOut(seg(tt, q.c.tA - .02, q.c.tA + .08)));
     }
-    // keycap conveyor (screen space)
-    keysEl.style.opacity = 1 - eIO(seg(tt, tPick + .5, tPick + 1.1));
-    let shift = 0; allKeys.forEach((k, i) => { if (i) shift += eOut(seg(tt, k.t, k.t + .22)); }); shift = Math.min(shift, 3.2) / 2;
-    allKeys.forEach((k, i) => {
+    caret.style.left = (cx + 3) + 'px';
+    { const x0 = xs[0].x0, full = xs[xs.length - 1].x1 - x0; line.style.transform = `translateX(${(full - (cx - x0)) / 2}px)`; }
+    caret.style.opacity = seg(tt, o.tIn + .2, o.tIn + .6) * (blinkOn(tt, tDone - .25) ? 1 : 0) * (1 - seg(tt, tRev, tRev + .25));
+    ul.style.left = xs[0].x0 + 'px';
+    ul.style.width = Math.max(0, cx - xs[0].x0) + 'px';
+    ul.style.opacity = (last >= 0 ? 1 : 0) * (1 - seg(tt, tRev, tRev + .4));
+    // reveal: roman becomes the subtitle under the Hanji (candidate-cell shape)
+    hero.style.transform = `translateY(${rev * o.subDrop}px) scale(${lerp(1, o.subScale, rev)})`;
+    line.style.color = mix('#1d1d1f', '#86868b', rev);
+    const ph = eOut(seg(tt, tRev + .1, tRev + 1.1));
+    hanji.style.opacity = ph;
+    hanji.style.transform = `translateY(${(1 - ph) * 30}px)`;
+    hanji.style.filter = ph < .999 ? `blur(${(1 - ph) * 16}px)` : 'none';
+    hanji.style.letterSpacing = hanji.style.textIndent = lerp(.2, .06, eOut(seg(tt, tRev + .1, tRev + 2))) + 'em';
+    // keycap conveyor
+    keysEl.style.opacity = 1 - eIO(seg(tt, tRev - .1, tRev + .5));
+    let shift = 0; keys.forEach((k, i) => { if (i) shift += eOut(seg(tt, k.t, k.t + .22)); }); shift = Math.min(shift, 3.2) / 2;
+    keys.forEach((k, i) => {
       const e = caps[i];
-      let m = 0; for (let j = i + 1; j < allKeys.length; j++) m += eOut(seg(tt, allKeys[j].t, allKeys[j].t + .22));
+      let n = 0;
+      for (let j = i + 1; j < keys.length; j++) n += eOut(seg(tt, keys[j].t, keys[j].t + .22));
       const a = seg(tt, k.t - .01, k.t + .12);
       const press = seg(tt, k.t, k.t + .09), rel = seg(tt, k.t + .09, k.t + .3);
-      const sc = (0.85 + 0.15 * eBack(a)) * (1 - 0.06 * press + 0.06 * eOut(rel));
-      e.style.opacity = eOut(a) * (1 - clamp((m - 3.2) / 1.6));
-      e.style.display = +e.style.opacity > .001 ? '' : 'none';
-      e.style.transform = 'translateX(' + ((-m + shift) * 84) + 'px) scale(' + sc + ')';
+      e.style.opacity = eOut(a) * (1 - clamp((n - 3.2) / 1.6));
+      e.style.display = e.style.opacity > 0.001 ? '' : 'none';
+      e.style.transform = `translateX(${(-n + shift) * 84}px) scale(${(0.85 + 0.15 * eBack(a)) * (1 - 0.06 * press + 0.06 * eOut(rel))})`;
       e.style.background = mix('#ffffff', '#e8e8ed', press * (1 - rel));
     });
   });
-})();
+}
+typingScene({
+  label: 'TL', seed: 7, size: 108, hanjiSize: 190, subScale: .5, subDrop: 150,
+  tIn: 1.45, tType: 1.95, beat: .115, tReveal: 4.75, tOut: 6.45,
+  hanji: '台語真媠',
+  steps: [
+    { k: 't', add: 't' }, { k: 'a', add: 'a' }, { k: 'i', add: 'i' },
+    { k: '5', tone: true, mark: { at: -2, g: 'â' }, pauseBefore: .05 },
+    { k: '-', add: '-', pauseBefore: .06 }, { k: 'g', add: 'g' }, { k: 'i', add: 'i' },
+    { k: '2', tone: true, mark: { at: -1, g: 'í' }, pauseBefore: .05 },
+    { k: ' ', add: ' ', pauseBefore: .09 },
+    { k: 't', add: 't' }, { k: 's', add: 's' }, { k: 'i', add: 'i' }, { k: 'n', add: 'n' },
+    { k: '1', tone: true, keyMark: '', pauseBefore: .03 },
+    { k: '-', add: '-', pauseBefore: .05 }, { k: 's', add: 's' }, { k: 'u', add: 'u' }, { k: 'i', add: 'i' },
+    { k: '2', tone: true, mark: { at: -1, g: 'í' }, pauseBefore: .05 },
+  ],
+});
 
-// ---------- Scene H: end card ----------
+// ---------- Scene C: one sentence, three scripts ----------
 (function () {
   const L = $('div', 'layer', stage);
-  const tIn = 40.35;
-  const ic = $('div', 'icon', L, '<img src="assets/icon.png">');
-  const S = 160; Object.assign(ic.style, { width: S + 'px', height: S + 'px', marginLeft: -S / 2 + 'px', top: '300px', marginTop: 0 });
-  const n1 = $('div', 'brand', L, '台語齒盤'); Object.assign(n1.style, { top: '508px', font: '66px GenMin', color: '#1d1d1f', letterSpacing: '.14em', textIndent: '.14em' });
-  const n2 = $('div', 'brand sf', L, 'TaigiKeyboard'); Object.assign(n2.style, { top: '610px', fontSize: '27px', fontWeight: 500, color: '#86868b', letterSpacing: '.08em' });
-  const p = $('div', 'brand sf', L); Object.assign(p.style, { top: '724px', fontSize: '25px', fontWeight: 500, color: '#1d1d1f' });
-  const names = ['iOS', 'macOS', 'Android', 'Windows', 'Linux'];
-  const els = names.map(nm => { const e = $('span', null, p, nm); e.style.display = 'inline-block'; e.style.margin = '0 20px'; return e; });
-  EVENTS.push({ t: tIn + .1, type: 'bloom', level: 1 });
-  names.forEach((_, i) => EVENTS.push({ t: tIn + 1.25 + i * .13, type: 'tick', level: .35, note: i }));
+  const tIn = 6.55, tOut = 9.1;
+  const h = $('div', 'tri-h', L, '台語真媠');
+  const rows = [
+    ['TL', ['tâi-gí ', ['ts', 1], 'in-', ['suí', 1]]],
+    ['POJ', ['tâi-gí ', ['ch', 1], 'in-', ['súi', 1]]],
+    ['TPS', ['ㄉㄞˊ ㆣㄧˋ ㄐㄧㄣ ㄙㄨㄧˋ']],
+  ];
+  const hl = [];
+  const rowEls = rows.map(([k, parts], i) => {
+    const r = $('div', 'tri-row', L);
+    r.style.top = (640 + i * 116) + 'px';
+    $('div', 'k', r, k);
+    const v = $('div', 'v', r);
+    parts.forEach(p => { if (typeof p === 'string') $('span', null, v, p); else hl.push($('span', null, v, p[0])); });
+    return r;
+  });
   scenes.push(t => {
-    if (!presence(L, t, tIn, DURATION - .75, { dIn: 1.0, dOut: .75, rise: 0, blur: 10 })) return;
-    const a = eOut(seg(t, tIn, tIn + 1.4));
-    ic.style.opacity = a; ic.style.transform = 'scale(' + lerp(.9, 1, a) + ')';
-    const b = eOut(seg(t, tIn + .4, tIn + 1.6));
-    n1.style.opacity = b; n1.style.transform = 'translateY(' + ((1 - b) * 16) + 'px)'; n1.style.filter = b < .999 ? 'blur(' + ((1 - b) * 10) + 'px)' : 'none';
-    const c = eOut(seg(t, tIn + .7, tIn + 1.8));
-    n2.style.opacity = c; n2.style.transform = 'translateY(' + ((1 - c) * 12) + 'px)';
-    els.forEach((e, i) => {
-      const q = eOut(seg(t, tIn + 1.2 + i * .13, tIn + 2.0 + i * .13));
-      e.style.opacity = q; e.style.transform = 'translateY(' + ((1 - q) * 14) + 'px)';
+    if (!presence(L, t, tIn, tOut, { blur: 16 })) return;
+    const ph = eOut(seg(t, tIn, tIn + 1.0));
+    h.style.opacity = ph; h.style.transform = `translateY(${(1 - ph) * 24}px)`;
+    h.style.letterSpacing = h.style.textIndent = lerp(.2, .08, eOut(seg(t, tIn, tIn + 2))) + 'em';
+    rowEls.forEach((r, i) => {
+      const p = rise(r, t, tIn + .3 + i * .18, .8);
+      r.style.filter = p < .999 ? `blur(${(1 - p) * 8}px)` : 'none';
     });
+    const hp = eIO(seg(t, tIn + 1.1, tIn + 1.5)) * (1 - eIO(seg(t, tIn + 2.2, tIn + 2.6)));
+    hl.forEach(e => e.style.color = mix('#1d1d1f', '#0071e3', hp));
   });
 })();
 
-EVENTS.sort((a, b) => a.t - b.t);
+// ---------- Scene D: every platform — phone and desktop type side by side ----------
+(function () {
+  const L = $('div', 'layer', stage);
+  const tIn = 9.2, tOut = 13.7;
+  const cap = caption(L, 'One engine · five platforms', '多平台');
+  const duo = makeDuo(L);
+  const names = ['iOS', 'Android', 'macOS', 'Windows', 'Linux'].map((n, i) => { const e = $('div', 'pname', L, n); e.style.top = (850 + i * 88) + 'px'; return e; });
+
+  const r = rng(99);
+  let t = tIn + 1.25; const pp = [];
+  for (const c of PHONE_TYPED) { pp.push({ t, c }); t += .15 + r() * .06; }
+  const tTap = t + .35;
+  t = tIn + 1.1; const dp = [];
+  for (const c of DESK_TYPED) { dp.push(t); t += .1 * (0.8 + r() * .45) + (/\d/.test(c) ? .04 : 0); }
+  const tPick = t + .4;
+
+  scenes.push(tt => {
+    if (!presence(L, tt, tIn, tOut, { dIn: .5 })) return;
+    cap(tt, tIn); duoEnter(duo, tt, tIn);
+    names.forEach((e, i) => {
+      rise(e, tt, tIn + .5 + i * .1, .7, 18);
+      e.style.color = mix('#c7c7cc', '#1d1d1f', eIO(seg(tt, tIn + 1.5 + i * .42, tIn + 1.9 + i * .42)));
+    });
+    let n = 0; pp.forEach(p => { if (tt >= p.t) n++; });
+    const active = pp.find(p => tt >= p.t && tt < p.t + .12);
+    const committed = tt >= tTap + .06;
+    duo.phone.update(DEFAULT_THEME, { n, committed, active: active && active.c,
+      caretOn: blinkOn(tt, committed ? tTap : (n ? pp[n - 1].t : tIn)),
+      appear: n ? eOut(seg(tt, pp[n - 1].t, pp[n - 1].t + .18)) : 0, tapP: seg(tt, tTap - .08, tTap + .45) });
+    let m = 0; dp.forEach(p => { if (tt >= p) m++; });
+    const picked = tt >= tPick + .05;
+    duo.desk.update({ n: m, picked, caretOn: blinkOn(tt, picked ? tPick : (m ? dp[m - 1] : tIn)),
+      appear: eOut(seg(tt, dp[0], dp[0] + .2)), flash: seg(tt, tPick - .09, tPick - .02) });
+  });
+})();
+
+// ---------- Scene E: candidate display modes + candidate window layouts ----------
+(function () {
+  const L = $('div', 'layer', stage);
+  const tIn = 13.8, tOut = 18.3;
+  const cap = caption(L, 'Candidate Display', '候選詞顯示');
+  // Hanji–Romanization Pairing / Hanji with Romanization / Romanization Only
+  const modeSeg = segControl(L, ['漢羅對應', '漢羅濫', '羅馬字'], 120, 300, 840, 84, 34);
+  const bar = $('div', 'showbar', L); bar.style.top = '420px';
+  const list = STRIPS.tsiahpa;
+  const mk = html => $('div', 'srow', bar, '<div class="chip">tsiahpa</div>' + html);
+  const modeRows = [
+    mk(list.slice(0, 4).map(([h, r]) => `<div class="cell"><span class="h">${h}</span><span class="r">${r}</span></div>`).join('')),
+    mk(list.slice(0, 2).map(([h, r]) => `<div class="one">${h}</div><div class="one rm">${r}</div>`).join('')),
+    mk(['tsia̍h-pá', 'tsia̍h', 'tsiah'].map(r => `<div class="one rm">${r}</div>`).join('')),
+  ];
+  const tMode = [0, tIn + 1.5, tIn + 2.7];
+
+  const eb = $('div', 'eyebrow', L, '選字窗排列　·　macOS　Windows　Linux'); Object.assign(eb.style, { left: '120px', top: '660px' });
+  // Horizontal / Vertical (Expandable is the third option on macOS and Windows)
+  const laySeg = segControl(L, ['水平', '徛直'], 120, 710, 480, 76, 32);
+  const d = DUMP[DESK_TYPED];
+  const ph = $('div', 'mpanel', L); Object.assign(ph.style, { left: '120px', top: '840px', transform: 'scale(1.7)' });
+  panelRow(ph, d);
+  const pv = $('div', 'mpanel', L); Object.assign(pv.style, { left: '120px', top: '840px', transform: 'scale(1.9)' });
+  panelColumn(pv, d);
+  const tLay = tIn + 2.1;
+
+  scenes.push(tt => {
+    if (!presence(L, tt, tIn, tOut)) return;
+    cap(tt, tIn);
+    [modeSeg.el, bar].forEach((e, i) => rise(e, tt, tIn + .2 + i * .12));
+    [eb, laySeg.el].forEach((e, i) => rise(e, tt, tIn + .45 + i * .1));
+    const m = stepAt(tt, tMode, .45);
+    modeSeg.set(m.i === 0 ? 0 : lerp(m.i - 1, m.i, m.p));
+    modeRows.forEach((row, i) => {
+      const o = i === m.i ? m.p : (i === m.i - 1 ? 1 - seg(tt, tMode[m.i], tMode[m.i] + .18) : 0);
+      row.style.opacity = o; row.style.display = o > .001 ? 'flex' : 'none';
+      row.style.transform = `translateX(${i === m.i ? (1 - m.p) * 18 : 0}px)`;
+    });
+    const lp = eIO(seg(tt, tLay, tLay + .5));
+    laySeg.set(lp);
+    const base = rise(ph, tt, tIn + .65);
+    ph.style.opacity = base * (1 - seg(tt, tLay, tLay + .2));
+    pv.style.opacity = eOut(seg(tt, tLay + .12, tLay + .55));
+    pv.style.translate = `0 ${(1 - eOut(seg(tt, tLay + .12, tLay + .6))) * 14}px`;
+  });
+})();
+
+// ---------- Scene F: settings ----------
+(function () {
+  const L = $('div', 'layer', stage);
+  const tIn = 18.4, tOut = 21.7;
+  const cap = caption(L, 'Settings', '設定');
+  const card = $('div', 'card', L); Object.assign(card.style, { top: '290px', height: '1120px' });
+  const sc = $('div', 'scroll', card);
+  // rows in on-screen order (ios SettingsTab): [label, value | initial toggle state, flip time offset]
+  const SECTIONS = [
+    [null, [['輸入模式', '台羅'], ['字型設定', '粉圓']]],
+    ['拍字設定', [['候選詞顯示', '漢羅對應'], ['括號標註', 0, .7], ['無連字符', 0], ['當咧拍的字囥第一个', 0, 1.0], ['自動大本字', 1], ['自動閬一格', 1]]],
+    ['齒盤設定', [['選字後自動收合工具列', 1], ['齒盤切換揤鈕', 1]]],
+    ['拍字反應', [['揤仔聲', 0, 1.7], ['震動反應', 1]]],
+    ['白話字', [['連紲拍 oo → o͘', 1], ['連紲拍 nn → ⁿ', 1], ['大本字時 ⁿ 轉做 ᴺ', 0, 2.3]]],
+    ['方音符號', [['or 對應 ㄜ', 0]]],
+  ];
+  const toggles = [];
+  for (const [head, rows] of SECTIONS) {
+    if (head) $('div', 'sech', sc, head);
+    const g = $('div', 'grp', sc);
+    for (const [label, v, flip] of rows) {
+      const row = $('div', 'row', g, `<span>${label}</span>`);
+      if (typeof v === 'string') $('span', 'val', row, v + '<svg width="12" height="20" viewBox="0 0 12 20"><path d="M2 2l8 8-8 8" stroke="#c4c4c7" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+      else toggles.push({ set: toggle(row), v, flip });
+    }
+  }
+  scenes.push(tt => {
+    if (!presence(L, tt, tIn, tOut)) return;
+    cap(tt, tIn);
+    rise(card, tt, tIn + .15, .9, 60);
+    sc.style.transform = `translateY(${-eIO(seg(tt, tIn + .9, tOut)) * 640}px)`;
+    toggles.forEach(g => g.set(g.flip == null ? g.v : eIO(seg(tt, tIn + g.flip, tIn + g.flip + .28))));
+  });
+})();
+
+// ---------- Scene G: dictionaries ----------
+(function () {
+  const L = $('div', 'layer', stage);
+  const tIn = 21.8, tOut = 25.4;
+  const cap = caption(L, 'Manage Dictionaries', '辭典管理');
+  const c1 = $('div', 'card', L); Object.assign(c1.style, { top: '290px', height: '472px' });
+  const g1 = $('div', 'grp', $('div', 'scroll', c1));
+  const dicts = ['教育部臺灣台語常用詞辭典', '公視台語台台語新詞辭庫', 'iTaigi愛台語', '臺日大辭典台語譯本', '台灣植物名彙']
+    .map((n, i) => ({ set: toggle($('div', 'row', g1, `<span>${n}</span>`)), flip: i < 2 ? null : .8 + (i - 2) * .32 }));
+
+  // custom dictionary: a word is one (Hanji, romanization) pair
+  const c2 = $('div', 'card', L); Object.assign(c2.style, { top: '796px', height: '390px' });
+  const s2 = $('div', 'scroll', c2);
+  const head = $('div', 'row', s2, '<span style="font-size:36px">自訂詞庫</span>'); Object.assign(head.style, { padding: '0 14px 0 22px', height: '70px', marginBottom: '14px' });
+  const add = $('div', 'addbtn', head, '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M12 3v18M3 12h18" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg>');
+  const g2 = $('div', 'grp', s2);
+  const word = (h, r) => $('div', 'row', g2, `<span>${h}<span class="rm">${r}</span></span>`);
+  const added = word('食飽未', 'tsia̍h-pá--buē');
+  word('台語真媠', 'tâi-gí tsin-suí'); word('白話字', 'pe̍h-ōe-jī');
+  const tAdd = tIn + 1.9;
+  const pills = $('div', 'pills', L); pills.style.top = '1222px';
+  const pillEls = ['學習紀錄', '詞頻', '匯入佮匯出', '備份復原'].map(n => $('span', null, pills, n));
+
+  scenes.push(tt => {
+    if (!presence(L, tt, tIn, tOut)) return;
+    cap(tt, tIn);
+    rise(c1, tt, tIn + .15, .9, 50); rise(c2, tt, tIn + .3, .9, 50);
+    dicts.forEach(d => d.set(d.flip == null ? 1 : eIO(seg(tt, tIn + d.flip, tIn + d.flip + .28))));
+    const press = seg(tt, tAdd - .12, tAdd) * (1 - seg(tt, tAdd, tAdd + .25));
+    add.style.transform = `scale(${1 - .14 * press})`;
+    const ap = eOut(seg(tt, tAdd + .05, tAdd + .5));
+    added.style.height = (84 * ap) + 'px'; added.style.opacity = ap; c2.style.height = (306 + 84 * ap) + 'px';
+    added.style.background = mix('#ffffff', '#e5f0fd', ap * (1 - eIO(seg(tt, tAdd + .6, tAdd + 1.3))));
+    pillEls.forEach((e, i) => rise(e, tt, tIn + .6 + i * .1, .7, 18));
+  });
+})();
+
+// ---------- Scene H: themes — mobile palettes × key styles, desktop light / dark ----------
+(function () {
+  const L = $('div', 'layer', stage);
+  const tIn = 25.5, tOut = 29.9;
+  const cap = caption(L, 'Theme', '主題');
+  const duo = makeDuo(L);
+  const order = ['def', 'sakura', 'gold', 'sea', 'jade', 'wisteria', 'cat'];
+  // [palette, key style] walk
+  const WALK = [['def', 0], ['sakura', 0], ['gold', 0], ['sea', 1], ['jade', 1], ['wisteria', 2], ['cat', 2]];
+  const times = WALK.map((_, i) => i === 0 ? 0 : tIn + .7 + i * .44);
+  const tDark = times[4];
+
+  const e1 = $('div', 'eyebrow', L, 'iOS　Android'); Object.assign(e1.style, { left: '70px', top: '850px' });
+  const dots = $('div', 'dots', L); Object.assign(dots.style, { left: '70px', top: '896px' });
+  const rings = order.map(n => { const d = $('div', 'dot', dots); d.style.background = `linear-gradient(180deg, ${PALETTE[n].top}, ${PALETTE[n].bot})`; return $('b', null, d); });
+  const tname = order.map(n => { const e = $('div', 'tname', L, PALETTE[n].zh); Object.assign(e.style, { left: '70px', top: '984px' }); return e; });
+  const styleSeg = segControl(L, STYLES.map(s => s[0]), 250, 978, 290, 64, 27);
+  const e2 = $('div', 'eyebrow', L, '外觀　·　macOS　Windows'); Object.assign(e2.style, { left: '70px', top: '1120px' });
+  // Appearance: Light / Dark / Automatic
+  const appSeg = segControl(L, ['淺色', '深色', '自動'], 70, 1166, 470, 72, 30);
+
+  scenes.push(tt => {
+    if (!presence(L, tt, tIn, tOut, { dIn: .5 })) return;
+    cap(tt, tIn); duoEnter(duo, tt, tIn);
+    [e1, dots, styleSeg.el, e2, appSeg.el].forEach((e, i) => rise(e, tt, tIn + .4 + i * .08, .7, 18));
+    const st = stepAt(tt, times, .42);
+    const A = themeOf(...WALK[Math.max(0, st.i - 1)]), B = themeOf(...WALK[st.i]);
+    duo.phone.update(themeMix(A, B, st.p), { n: PHONE_TYPED.length, committed: false, caretOn: true, appear: 1 });
+    const cur = order.indexOf(WALK[st.i][0]), prev = order.indexOf(WALK[Math.max(0, st.i - 1)][0]);
+    const shown = eOut(seg(tt, tIn + .4, tIn + 1));
+    rings.forEach((r, i) => { const o = i === cur ? st.p : (i === prev ? 1 - st.p : 0); r.style.opacity = o; r.style.transform = `scale(${lerp(1.25, 1, o)})`; });
+    tname.forEach((e, i) => { e.style.opacity = shown * (i === cur ? st.p : (i === prev && cur !== prev ? 1 - seg(tt, times[st.i], times[st.i] + .15) : 0)); });
+    styleSeg.set(lerp(A.fill ? 0 : (A.outline ? 1 : 2), B.fill ? 0 : (B.outline ? 1 : 2), st.p));
+    const dk = eIO(seg(tt, tDark, tDark + .5));
+    appSeg.set(dk);
+    duo.desk.update({ n: DESK_TYPED.length, picked: false, caretOn: true, appear: 1, dark: dk });
+  });
+})();
+
+// ---------- Scene I: end card (held to the last frame — feeds loop) ----------
+(function () {
+  const L = $('div', 'layer', stage);
+  const tIn = 30.1;
+  const ic = $('div', 'icon', L, '<img src="assets/icon.png">');
+  const S = 190; Object.assign(ic.style, { width: S + 'px', height: S + 'px', marginLeft: -S / 2 + 'px', top: '360px', marginTop: 0 });
+  const n1 = $('div', 'brand', L, '台語齒盤'); Object.assign(n1.style, { top: '610px', font: '84px GenMin', color: '#1d1d1f', letterSpacing: '.14em', textIndent: '.14em' });
+  const n2 = $('div', 'brand sf', L, 'TaigiKeyboard'); Object.assign(n2.style, { top: '740px', fontSize: '32px', fontWeight: 500, color: '#86868b', letterSpacing: '.08em' });
+  const p = $('div', 'brand sf', L); Object.assign(p.style, { top: '860px', fontSize: '32px', fontWeight: 500, color: '#1d1d1f' });
+  const els = ['iOS', 'Android', 'macOS', 'Windows', 'Linux'].map(nm => { const e = $('span', null, p, nm); e.style.display = 'inline-block'; e.style.margin = '0 17px'; return e; });
+  const n3 = $('div', 'brand sf', L, 'Free · Open Source'); Object.assign(n3.style, { top: '944px', fontSize: '24px', fontWeight: 500, color: '#86868b', letterSpacing: '.16em' });
+  scenes.push(t => {
+    if (!presence(L, t, tIn, DURATION + 1, { dIn: .9, blur: 10 })) return;
+    const a = eOut(seg(t, tIn, tIn + 1.2));
+    ic.style.opacity = a; ic.style.transform = 'scale(' + lerp(.9, 1, a) + ')';
+    const b = rise(n1, t, tIn + .3, 1.0, 16); n1.style.filter = b < .999 ? 'blur(' + ((1 - b) * 10) + 'px)' : 'none';
+    rise(n2, t, tIn + .5, 1.0, 12);
+    els.forEach((e, i) => rise(e, t, tIn + .8 + i * .1, .7, 14));
+    rise(n3, t, tIn + 1.4, .8, 10);
+  });
+})();
+
 window.render = t => { for (const f of scenes) f(t); };
-window.EVENTS = EVENTS;
+window.SIZE = SIZE;
 window.DURATION = DURATION;
 window.ready = document.fonts.ready.then(() => Promise.all([
-  document.fonts.load('124px Huninn', 'tâi'), document.fonts.load('150px GenMin', '台語'), document.fonts.load('60px GenGo', '台')
+  document.fonts.load('108px Huninn', 'tâi'), document.fonts.load('150px GenMin', '台語'), document.fonts.load('32px GenGo', '台')
 ])).then(() => Promise.all([...document.images].map(i => i.decode().catch(() => {})))).then(() => { render(0); return true; });
 </script>
 </body>
