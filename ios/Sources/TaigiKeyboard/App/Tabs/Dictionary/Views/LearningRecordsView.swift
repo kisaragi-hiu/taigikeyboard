@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Learning Records subpage — one per kind (word frequency, learned
-/// phrases), each its own Data management row.
+/// One kind's Learning Records list (word frequency or learned phrases),
+/// opened from its row on the Learning Records subpage.
 /// What the keyboard learned from the user's picks, in the order picked: edit
 /// one row's count, swipe to delete one row. No add (a word the user wants
 /// is a custom word) and no wipe — Delete Learning Records stays on the
@@ -19,9 +19,9 @@ struct LearningRecordsView: View {
         _viewModel = StateObject(wrappedValue: LearningRecordsViewModel(kind: kind))
     }
 
-    /// The page title, the list header and the Data management row.
+    /// The page title and the list header.
     private var title: String {
-        lang.string(viewModel.kind == .frequency ? .dictionaryLearningRecordsFrequency : .dictionaryLearningRecordsPhrases)
+        lang.string(viewModel.kind.titleKey)
     }
 
     var body: some View {
@@ -194,6 +194,13 @@ struct LearningRecordsView: View {
                 Image(latinSystemName: "trash")
             }
         }
+    }
+}
+
+extension Taigi_Engine_LearningRecordKind {
+    /// The kind's row on the Learning Records subpage and its list's title.
+    var titleKey: StringKey {
+        self == .frequency ? .dictionaryLearningRecordsFrequency : .dictionaryLearningRecordsPhrases
     }
 }
 
