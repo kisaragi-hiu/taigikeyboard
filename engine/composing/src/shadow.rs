@@ -1188,8 +1188,24 @@ fn fused_shadow_with_barriers(
 /// and emits `poj:`. A mismatch would make a custom roman key
 /// `poj:chiah` while the lattice edge keys `tl:tsiah` (or the
 /// converse), silently breaking the S6 byte-identity match.
+///
+/// **Stored readings fold the word space.** A stored row's reading may
+/// separate its words with a space — a custom roman committed from a
+/// multi-word candidate (`tshì-giām sû`), a learned phrase's multi-word
+/// dictionary TL (`iā sī`, §50). Between syllables of one stored reading
+/// that space is the same boundary a hyphen is, so under TL / POJ /
+/// English it folds to `-` before the shadow pipeline and keys like the
+/// unspaced typed span (`tl:tshigiamsu`). Without the fold the space
+/// survives the TL / POJ separator pass and fails the body gate, so the
+/// row never reaches the walker. This is a rule for STORED readings only:
+/// a typed TL / POJ space stays a word boundary in the lattice. TPS keeps
+/// its own space handling (the separator pass strips it).
 pub(crate) fn custom_toneless_key(roman: &str, mode: InputMode) -> Option<String> {
-    let toneless = strip_tones_for_mode(&fused_shadow(roman, mode), mode);
+    let reading = match mode {
+        InputMode::Tps => roman.to_owned(),
+        InputMode::Tl | InputMode::Poj | InputMode::English => roman.replace(' ', "-"),
+    };
+    let toneless = strip_tones_for_mode(&fused_shadow(&reading, mode), mode);
     if toneless.is_empty() {
         return None;
     }
@@ -2068,6 +2084,35 @@ mod tests {
         assert_eq!(
             custom_toneless_key("tai5uan5", InputMode::Tl).as_deref(),
             Some("tl:taiuan"),
+        );
+    }
+
+    #[test]
+    fn custom_toneless_key_folds_a_stored_word_space_like_a_hyphen() {
+        // trace: "tshì-giām sû" → space→'-' → "tshì-giām-sû" → hyphen +
+        // tone strip → "tshigiamsu"; the same key the unspaced typed span
+        // `tshigiamsu` / `tshi3giam7su5` builds.
+        for roman in [
+            "tshì-giām sû",
+            "tshì-giām-sû",
+            "tshi3giam7su5",
+            "tshì  giām sû ",
+        ] {
+            assert_eq!(
+                custom_toneless_key(roman, InputMode::Tl).as_deref(),
+                Some("tl:tshigiamsu"),
+                "{roman}"
+            );
+        }
+        assert_eq!(
+            custom_toneless_key("chhì-giām sû", InputMode::Poj).as_deref(),
+            Some("poj:chhigiamsu")
+        );
+        // TPS: the separator pass already strips the space; a Bopomofo
+        // reading keys the same with or without it.
+        assert_eq!(
+            custom_toneless_key("ㄍㄠ ㄉㄞ", InputMode::Tps),
+            custom_toneless_key("ㄍㄠㄉㄞ", InputMode::Tps)
         );
     }
 

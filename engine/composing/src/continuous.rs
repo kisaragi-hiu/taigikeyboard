@@ -502,19 +502,20 @@ fn edge_key_map<'a, T>(
 }
 
 /// Learned phrases (§50) — the walker edge key for a learned row's canonical
-/// TL: a multi-word dictionary TL's space (`iā sī`) becomes the hyphen it is
-/// between syllables, under POJ input the TL is rendered to POJ first (the
-/// same face the lattice edges of a typed POJ buffer carry), then the same
-/// [`custom_toneless_key`] pipeline a custom roman goes through. TPS input
-/// keys Bopomofo bodies only, so a learned row is never a TPS walker edge —
-/// the limit a custom row has today.
+/// TL: under POJ input the TL is rendered to POJ first (the same face the
+/// lattice edges of a typed POJ buffer carry), then the same
+/// [`custom_toneless_key`] pipeline a custom roman goes through, which also
+/// folds a multi-word dictionary TL's space (`iā sī`) into the hyphen it is
+/// between syllables. TPS input keys Bopomofo bodies only, so a learned row
+/// is never a TPS walker edge — the limit a custom row has today.
 fn learned_edge_key(canonical_tl: &str, mode: phonetics::InputMode) -> Option<String> {
-    let hyphenated = canonical_tl.replace(' ', "-");
-    let native = match mode {
-        phonetics::InputMode::Poj => phonetics::api::tl_display_to_poj_display(&hyphenated),
-        _ => hyphenated,
-    };
-    custom_toneless_key(&native, mode)
+    match mode {
+        phonetics::InputMode::Poj => custom_toneless_key(
+            &phonetics::api::tl_display_to_poj_display(canonical_tl),
+            mode,
+        ),
+        _ => custom_toneless_key(canonical_tl, mode),
+    }
 }
 
 /// The shape of a continuous candidate list.
