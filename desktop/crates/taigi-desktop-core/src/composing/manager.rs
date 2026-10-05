@@ -47,7 +47,8 @@ pub struct ComposingManager {
     /// prefix included. Mirrored because only the engine knows how segments
     /// join, and because the candidate window anchors to what is on screen.
     display_text: String,
-    /// Where the caret sits in `display_text`, as a UTF-16 offset. Under TPS
+    /// Where the caret sits in `display_text`, as a UTF-16 offset — the last
+    /// engine answer's, which a list re-mirrors before it is shown. Under TPS
     /// the candidate window lists the word before it, so the macOS window
     /// anchors there (`taigi-macos-ffi` `RecordingSurface::finish`).
     display_caret_utf16: u32,

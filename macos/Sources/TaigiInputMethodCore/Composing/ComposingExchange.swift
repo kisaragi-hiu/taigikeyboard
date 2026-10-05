@@ -86,6 +86,6 @@ struct CandidateListUpdate: Equatable {
 
     /// The window sits under the character of the marked text that ends
     /// here — where the caret walk starts. The end of the marked text, or the
-    /// caret under TPS, whose list is the word before it.
+    /// caret under TPS, whose list is usually the word before it.
     let anchorEndUTF16: Int
 }

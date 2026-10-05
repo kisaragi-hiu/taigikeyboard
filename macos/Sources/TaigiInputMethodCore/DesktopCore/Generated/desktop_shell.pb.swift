@@ -1322,8 +1322,8 @@ public nonisolated struct Taigi_DesktopShell_CandidatesChanged: Sendable {
 
   /// The window sits under the character of the marked text that ends at this
   /// UTF-16 offset — the caret walk starts there and goes left. The end of the
-  /// marked text, except under TPS, where it is the caret: the list is the
-  /// word before it.
+  /// marked text, except under TPS, where it is the caret: the list there is
+  /// usually the word before it.
   public var anchorEndUtf16: UInt32 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()

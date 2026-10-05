@@ -318,8 +318,8 @@ message CandidatesChanged {
   bool leads_with_literal_roman = 2;
   // The window sits under the character of the marked text that ends at this
   // UTF-16 offset — the caret walk starts there and goes left. The end of the
-  // marked text, except under TPS, where it is the caret: the list is the
-  // word before it.
+  // marked text, except under TPS, where it is the caret: the list there is
+  // usually the word before it.
   uint32 anchor_end_utf16 = 3;
 }
 

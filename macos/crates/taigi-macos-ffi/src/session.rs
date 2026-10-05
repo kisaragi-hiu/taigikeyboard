@@ -380,9 +380,10 @@ impl<'a> RecordingSurface<'a> {
     /// the surface cannot read while the executor holds the manager. Every
     /// arm that refreshes the list does so as its last step
     /// (`intent_executor.rs` `refresh`), so the composition now is the one
-    /// the list was fetched for. A TPS list is the word before the caret's
-    /// (desktop-tps-hanji-conversion-roadmap H4), so it anchors at the
-    /// caret; any other list covers the composition to its end.
+    /// the list was fetched for. A TPS list is usually the word before the
+    /// caret's (desktop-tps-hanji-conversion-roadmap H4, As built in H-P5),
+    /// so it anchors at the caret; any other list covers the composition to
+    /// its end.
     pub(crate) fn finish(mut self, manager: &ComposingManager) -> Vec<Effect> {
         let anchor_end = if manager.is_tps_composition() {
             manager.display_caret_utf16()
