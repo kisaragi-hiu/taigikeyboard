@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="nan-Hant-TW">
+<head>
+<meta charset="utf-8">
+<title>TaigiKeyboard desktop cheatsheet</title>
+<!-- One page, two pictures: render.sh loads it as-is for macOS and with ?os=pc for Windows / Linux. -->
+<style>
+@font-face { font-family: Huninn; src: url(../assets/fonts/font/jf_openhuninn_2_1.ttf); }
+@font-face { font-family: GenMin; src: url(../assets/fonts/font/genyomin2tw_r.otf); }
+:root { --ink: #1d1d1f; --ink2: #6e6e73; --accent: #0071e3; --bg: #fbfbfd; --line: rgba(0,0,0,.09); --tint: rgba(0,113,227,.08); }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1600px; height: 1000px; overflow: hidden; background: var(--bg); color: var(--ink); font: 19px/1.5 Huninn, sans-serif; }
+body { padding: 28px 48px 0; }
+.pc { display: none; }
+.is-pc .pc { display: revert; }
+.is-pc .mac { display: none; }
+
+header { display: flex; align-items: center; gap: 18px; }
+header img { width: 68px; height: 68px; border-radius: 16px; }
+h1 { font: 46px GenMin; letter-spacing: .08em; }
+.tag { margin-left: 6px; padding: 4px 16px; border-radius: 999px; background: var(--ink); color: #fff; font-size: 18px; letter-spacing: .04em; }
+.url { margin-left: auto; font: 500 20px "SF Pro Display", system-ui, sans-serif; letter-spacing: .12em; color: var(--ink2); }
+
+.grid { display: grid; grid-template-columns: 1.08fr 1fr 1fr; gap: 16px; margin-top: 18px; }
+.card { padding: 14px 24px 12px; border-radius: 24px; background: #fff; border: 1px solid var(--line); }
+h2 { display: flex; align-items: baseline; gap: 10px; font: 27px GenMin; letter-spacing: .1em; }
+h2 small { font: 500 13px "SF Pro Display", system-ui, sans-serif; letter-spacing: .26em; color: var(--accent); text-transform: uppercase; }
+table { width: 100%; margin-top: 8px; border-collapse: collapse; }
+td { padding: 5px 0; border-top: 1px solid var(--line); vertical-align: middle; }
+tr:first-child td { border-top: 0; }
+td:last-child { text-align: right; white-space: nowrap; }
+kbd { display: inline-block; min-width: 34px; padding: 0 9px; margin-left: 3px; border-radius: 9px; background: #fff;
+  box-shadow: 0 0 0 1px rgba(0,0,0,.1), 0 2px 0 rgba(0,0,0,.2); font: 500 17px/30px "SF Pro Text", system-ui, sans-serif; text-align: center; }
+.typed { padding: 1px 9px; border-radius: 8px; background: var(--tint); font: 18px "SF Mono", ui-monospace, Menlo, monospace; }
+.shot { margin-top: 10px; border-radius: 12px; border: 1px solid var(--line); overflow: hidden; }
+.shot img { display: block; width: 100%; }
+.hint { margin-top: 8px; font-size: 16px; color: var(--ink2); }
+.flow { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 18px; }
+.flow span { padding: 3px 14px; border-radius: 999px; background: var(--tint); color: var(--accent); }
+.flow i { font-style: normal; color: var(--ink2); }
+
+.tones { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; margin-top: 6px; text-align: center; }
+.tones div { padding: 2px 0 6px; border-radius: 12px; background: var(--bg); border: 1px solid var(--line); }
+.tones b { display: block; font: 26px/1.3 Huninn; font-weight: 400; }
+.tones kbd { margin: 4px 0 0; min-width: 30px; padding: 0 6px; }
+.tones .row { grid-column: 1 / -1; padding: 0; border: 0; background: none; text-align: left; font-size: 16px; color: var(--ink2); }
+
+footer { position: absolute; left: 48px; right: 48px; bottom: 16px; display: flex; align-items: center; gap: 14px; font-size: 18px; color: var(--ink2); }
+footer .right { margin-left: auto; }
+</style>
+</head>
+<body>
+<header>
+  <img src="assets/icon.png" alt="">
+  <h1>台語齒盤　電腦版速查表</h1>
+  <span class="tag mac">macOS</span><span class="tag pc">Windows / Linux</span>
+  <span class="url">taigikeyboard.tw</span>
+</header>
+
+<div class="grid">
+  <div class="card">
+    <h2>拍字 <small>Type</small></h2>
+    <p style="margin-top:8px">拍 <span class="typed">taigi</span>，聲調免拍嘛會使</p>
+    <div class="shot"><img src="shots/layout-horizontal.png" alt=""></div>
+    <table>
+      <tr><td>輸出漢字　台語</td><td><kbd class="mac">Return</kbd><kbd class="pc">Enter</kbd></td></tr>
+      <tr><td>輸出羅馬字　tâi-gí</td><td><kbd>Space</kbd></td></tr>
+      <tr><td>照拍的輸出　taigi</td><td><kbd class="mac">⇧</kbd><kbd class="mac">Return</kbd><kbd class="pc">Shift</kbd><kbd class="pc">Enter</kbd></td></tr>
+      <tr><td>刪除當咧拍的字</td><td><kbd>Esc</kbd></td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>選字 <small>Pick</small></h2>
+    <table>
+      <tr><td>後一个字</td><td><kbd>Tab</kbd></td></tr>
+      <tr><td>頂一个字</td><td><kbd class="mac">⇧</kbd><kbd class="pc">Shift</kbd><kbd>Tab</kbd></td></tr>
+      <tr><td>後一頁／頂一頁</td><td><kbd>]</kbd><kbd>[</kbd></td></tr>
+      <tr><td>直接選字</td><td><kbd>q</kbd><kbd>w</kbd><kbd>d</kbd><kbd>f</kbd><kbd>z</kbd><kbd>x</kbd><kbd>v</kbd></td></tr>
+      <tr><td>直接選，輸出對換的文字</td><td><kbd class="mac">⇧</kbd><kbd class="pc">Shift</kbd><kbd>q</kbd><kbd>w</kbd>…</td></tr>
+      <tr><td>徙動選字游標</td><td><kbd>←</kbd><kbd>→</kbd><kbd>↑</kbd><kbd>↓</kbd></td></tr>
+      <tr><td>修正當咧拍的字</td><td><kbd class="mac">⌥</kbd><kbd class="pc">Ctrl</kbd><kbd>←</kbd><kbd>→</kbd></td></tr>
+      <tr><td>標點換全角／半角</td><td><kbd class="mac">⌃</kbd><kbd class="pc">Ctrl</kbd><kbd>,</kbd><kbd>.</kbd><kbd>;</kbd></td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>切換 <small>Switch</small></h2>
+    <table>
+      <tr><td>漢字／羅馬字排頭前</td><td><kbd>`</kbd></td></tr>
+      <tr><td>候選詞顯示</td><td><kbd class="mac">⌃</kbd><kbd class="mac">⌘</kbd><kbd class="pc">Ctrl</kbd><kbd class="pc">Alt</kbd><kbd>H</kbd></td></tr>
+      <tr><td>台羅／白話字</td><td><kbd class="mac">⌃</kbd><kbd class="mac">⌘</kbd><kbd class="pc">Ctrl</kbd><kbd class="pc">Alt</kbd><kbd>C</kbd></td></tr>
+      <tr><td>方音符號</td><td><kbd class="mac">⌃</kbd><kbd class="mac">⌘</kbd><kbd class="pc">Ctrl</kbd><kbd class="pc">Alt</kbd><kbd>P</kbd></td></tr>
+      <tr><td>方音符號齒盤</td><td><kbd class="mac">⌃</kbd><kbd class="mac">⌘</kbd><kbd class="pc">Ctrl</kbd><kbd class="pc">Alt</kbd><kbd>J</kbd></td></tr>
+      <tr><td>符號選單</td><td><kbd class="mac">⌃</kbd><kbd class="mac">⌘</kbd><kbd class="pc">Ctrl</kbd><kbd class="pc">Alt</kbd><kbd>,</kbd></td></tr>
+      <tr><td>Telex 說明</td><td><kbd class="mac">⌃</kbd><kbd class="mac">⌘</kbd><kbd class="pc">Ctrl</kbd><kbd class="pc">Alt</kbd><kbd>/</kbd></td></tr>
+      <tr><td>設定</td><td><kbd class="mac">⌃</kbd><kbd class="mac">⌘</kbd><kbd class="pc">Ctrl</kbd><kbd class="pc">Alt</kbd><kbd>S</kbd></td></tr>
+    </table>
+  </div>
+
+  <div class="card" style="grid-column: span 2">
+    <h2>聲調 <small>Tones</small></h2>
+    <div class="tones">
+      <div class="row">數字調（預設）：字母後壁拍數字，<span class="typed">tai5gi2</span> → tâi-gí</div>
+      <div><b>a</b><kbd>1</kbd></div><div><b>á</b><kbd>2</kbd></div><div><b>à</b><kbd>3</kbd></div><div><b>ah</b><kbd>4</kbd></div>
+      <div><b>â</b><kbd>5</kbd></div><div><b>ā</b><kbd>7</kbd></div><div><b>a̍h</b><kbd>8</kbd></div><div><b>a̋</b><kbd>9</kbd></div>
+      <div class="row" style="margin-top:6px">Telex：手免離開字母區，<span class="typed">taidgiv</span> → tâi-gí；選字換用數字齒 1–9。　<kbd>z</kbd> = ts　<kbd>f</kbd> = 連字符</div>
+      <div><b>a</b><kbd>x</kbd></div><div><b>á</b><kbd>v</kbd></div><div><b>à</b><kbd>y</kbd></div><div><b>ah</b><kbd>x</kbd></div>
+      <div><b>â</b><kbd>d</kbd></div><div><b>ā</b><kbd>w</kbd></div><div><b>a̍h</b><kbd>v</kbd></div><div><b>a̋</b><kbd>q</kbd></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>候選詞顯示 <small>Display</small></h2>
+    <div class="flow"><span>漢羅對應</span><i>→</i><span>漢羅濫</span><i>→</i><span>羅馬字</span></div>
+    <div class="shot"><img src="shots/display-pairing.png" alt=""></div>
+    <div class="shot"><img src="shots/display-combined.png" alt=""></div>
+  </div>
+</div>
+
+<footer>
+  <span>齒攏會當改：設定 → 快速齒</span>
+  <span class="right">自由、開源、永遠免費的台語輸入法</span>
+</footer>
+<script>
+if (new URLSearchParams(location.search).get('os') === 'pc') document.documentElement.classList.add('is-pc');
+</script>
+</body>
+</html>
