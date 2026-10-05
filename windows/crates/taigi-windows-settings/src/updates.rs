@@ -151,7 +151,7 @@ impl UpdateState {
             return;
         }
         if let Outcome::UpdateAvailable(manifest) = &outcome {
-            announce(settings, manifest);
+            announce(settings, manifest, post_toast);
         }
     }
 
@@ -206,13 +206,19 @@ impl UpdateState {
 /// CLAIMED inside the locked settings write first (the scheduled task and
 /// this window cannot both win), then the toast posted
 /// (`UpdateAnnouncement.post`, claim-then-post rather than post-then-record).
-pub fn announce(settings: &mut SettingsWriter, manifest: &UpdateManifest) {
+/// `post` is [`post_toast`] in the window; tests pass a recorder, so a test run
+/// never shows a real toast.
+pub fn announce(
+    settings: &mut SettingsWriter,
+    manifest: &UpdateManifest,
+    post: impl FnOnce(&StringResolver, &UpdateManifest) -> bool,
+) {
     let version = manifest.version.clone();
     let mut claimed = false;
     settings.update(|document| claimed = checker::claim_announcement(document, &version));
     if claimed {
         let strings = presentation::strings_for(settings.document());
-        post_toast(&strings, manifest);
+        post(&strings, manifest);
     }
 }
 
@@ -233,11 +239,22 @@ pub fn open_download_page(manifest: &UpdateManifest) -> Option<PageMessage> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::cell::RefCell;
     use std::rc::Rc;
     use taigi_desktop_storage::{LiveSettings, SettingsFileStore};
 
     fn live(directory: &std::path::Path) -> Rc<LiveSettings> {
         Rc::new(LiveSettings::new(SettingsFileStore::new(directory)))
+    }
+
+    /// Records each post instead of showing a Windows toast.
+    fn recorder(
+        posted: &RefCell<Vec<String>>,
+    ) -> impl FnOnce(&StringResolver, &UpdateManifest) -> bool + '_ {
+        move |_, manifest| {
+            posted.borrow_mut().push(manifest.version.clone());
+            true
+        }
     }
 
     fn manifest() -> UpdateManifest {
@@ -255,17 +272,25 @@ mod tests {
         // false, so the toast is posted once however often the check runs.
         let directory = tempfile::tempdir().expect("a temporary settings directory");
         let mut settings = SettingsWriter::new(live(directory.path()));
-        announce(&mut settings, &manifest());
+        let before = settings.document().clone();
+        let posted = RefCell::new(Vec::new());
+        announce(&mut settings, &manifest(), recorder(&posted));
         let after_first = settings.document().clone();
-        announce(&mut settings, &manifest());
+        assert_ne!(after_first, before, "the first attempt records the claim");
+        announce(&mut settings, &manifest(), recorder(&posted));
         assert_eq!(
             settings.document(),
             &after_first,
             "the second attempt finds the version already claimed"
         );
+        assert_eq!(
+            *posted.borrow(),
+            ["9.9.9"],
+            "posted once, by the claiming attempt"
+        );
         assert!(
             settings.write_failure().is_none(),
-            "both attempts wrote the settings file"
+            "neither attempt reported a settings write failure"
         );
     }
 
@@ -277,8 +302,10 @@ mod tests {
         let directory = tempfile::tempdir().expect("a temporary settings directory");
         let mut settings = SettingsWriter::read_only_over(live(directory.path()), "APPDATA");
         let before = settings.document().clone();
-        announce(&mut settings, &manifest());
+        let posted = RefCell::new(Vec::new());
+        announce(&mut settings, &manifest(), recorder(&posted));
         assert_eq!(settings.document(), &before, "nothing was written");
+        assert!(posted.borrow().is_empty(), "no claim, so no toast");
         assert_eq!(settings.write_failure(), Some("APPDATA"));
     }
 
