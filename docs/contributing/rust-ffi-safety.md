@@ -126,8 +126,7 @@ pub extern "C" fn engine_shutdown(handle: EngineHandle) {
 Both extern fns wrap their bodies in `catch_unwind` per §1.2. Every `unsafe` block carries a `// SAFETY:` comment per §3. The handle is `#[repr(transparent)]` so the ABI matches `*mut Engine` exactly.
 
 - **Drop discipline**: every handle has an explicit free / shutdown entry matched on both sides; the Rust type implements `Drop` with the full teardown; a null handle is a no-op, never a dereference. Failure modes blocked: khiin-rs Kotlin declares `external fun shutdown(enginePtr: Long)` (`references/khiin-rs/android/app/src/main/kotlin/be/chiahpa/khiin/EngineManager.kt:39-48`) with no matching Rust extern (`references/khiin-rs/android/rust/src/lib.rs:11-79`) — the link succeeds and the call fails at runtime; khiin-rs Swift `EngineBridge` (`references/khiin-rs/swift/bridge/src/lib.rs:33-48`) has no `Drop`, so the boxed engine leaks on every teardown.
-- **Kotlin side**: wrap `jlong` in `@JvmInline value class EngineHandle(val raw: Long)`, freed from `close()` / `onDestroy`.
-- **Swift side**: swift-bridge generates the wrapper; the platform holds it via ARC and frees from `deinit`.
+- **Kotlin / Swift side** (only if a handle ever crosses those seams): Kotlin wraps `jlong` in a `@JvmInline value class`, freed from `close()` / `onDestroy`; Swift holds the swift-bridge wrapper via ARC and frees from `deinit`.
 - **C / C++ side**: the header documents ownership of every returned pointer and which `*_free` releases it.
 - **Never expose the raw pointer to platform code.** The handle is opaque.
 

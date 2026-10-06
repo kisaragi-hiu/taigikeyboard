@@ -70,7 +70,7 @@ Procedure when slice swaps `PlatformHelper.x()` → `RustEngineBridge.x()`:
 1. Delete `PlatformHelper.{swift,kt}` whole file (or migrated functions if the file has out-of-slice helpers).
 2. Delete the corresponding `*Test.kt` JVM tests entirely. Verify parity tests in `engine/<crate>/tests/*.rs` cover the deleted JVM cases before deletion.
 3. Fold non-migrated platform callers (cold-start fallbacks, URL builders) into the Rust round-trip too.
-4. If a B-class JVM test has been silently build-broken since a prior slice deleted referenced symbols, **delete it** as artifact cleanup. Check `git grep` for refs to deleted symbols (e.g. `TaigiPhonetics`, `ToneRestoration`, `TPSConverter`) inside `src/test/`.
+4. If a B-class JVM test has been silently build-broken since a prior slice deleted referenced symbols, **delete it** as artifact cleanup. Check `git grep` for refs to deleted symbols inside `src/test/`.
 
 Out of scope (still platform-owned): UI layer / KeyboardKit / FlorisBoard adapter, IME lifecycle, settings storage backends, logging sinks, URL semantics in URL builders.
 

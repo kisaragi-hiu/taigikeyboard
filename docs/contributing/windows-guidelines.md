@@ -96,9 +96,9 @@ shared engine). Read before modifying Windows code. Design record: `docs/archite
 - A rule in the Rust states itself and names its test; it does not cite a Swift file as its
   source. A `*.swift` cite in a Rust comment points at a live Swift twin, a shell port of a macOS
   view, an iOS counterpart or pinned history.
-- Named shell divergences so far: WinUI 3 chrome (not SwiftUI; window frame not persisted, label click does not toggle a switch, 外觀 mode is a native pop-up rather than the Mac's drawn thumbnails, the width floor is 600 so `NavigationView` can compact its pane), ⌘→Ctrl / ⌃→Alt modifier mapping, AppContainer
+- Named shell divergences: WinUI 3 chrome (not SwiftUI; window frame not persisted, label click does not toggle a switch, 外觀 mode is a native pop-up rather than the Mac's drawn thumbnails, the width floor is 600 so `NavigationView` can compact its pane), ⌘→Ctrl / ⌃→Alt modifier mapping, AppContainer
   hosts run on defaults, Windows toast instead of `UNUserNotification`, no `.taigi` pane (macOS
-  retired it too).
+  has none either).
 
 ## TSF / COM discipline
 
