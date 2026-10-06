@@ -111,15 +111,15 @@ final class LearningRecordsPageTests: XCTestCase {
     }
 
     /// The phrase lands in the custom dictionary, leaves this list, and the
-    /// move is said.
-    func testMoveToCustomDictionary_filesThePhraseAndReloadsWithoutIt() async throws {
+    /// add is said.
+    func testAddToCustomDictionary_filesThePhraseAndReloadsWithoutIt() async throws {
         let (model, client) = makeModel([record(.learnedPhrase, id: 1), record(.learnedPhrase, id: 2)])
         model.kind = .learnedPhrase
         await model.loadFirstPage()
 
-        try await model.moveToCustomDictionary(XCTUnwrap(model.list.rows.first { $0.id == 1 }))
+        try await model.addToCustomDictionary(XCTUnwrap(model.list.rows.first { $0.id == 1 }))
 
-        XCTAssertEqual(model.message, .done(.dictionaryLearningRecordsMovedToCustomDictionary))
+        XCTAssertEqual(model.message, .done(.dictionaryLearningRecordsAddedToCustomDictionary))
         XCTAssertEqual(model.list.rows.map(\.id), [2])
         XCTAssertEqual(model.list.countLabel, "1")
         let custom = try client.list(filter: "", limit: 10, offset: 0).rows
@@ -128,14 +128,28 @@ final class LearningRecordsPageTests: XCTestCase {
         XCTAssertFalse(model.activity.isWorking)
     }
 
+    /// A frequency row's word lands in the custom dictionary and the add is
+    /// said; the row stays listed, still weighting its word.
+    func testAddToCustomDictionary_filesTheWordAndKeepsTheFrequencyRow() async throws {
+        let (model, client) = makeModel([record(.frequency, id: 1), record(.frequency, id: 2)])
+        await model.loadFirstPage()
+
+        try await model.addToCustomDictionary(XCTUnwrap(model.list.rows.first { $0.id == 1 }))
+
+        XCTAssertEqual(model.message, .done(.dictionaryLearningRecordsAddedToCustomDictionary))
+        XCTAssertEqual(model.list.rows.map(\.id), [1, 2])
+        let custom = try client.list(filter: "", limit: 10, offset: 0).rows
+        XCTAssertEqual(custom.map(\.hanji), ["字1"])
+    }
+
     /// A refusal — a full dictionary — is a write failure, and the row stays.
-    func testMoveToCustomDictionary_refused_isAWriteFailureAndKeepsTheRow() async throws {
+    func testAddToCustomDictionary_refused_isAWriteFailureAndKeepsTheRow() async throws {
         let (model, client) = makeModel([record(.learnedPhrase, id: 1)])
-        client.refusesLearningRecordMoves = true
+        client.refusesLearningRecordAdds = true
         model.kind = .learnedPhrase
         await model.loadFirstPage()
 
-        try await model.moveToCustomDictionary(XCTUnwrap(model.list.rows.first))
+        try await model.addToCustomDictionary(XCTUnwrap(model.list.rows.first))
 
         guard case .failure(.dictionaryLearningRecordsWriteFailed, _)? = model.message else {
             return XCTFail("expected the write-failed alert, got \(String(describing: model.message))")

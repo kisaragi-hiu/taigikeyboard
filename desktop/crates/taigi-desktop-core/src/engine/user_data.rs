@@ -11,10 +11,10 @@
 use std::path::Path;
 
 use protos::engine::{
-    request, response, user_data_request, user_data_response, DeleteCustomEntry,
-    DeleteLearningRecord, ExportCustomCsv, ImportCustomCsv, ListCustomEntries, ListLearningRecords,
-    MoveLearningRecordToCustomDictionary, OpenUserData, ResetUserData, SaveCustomEntry,
-    SearchCustomEntries, SetLearningRecordCount, UserDataJournal, UserDataRequest,
+    request, response, user_data_request, user_data_response, AddLearningRecordToCustomDictionary,
+    DeleteCustomEntry, DeleteLearningRecord, ExportCustomCsv, ImportCustomCsv, ListCustomEntries,
+    ListLearningRecords, OpenUserData, ResetUserData, SaveCustomEntry, SearchCustomEntries,
+    SetLearningRecordCount, UserDataJournal, UserDataRequest,
 };
 pub use protos::engine::{
     CustomCsvImported, CustomDictionaryEntry, CustomDictionaryRefusal, CustomEntries,
@@ -364,28 +364,29 @@ pub fn delete_learning_record(record: LearningRecord) -> Result<bool, UserDataEr
     }
 }
 
-/// Makes the learned phrase `record` a custom word and forgets it; a word
-/// the dictionary holds already is not added twice. A refusal (no search
-/// key, a full dictionary) is `UserDataError::Refused` and keeps the phrase.
-pub fn move_learning_record_to_custom_dictionary(
+/// Makes `record`'s word a custom word — a learned phrase is then forgotten,
+/// a frequency row stays; a word the dictionary holds already is not added
+/// twice. A refusal (no search key, a full dictionary) is
+/// `UserDataError::Refused` and keeps the row.
+pub fn add_learning_record_to_custom_dictionary(
     record: LearningRecord,
 ) -> Result<(), UserDataError> {
-    let op = "learningRecordMoveToCustomDictionary";
+    let op = "learningRecordAddToCustomDictionary";
     match page_request(
-        user_data_request::Method::MoveLearningRecordToCustomDictionary(
-            MoveLearningRecordToCustomDictionary {
+        user_data_request::Method::AddLearningRecordToCustomDictionary(
+            AddLearningRecordToCustomDictionary {
                 record: Some(record),
             },
         ),
         op,
     )? {
-        user_data_response::Result::LearningRecordMoved(moved)
-            if moved.refusal() == CustomDictionaryRefusal::None =>
+        user_data_response::Result::LearningRecordAddedToCustomDictionary(added)
+            if added.refusal() == CustomDictionaryRefusal::None =>
         {
             Ok(())
         }
-        user_data_response::Result::LearningRecordMoved(moved) => {
-            Err(refused(moved.refusal, moved.detail))
+        user_data_response::Result::LearningRecordAddedToCustomDictionary(added) => {
+            Err(refused(added.refusal, added.detail))
         }
         _ => Err(other_result(op)),
     }

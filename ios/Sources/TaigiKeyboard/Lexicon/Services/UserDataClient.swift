@@ -106,11 +106,11 @@ protocol UserDataClient: Sendable {
     func setLearningRecordCount(_ record: Taigi_Engine_LearningRecord, count: Int64) async throws -> Bool
     /// Forgets the listed `record`; `false` when the row was already gone.
     func deleteLearningRecord(_ record: Taigi_Engine_LearningRecord) async throws -> Bool
-    /// Files the listed learned phrase as a custom word (roman = its TL,
-    /// hanji = its text) unless already stored, then forgets the phrase. A
-    /// refusal (a full dictionary, an empty or unsearchable reading) keeps
-    /// the phrase and throws.
-    func moveLearningRecordToCustomDictionary(_ record: Taigi_Engine_LearningRecord) async throws
+    /// Files the listed row's word as a custom word (roman = its TL,
+    /// hanji = its text) unless already stored, then forgets a learned phrase
+    /// (a frequency row stays). A refusal (a full dictionary, an unsearchable
+    /// reading) keeps the row and throws.
+    func addLearningRecordToCustomDictionary(_ record: Taigi_Engine_LearningRecord) async throws
 }
 
 /// The shipped client: the engine's user-data ops, one at a time on a queue
@@ -227,12 +227,12 @@ struct EngineUserDataClient: UserDataClient {
             .removed
     }
 
-    func moveLearningRecordToCustomDictionary(_ record: Taigi_Engine_LearningRecord) async throws {
-        let moved = try await engine("learningRecordMoveToCustomDictionary") {
-            RustEngineBridge.learningRecordMoveToCustomDictionary(record)
+    func addLearningRecordToCustomDictionary(_ record: Taigi_Engine_LearningRecord) async throws {
+        let added = try await engine("learningRecordAddToCustomDictionary") {
+            RustEngineBridge.learningRecordAddToCustomDictionary(record)
         }
-        if moved.refusal != .none {
-            throw UserDataRefused(detail: moved.detail)
+        if added.refusal != .none {
+            throw UserDataRefused(detail: added.detail)
         }
     }
 

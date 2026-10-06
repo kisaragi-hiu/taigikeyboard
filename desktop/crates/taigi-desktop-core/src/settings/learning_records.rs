@@ -100,17 +100,17 @@ pub fn delete_job(record: LearningRecord) -> JobOutcome {
     applied(user_data::delete_learning_record(record), None)
 }
 
-/// Makes the learned phrase `record` a custom word; the reload takes it off
-/// the list, so the receipt says where it went. The page offers this on the
-/// Phrases list only: a frequency row keeps weighting its word.
-pub fn move_to_custom_dictionary_job(record: LearningRecord) -> JobOutcome {
+/// Makes `record`'s word a custom word; the receipt says where it went — the
+/// reload takes a learned phrase off its list, a frequency row stays. The page
+/// offers this on a row whose `can_add_to_custom_dictionary` is set.
+pub fn add_to_custom_dictionary_job(record: LearningRecord) -> JobOutcome {
     applied(
-        user_data::move_learning_record_to_custom_dictionary(record).map(|()| true),
-        Some(StringKey::DictionaryLearningRecordsMovedToCustomDictionary),
+        user_data::add_learning_record_to_custom_dictionary(record).map(|()| true),
+        Some(StringKey::DictionaryLearningRecordsAddedToCustomDictionary),
     )
 }
 
-/// Every write reloads: the row moved, went, or was never there. A write
+/// Every write reloads: the row was added, went, or was never there. A write
 /// that landed says `receipt`, when it has one; a row already gone (deleted
 /// elsewhere, evicted, its id taken by another word) is said, not reported
 /// as a failure.
@@ -212,15 +212,15 @@ mod tests {
     }
 
     #[test]
-    fn a_move_says_it_landed_or_why_not_and_reloads() {
+    fn an_add_says_it_landed_or_why_not_and_reloads() {
         assert_eq!(
             applied(
                 Ok(true),
-                Some(StringKey::DictionaryLearningRecordsMovedToCustomDictionary)
+                Some(StringKey::DictionaryLearningRecordsAddedToCustomDictionary)
             ),
             JobOutcome {
                 message: Some(PageMessage::Done(
-                    StringKey::DictionaryLearningRecordsMovedToCustomDictionary
+                    StringKey::DictionaryLearningRecordsAddedToCustomDictionary
                 )),
                 is_reload_wanted: true
             }
@@ -230,7 +230,7 @@ mod tests {
                 refusal: CustomDictionaryRefusal::Full,
                 detail: "custom dictionary is full (max 30000 entries)".to_owned(),
             }),
-            Some(StringKey::DictionaryLearningRecordsMovedToCustomDictionary),
+            Some(StringKey::DictionaryLearningRecordsAddedToCustomDictionary),
         );
         assert!(refused.is_reload_wanted);
         assert_eq!(

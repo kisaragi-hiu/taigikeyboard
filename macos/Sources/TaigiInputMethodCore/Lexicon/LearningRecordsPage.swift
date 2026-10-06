@@ -3,8 +3,8 @@
 // The Custom Dictionary page's shape (`CustomDictionaryPage.swift`) over the
 // engine's learning stores: a kind and an order picker over a filter, a paged
 // table, a count sheet and `−`. Nothing is added here by hand — a word the
-// user wants is a custom word, so a learned phrase can be moved there (Add to
-// Custom Dictionary) — and no wipe: Delete Learning Records stays on Custom
+// user wants is a custom word, so a listed row's word can be filed there (Add
+// to Custom Dictionary) — and no wipe: Delete Learning Records stays on Custom
 // Dictionary.
 // Design: `docs/architecture/learning-records-page-roadmap.md`.
 
@@ -120,12 +120,12 @@ final class LearningRecordsPageModel {
         await perform { try $0.deleteLearningRecord(record) }
     }
 
-    /// Files a learned phrase in the custom dictionary and forgets it. The
-    /// receipt is always said — the row leaves this list either way it
-    /// succeeds, added or already stored — as desktop-core's job does.
-    func moveToCustomDictionary(_ record: Taigi_Engine_LearningRecord) async {
-        await perform(receipt: .done(.dictionaryLearningRecordsMovedToCustomDictionary)) {
-            try $0.moveLearningRecordToCustomDictionary(record)
+    /// Files the row's word in the custom dictionary; the engine then forgets
+    /// a learned phrase and keeps a frequency row. The receipt is always said
+    /// — added or already stored — as desktop-core's job does.
+    func addToCustomDictionary(_ record: Taigi_Engine_LearningRecord) async {
+        await perform(receipt: .done(.dictionaryLearningRecordsAddedToCustomDictionary)) {
+            try $0.addLearningRecordToCustomDictionary(record)
             return true
         }
     }
@@ -265,9 +265,9 @@ struct LearningRecordsPage: View {
         .contextMenu(forSelectionType: Taigi_Engine_LearningRecord.ID.self) { ids in
             if let record = record(for: ids.first) {
                 Button(language.string(.dictionaryLearningRecordsEditCount)) { editing = record }
-                if model.kind == .learnedPhrase {
-                    Button(language.string(.dictionaryLearningRecordsMoveToCustomDictionary)) {
-                        Task { await model.moveToCustomDictionary(record) }
+                if record.canAddToCustomDictionary {
+                    Button(language.string(.dictionaryLearningRecordsAddToCustomDictionary)) {
+                        Task { await model.addToCustomDictionary(record) }
                     }
                 }
                 Button(language.string(.commonDelete), role: .destructive) {
@@ -296,8 +296,7 @@ struct LearningRecordsPage: View {
     }
 
     /// `−` under the table — nothing is added here by hand — with Add to
-    /// Custom Dictionary beside it for learned phrases, and the pager at its
-    /// trailing end.
+    /// Custom Dictionary beside it, and the pager at its trailing end.
     private var recordTableControls: some View {
         UserDataListControls(
             isRemoveEnabled: model.list.selectedRow != nil,
@@ -305,7 +304,7 @@ struct LearningRecordsPage: View {
                 guard let selectedRecord = model.list.selectedRow else { return }
                 Task { await model.delete(selectedRecord) }
             },
-            rowAction: moveToCustomDictionaryControl,
+            rowAction: addToCustomDictionaryControl,
         ) {
             UserDataListPager(
                 page: model.list.page,
@@ -317,14 +316,17 @@ struct LearningRecordsPage: View {
     }
 
     /// The button form of the context menu's Add to Custom Dictionary, so it
-    /// is found without a right-click. Word frequency rows never move, so
-    /// that list draws no button at all.
-    private var moveToCustomDictionaryControl: (labelKey: StringKey, action: () -> Void)? {
-        guard model.kind == .learnedPhrase else { return nil }
-        return (.dictionaryLearningRecordsMoveToCustomDictionary, {
-            guard let selectedRecord = model.list.selectedRow else { return }
-            Task { await model.moveToCustomDictionary(selectedRecord) }
-        })
+    /// is found without a right-click. Off unless the selected row is one the
+    /// engine says can be added (one syllable or no Hanji is not).
+    private var addToCustomDictionaryControl: (labelKey: StringKey, isEnabled: Bool, action: () -> Void) {
+        (
+            .dictionaryLearningRecordsAddToCustomDictionary,
+            model.list.selectedRow?.canAddToCustomDictionary == true,
+            {
+                guard let selectedRecord = model.list.selectedRow else { return }
+                Task { await model.addToCustomDictionary(selectedRecord) }
+            },
+        )
     }
 
     private func record(for id: Taigi_Engine_LearningRecord.ID?) -> Taigi_Engine_LearningRecord? {

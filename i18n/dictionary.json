@@ -1951,8 +1951,8 @@
         "ja": "学習記録を変更できませんでした"
       }
     },
-    "learningRecordsMoveToCustomDictionary": {
-      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). Action on one learned phrase (Phrases only): adds it to the custom dictionary and removes it from the list (row menu / swipe / button tooltip).",
+    "learningRecordsAddToCustomDictionary": {
+      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). Action on one row (a learned phrase or word-frequency row of two syllables or more with Hanji): adds its word to the custom dictionary; a learned phrase then leaves the list, a frequency row stays (row menu / swipe / button tooltip).",
       "scope": {
         "platforms": [
           "android",
@@ -1973,8 +1973,8 @@
         "ja": "カスタム辞書に追加"
       }
     },
-    "learningRecordsMovedToCustomDictionary": {
-      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). Notice after a learned phrase was added to the custom dictionary (or found there already) and left the list.",
+    "learningRecordsAddedToCustomDictionary": {
+      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). Notice after a row's word was added to the custom dictionary (or found there already).",
       "scope": {
         "platforms": [
           "android",

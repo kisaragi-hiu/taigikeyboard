@@ -170,20 +170,23 @@ final class FakeUserDataClient: UserDataClient, @unchecked Sendable {
         }
     }
 
-    /// Set to refuse every move, as the engine does for a full dictionary.
-    var refusesLearningRecordMoves = false
+    /// Set to refuse every add, as the engine does for a full dictionary.
+    var refusesLearningRecordAdds = false
 
-    /// Files the phrase as a custom word unless that word is stored already,
-    /// then forgets the row; a refusal keeps it — as the engine does.
-    func moveLearningRecordToCustomDictionary(_ record: Taigi_Engine_LearningRecord) throws {
+    /// Files the row's word as a custom word unless that word is stored
+    /// already, then forgets a learned phrase and keeps a frequency row; a
+    /// refusal keeps it — as the engine does.
+    func addLearningRecordToCustomDictionary(_ record: Taigi_Engine_LearningRecord) throws {
         try lock.withLock {
-            if refusesLearningRecordMoves {
+            if refusesLearningRecordAdds {
                 throw UserDataClientError.refused(detail: "custom dictionary is full (max 30000 entries)")
             }
             if !rows.contains(where: { $0.roman == record.tl && $0.hanji == record.text }) {
                 rows.insert(CustomDictionaryRow(roman: record.tl, hanji: record.text), at: 0)
             }
-            learningRecords.removeAll { Self.isSameRow($0, record) }
+            if record.kind == .learnedPhrase {
+                learningRecords.removeAll { Self.isSameRow($0, record) }
+            }
         }
     }
 

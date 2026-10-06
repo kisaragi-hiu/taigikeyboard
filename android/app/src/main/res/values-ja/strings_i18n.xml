@@ -122,8 +122,8 @@
     <string name="i18n_dictionary_learningRecordGone">この記録はもうありません</string>
     <string name="i18n_dictionary_learningRecordsReadFailed">学習記録を読み込めませんでした</string>
     <string name="i18n_dictionary_learningRecordsWriteFailed">学習記録を変更できませんでした</string>
-    <string name="i18n_dictionary_learningRecordsMoveToCustomDictionary">カスタム辞書に追加</string>
-    <string name="i18n_dictionary_learningRecordsMovedToCustomDictionary">カスタム辞書に追加しました</string>
+    <string name="i18n_dictionary_learningRecordsAddToCustomDictionary">カスタム辞書に追加</string>
+    <string name="i18n_dictionary_learningRecordsAddedToCustomDictionary">カスタム辞書に追加しました</string>
     <string name="i18n_home_appHeaderTitle">台湾語キーボード</string>
     <string name="i18n_home_setupKeyboard">キーボードを有効にして使い始めましょう</string>
     <string name="i18n_home_typingGuide">入力ガイド</string>

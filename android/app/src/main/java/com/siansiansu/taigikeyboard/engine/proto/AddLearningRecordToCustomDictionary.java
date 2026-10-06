@@ -7,28 +7,32 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * Moves one learned phrase into the custom dictionary: adds it as a custom
- * word (roman = `record.tl`, hanji = `record.text`) unless the dictionary
- * already holds that word — the same Hanji with the same canonical TL,
- * however its roman is spelled — then forgets the learned phrase as
- * `DeleteLearningRecord` does (a row already gone is not a failure). The
- * custom word offers the whole phrase from then on, as the learned phrase
- * did, so nothing is lost. Refused as `SaveCustomEntry` is (FULL, or
- * UNSEARCHABLE for a TL that derives no search key), and a refused move
- * keeps the phrase. Learned phrases only:
- * a frequency row keeps weighting the word it counts, and an association is
- * not a word (`FAIL_INVARIANT`).
+ * Adds one row's word to the custom dictionary (roman = `record.tl`,
+ * hanji = `record.text`) unless the dictionary already holds that word —
+ * the same Hanji with the same canonical TL, however its roman is spelled.
+ * What happens to the row after depends on its kind:
+ * - a learned phrase is then forgotten as `DeleteLearningRecord` forgets it
+ * (a row already gone is not a failure): the custom word offers the whole
+ * phrase from then on, as the learned phrase did, so nothing is lost;
+ * - a word-frequency row stays as it is: it keeps weighting the word it
+ * counts.
+ * Refused as `SaveCustomEntry` is (FULL, or UNSEARCHABLE for a TL that
+ * derives no search key), and a refused add keeps the row. A row whose
+ * `can_add_to_custom_dictionary` the engine would answer false (an
+ * association, no Hanji, a one-syllable TL) is `FAIL_INVARIANT`: a custom
+ * word overrides its toneless key in continuous input, so one syllable is
+ * left to a deliberate custom-word entry.
  * </pre>
  *
- * Protobuf type {@code taigi.engine.MoveLearningRecordToCustomDictionary}
+ * Protobuf type {@code taigi.engine.AddLearningRecordToCustomDictionary}
  */
 @com.google.protobuf.Generated
-public  final class MoveLearningRecordToCustomDictionary extends
+public  final class AddLearningRecordToCustomDictionary extends
     com.google.protobuf.GeneratedMessageLite<
-        MoveLearningRecordToCustomDictionary, MoveLearningRecordToCustomDictionary.Builder> implements
-    // @@protoc_insertion_point(message_implements:taigi.engine.MoveLearningRecordToCustomDictionary)
-    MoveLearningRecordToCustomDictionaryOrBuilder {
-  private MoveLearningRecordToCustomDictionary() {
+        AddLearningRecordToCustomDictionary, AddLearningRecordToCustomDictionary.Builder> implements
+    // @@protoc_insertion_point(message_implements:taigi.engine.AddLearningRecordToCustomDictionary)
+    AddLearningRecordToCustomDictionaryOrBuilder {
+  private AddLearningRecordToCustomDictionary() {
   }
   private int bitField0_;
   public static final int RECORD_FIELD_NUMBER = 1;
@@ -78,50 +82,50 @@ public  final class MoveLearningRecordToCustomDictionary extends
     bitField0_ = (bitField0_ & ~0x00000001);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.MoveLearningRecordToCustomDictionary parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.AddLearningRecordToCustomDictionary parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.MoveLearningRecordToCustomDictionary parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.AddLearningRecordToCustomDictionary parseFrom(
       java.nio.ByteBuffer data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.MoveLearningRecordToCustomDictionary parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.AddLearningRecordToCustomDictionary parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.MoveLearningRecordToCustomDictionary parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.AddLearningRecordToCustomDictionary parseFrom(
       com.google.protobuf.ByteString data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.MoveLearningRecordToCustomDictionary parseFrom(byte[] data)
+  public static com.siansiansu.taigikeyboard.engine.proto.AddLearningRecordToCustomDictionary parseFrom(byte[] data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.MoveLearningRecordToCustomDictionary parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.AddLearningRecordToCustomDictionary parseFrom(
       byte[] data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.MoveLearningRecordToCustomDictionary parseFrom(java.io.InputStream input)
+  public static com.siansiansu.taigikeyboard.engine.proto.AddLearningRecordToCustomDictionary parseFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, input);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.MoveLearningRecordToCustomDictionary parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.AddLearningRecordToCustomDictionary parseFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -129,24 +133,24 @@ public  final class MoveLearningRecordToCustomDictionary extends
         DEFAULT_INSTANCE, input, extensionRegistry);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.MoveLearningRecordToCustomDictionary parseDelimitedFrom(java.io.InputStream input)
+  public static com.siansiansu.taigikeyboard.engine.proto.AddLearningRecordToCustomDictionary parseDelimitedFrom(java.io.InputStream input)
       throws java.io.IOException {
     return parseDelimitedFrom(DEFAULT_INSTANCE, input);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.MoveLearningRecordToCustomDictionary parseDelimitedFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.AddLearningRecordToCustomDictionary parseDelimitedFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return parseDelimitedFrom(DEFAULT_INSTANCE, input, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.MoveLearningRecordToCustomDictionary parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.AddLearningRecordToCustomDictionary parseFrom(
       com.google.protobuf.CodedInputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, input);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.MoveLearningRecordToCustomDictionary parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.AddLearningRecordToCustomDictionary parseFrom(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -157,33 +161,37 @@ public  final class MoveLearningRecordToCustomDictionary extends
   public static Builder newBuilder() {
     return (Builder) DEFAULT_INSTANCE.createBuilder();
   }
-  public static Builder newBuilder(com.siansiansu.taigikeyboard.engine.proto.MoveLearningRecordToCustomDictionary prototype) {
+  public static Builder newBuilder(com.siansiansu.taigikeyboard.engine.proto.AddLearningRecordToCustomDictionary prototype) {
     return DEFAULT_INSTANCE.createBuilder(prototype);
   }
 
   /**
    * <pre>
-   * Moves one learned phrase into the custom dictionary: adds it as a custom
-   * word (roman = `record.tl`, hanji = `record.text`) unless the dictionary
-   * already holds that word — the same Hanji with the same canonical TL,
-   * however its roman is spelled — then forgets the learned phrase as
-   * `DeleteLearningRecord` does (a row already gone is not a failure). The
-   * custom word offers the whole phrase from then on, as the learned phrase
-   * did, so nothing is lost. Refused as `SaveCustomEntry` is (FULL, or
-   * UNSEARCHABLE for a TL that derives no search key), and a refused move
-   * keeps the phrase. Learned phrases only:
-   * a frequency row keeps weighting the word it counts, and an association is
-   * not a word (`FAIL_INVARIANT`).
+   * Adds one row's word to the custom dictionary (roman = `record.tl`,
+   * hanji = `record.text`) unless the dictionary already holds that word —
+   * the same Hanji with the same canonical TL, however its roman is spelled.
+   * What happens to the row after depends on its kind:
+   * - a learned phrase is then forgotten as `DeleteLearningRecord` forgets it
+   * (a row already gone is not a failure): the custom word offers the whole
+   * phrase from then on, as the learned phrase did, so nothing is lost;
+   * - a word-frequency row stays as it is: it keeps weighting the word it
+   * counts.
+   * Refused as `SaveCustomEntry` is (FULL, or UNSEARCHABLE for a TL that
+   * derives no search key), and a refused add keeps the row. A row whose
+   * `can_add_to_custom_dictionary` the engine would answer false (an
+   * association, no Hanji, a one-syllable TL) is `FAIL_INVARIANT`: a custom
+   * word overrides its toneless key in continuous input, so one syllable is
+   * left to a deliberate custom-word entry.
    * </pre>
    *
-   * Protobuf type {@code taigi.engine.MoveLearningRecordToCustomDictionary}
+   * Protobuf type {@code taigi.engine.AddLearningRecordToCustomDictionary}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageLite.Builder<
-        com.siansiansu.taigikeyboard.engine.proto.MoveLearningRecordToCustomDictionary, Builder> implements
-      // @@protoc_insertion_point(builder_implements:taigi.engine.MoveLearningRecordToCustomDictionary)
-      com.siansiansu.taigikeyboard.engine.proto.MoveLearningRecordToCustomDictionaryOrBuilder {
-    // Construct using com.siansiansu.taigikeyboard.engine.proto.MoveLearningRecordToCustomDictionary.newBuilder()
+        com.siansiansu.taigikeyboard.engine.proto.AddLearningRecordToCustomDictionary, Builder> implements
+      // @@protoc_insertion_point(builder_implements:taigi.engine.AddLearningRecordToCustomDictionary)
+      com.siansiansu.taigikeyboard.engine.proto.AddLearningRecordToCustomDictionaryOrBuilder {
+    // Construct using com.siansiansu.taigikeyboard.engine.proto.AddLearningRecordToCustomDictionary.newBuilder()
     private Builder() {
       super(DEFAULT_INSTANCE);
     }
@@ -236,7 +244,7 @@ public  final class MoveLearningRecordToCustomDictionary extends
       return this;
     }
 
-    // @@protoc_insertion_point(builder_scope:taigi.engine.MoveLearningRecordToCustomDictionary)
+    // @@protoc_insertion_point(builder_scope:taigi.engine.AddLearningRecordToCustomDictionary)
   }
   @java.lang.Override
   @java.lang.SuppressWarnings({"ThrowNull"})
@@ -245,7 +253,7 @@ public  final class MoveLearningRecordToCustomDictionary extends
       java.lang.Object arg0, java.lang.Object arg1) {
     switch (method) {
       case NEW_MUTABLE_INSTANCE: {
-        return new com.siansiansu.taigikeyboard.engine.proto.MoveLearningRecordToCustomDictionary();
+        return new com.siansiansu.taigikeyboard.engine.proto.AddLearningRecordToCustomDictionary();
       }
       case NEW_BUILDER: {
         return new Builder();
@@ -263,13 +271,13 @@ public  final class MoveLearningRecordToCustomDictionary extends
         return DEFAULT_INSTANCE;
       }
       case GET_PARSER: {
-        com.google.protobuf.Parser<com.siansiansu.taigikeyboard.engine.proto.MoveLearningRecordToCustomDictionary> parser = PARSER;
+        com.google.protobuf.Parser<com.siansiansu.taigikeyboard.engine.proto.AddLearningRecordToCustomDictionary> parser = PARSER;
         if (parser == null) {
-          synchronized (com.siansiansu.taigikeyboard.engine.proto.MoveLearningRecordToCustomDictionary.class) {
+          synchronized (com.siansiansu.taigikeyboard.engine.proto.AddLearningRecordToCustomDictionary.class) {
             parser = PARSER;
             if (parser == null) {
               parser =
-                  new DefaultInstanceBasedParser<com.siansiansu.taigikeyboard.engine.proto.MoveLearningRecordToCustomDictionary>(
+                  new DefaultInstanceBasedParser<com.siansiansu.taigikeyboard.engine.proto.AddLearningRecordToCustomDictionary>(
                       DEFAULT_INSTANCE);
               PARSER = parser;
             }
@@ -289,24 +297,24 @@ public  final class MoveLearningRecordToCustomDictionary extends
   }
 
 
-  // @@protoc_insertion_point(class_scope:taigi.engine.MoveLearningRecordToCustomDictionary)
-  private static final com.siansiansu.taigikeyboard.engine.proto.MoveLearningRecordToCustomDictionary DEFAULT_INSTANCE;
+  // @@protoc_insertion_point(class_scope:taigi.engine.AddLearningRecordToCustomDictionary)
+  private static final com.siansiansu.taigikeyboard.engine.proto.AddLearningRecordToCustomDictionary DEFAULT_INSTANCE;
   static {
-    MoveLearningRecordToCustomDictionary defaultInstance = new MoveLearningRecordToCustomDictionary();
+    AddLearningRecordToCustomDictionary defaultInstance = new AddLearningRecordToCustomDictionary();
     // New instances are implicitly immutable so no need to make
     // immutable.
     DEFAULT_INSTANCE = defaultInstance;
     com.google.protobuf.GeneratedMessageLite.registerDefaultInstance(
-      MoveLearningRecordToCustomDictionary.class, defaultInstance);
+      AddLearningRecordToCustomDictionary.class, defaultInstance);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.MoveLearningRecordToCustomDictionary getDefaultInstance() {
+  public static com.siansiansu.taigikeyboard.engine.proto.AddLearningRecordToCustomDictionary getDefaultInstance() {
     return DEFAULT_INSTANCE;
   }
 
-  private static volatile com.google.protobuf.Parser<MoveLearningRecordToCustomDictionary> PARSER;
+  private static volatile com.google.protobuf.Parser<AddLearningRecordToCustomDictionary> PARSER;
 
-  public static com.google.protobuf.Parser<MoveLearningRecordToCustomDictionary> parser() {
+  public static com.google.protobuf.Parser<AddLearningRecordToCustomDictionary> parser() {
     return DEFAULT_INSTANCE.getParserForType();
   }
 }

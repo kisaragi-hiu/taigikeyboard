@@ -13,8 +13,8 @@ import com.siansiansu.taigikeyboard.engine.customDictionaryImportCsv
 import com.siansiansu.taigikeyboard.engine.customDictionaryList
 import com.siansiansu.taigikeyboard.engine.customDictionarySave
 import com.siansiansu.taigikeyboard.engine.customDictionarySearch
+import com.siansiansu.taigikeyboard.engine.learningRecordAddToCustomDictionary
 import com.siansiansu.taigikeyboard.engine.learningRecordDelete
-import com.siansiansu.taigikeyboard.engine.learningRecordMoveToCustomDictionary
 import com.siansiansu.taigikeyboard.engine.learningRecordSetCount
 import com.siansiansu.taigikeyboard.engine.learningRecordsList
 import com.siansiansu.taigikeyboard.engine.proto.BackupRefusal
@@ -145,12 +145,12 @@ interface UserDataClient {
     suspend fun deleteLearningRecord(record: LearningRecord): Boolean
 
     /**
-     * Adds the listed learned phrase [record] to the custom dictionary (TL as
-     * roman, text as Hanji; nothing added when the word is already there) and
-     * forgets the row. A refusal — a full dictionary, a reading it cannot
+     * Adds the listed row [record]'s word to the custom dictionary (TL as
+     * roman, text as Hanji; nothing added when the word is already there);
+     * the engine then forgets a learned phrase and keeps a frequency row. A refusal — a full dictionary, a reading it cannot
      * store — throws [UserDataException.Refused] and keeps the row.
      */
-    suspend fun moveLearningRecordToCustomDictionary(record: LearningRecord)
+    suspend fun addLearningRecordToCustomDictionary(record: LearningRecord)
 
     companion object {
         /**
@@ -243,10 +243,10 @@ object EngineUserDataClient : UserDataClient {
 
     override suspend fun deleteLearningRecord(record: LearningRecord): Boolean = engine("learningRecordDelete") { RustEngineBridge.learningRecordDelete(record) }.removed
 
-    override suspend fun moveLearningRecordToCustomDictionary(record: LearningRecord) {
-        val moved = engine("learningRecordMoveToCustomDictionary") { RustEngineBridge.learningRecordMoveToCustomDictionary(record) }
-        if (moved.refusal != CustomDictionaryRefusal.CUSTOM_DICTIONARY_REFUSAL_NONE) {
-            throw UserDataException.Refused(moved.refusal, moved.detail)
+    override suspend fun addLearningRecordToCustomDictionary(record: LearningRecord) {
+        val added = engine("learningRecordAddToCustomDictionary") { RustEngineBridge.learningRecordAddToCustomDictionary(record) }
+        if (added.refusal != CustomDictionaryRefusal.CUSTOM_DICTIONARY_REFUSAL_NONE) {
+            throw UserDataException.Refused(added.refusal, added.detail)
         }
     }
 

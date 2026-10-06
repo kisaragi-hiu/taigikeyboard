@@ -4,7 +4,7 @@
 //! picker over a filter, rows fetched one PAGE at a time (10), a list whose
 //! selection drives the edit-count / add-to-custom-dictionary / delete
 //! verbs, and the pager under it. No add — a word the user wants is a
-//! custom word, which a learned phrase can become here — and no wipe here:
+//! custom word, which a listed row's word can become here — and no wipe here:
 //! the one destructive verb for every learning record stays on Custom
 //! Dictionary.
 //!
@@ -24,7 +24,7 @@ use taigi_desktop_core::engine::user_data::{
     LearningRecord, LearningRecordKind, LearningRecordOrder,
 };
 use taigi_desktop_core::settings::learning_records::{
-    count_note, delete_job, fetch, last_used_label, move_to_custom_dictionary_job, order_label,
+    add_to_custom_dictionary_job, count_note, delete_job, fetch, last_used_label, order_label,
     set_count_job, Listing, KINDS, MAX_COUNT, ORDERS,
 };
 use taigi_desktop_core::settings::listing::{
@@ -62,7 +62,7 @@ struct Widgets {
     list: gtk::ListBox,
     empty: gtk::Label,
     edit: gtk::Button,
-    move_to_custom_dictionary: gtk::Button,
+    add_to_custom_dictionary: gtk::Button,
     delete: gtk::Button,
     previous: gtk::Button,
     next: gtk::Button,
@@ -160,16 +160,16 @@ impl LearningRecordsPage {
             "document-edit-symbolic",
             strings.resolve(StringKey::DictionaryLearningRecordsEditCount),
         );
-        let move_to_custom_dictionary = icon_button(
+        let add_to_custom_dictionary = icon_button(
             "list-add-symbolic",
-            strings.resolve(StringKey::DictionaryLearningRecordsMoveToCustomDictionary),
+            strings.resolve(StringKey::DictionaryLearningRecordsAddToCustomDictionary),
         );
         let delete = icon_button(
             "list-remove-symbolic",
             strings.resolve(StringKey::CommonDelete),
         );
         verbs.append(&edit);
-        verbs.append(&move_to_custom_dictionary);
+        verbs.append(&add_to_custom_dictionary);
         verbs.append(&delete);
         let (previous, page_label, next) = append_pager(&verbs, &strings);
         entries.add(&verbs);
@@ -196,7 +196,7 @@ impl LearningRecordsPage {
                 list,
                 empty,
                 edit,
-                move_to_custom_dictionary,
+                add_to_custom_dictionary,
                 delete,
                 previous,
                 next,
@@ -280,13 +280,13 @@ impl LearningRecordsPage {
         });
         let weak = Rc::downgrade(self);
         self.widgets
-            .move_to_custom_dictionary
+            .add_to_custom_dictionary
             .connect_clicked(move |_| {
                 let Some(page) = weak.upgrade() else { return };
                 let Some(row) = page.state.borrow().listing.selected_row().cloned() else {
                     return;
                 };
-                page.begin_job(move || move_to_custom_dictionary_job(row));
+                page.begin_job(move || add_to_custom_dictionary_job(row));
             });
         let weak = Rc::downgrade(self);
         self.widgets.previous.connect_clicked(move |_| {
@@ -529,22 +529,23 @@ impl LearningRecordsPage {
     }
 
     /// The ✎, + and − buttons: on while a row is selected and nothing runs.
-    /// The + (add to custom dictionary) shows on the phrases kind only: a
-    /// frequency row keeps weighting its word.
+    /// The + (add to custom dictionary) also needs a row the engine says can
+    /// be added: one syllable or no Hanji keeps it off on either kind.
     fn render_verbs(&self) {
-        let (is_busy, has_selection, is_phrases_kind) = {
+        let (is_busy, has_selection, can_add_selection) = {
             let state = self.state.borrow();
+            let selected_row = state.listing.selected_row();
             (
                 state.job.is_busy_shown(),
-                state.listing.selected_row().is_some(),
-                state.kind == LearningRecordKind::LearnedPhrase,
+                selected_row.is_some(),
+                selected_row.is_some_and(|row| row.can_add_to_custom_dictionary),
             )
         };
         let is_on = !is_busy && has_selection;
         self.widgets.edit.set_sensitive(is_on);
-        let move_to_custom_dictionary = &self.widgets.move_to_custom_dictionary;
-        move_to_custom_dictionary.set_visible(is_phrases_kind);
-        move_to_custom_dictionary.set_sensitive(is_on);
+        self.widgets
+            .add_to_custom_dictionary
+            .set_sensitive(is_on && can_add_selection);
         self.widgets.delete.set_sensitive(is_on);
     }
 }

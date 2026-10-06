@@ -10,8 +10,8 @@ use protos::engine::{
     user_data_request, user_data_response, BackupExported, BackupImported, BackupRefusal,
     CustomCsvExported, CustomCsvImported, CustomDictionaryEntry, CustomDictionaryRefusal,
     CustomEntries, CustomEntryDeleted, CustomEntryMatches, CustomEntrySaved, ImportBackup,
-    ImportCustomCsv, LearningRecord, LearningRecordDeleted, LearningRecordKind,
-    LearningRecordMoved, LearningRecordOrder, LearningRecordSaved, LearningRecords,
+    ImportCustomCsv, LearningRecord, LearningRecordAddedToCustomDictionary, LearningRecordDeleted,
+    LearningRecordKind, LearningRecordOrder, LearningRecordSaved, LearningRecords,
     ListCustomEntries, ListLearningRecords, RecordUsage, ResetUserData, SaveCustomEntry,
     SearchCustomEntries, UserDataReset,
 };
@@ -97,9 +97,11 @@ impl UserDataHandle {
                     learning_records::delete(stores, kind, record).map_err(store_error)?;
                 Answer::LearningRecordDeleted(LearningRecordDeleted { removed })
             }
-            Method::MoveLearningRecordToCustomDictionary(move_request) => {
-                let (kind, record) = named_learning_record(move_request.record.as_ref())?;
-                Answer::LearningRecordMoved(Self::move_to_custom_dictionary(stores, kind, record)?)
+            Method::AddLearningRecordToCustomDictionary(add) => {
+                let (kind, record) = named_learning_record(add.record.as_ref())?;
+                Answer::LearningRecordAddedToCustomDictionary(Self::add_to_custom_dictionary(
+                    stores, kind, record,
+                )?)
             }
             // Answered by `handle` before a page request is looked at.
             Method::Open(_) | Method::RecordUsage(_) => {
@@ -211,25 +213,28 @@ impl UserDataHandle {
         })
     }
 
-    /// A learned phrase made a custom word: added unless its word is stored
-    /// already, then forgotten. Two files, so no one transaction: the add
-    /// comes first and a refused or failed add keeps the phrase; a forget
-    /// that fails after it is a store error, and the retry finds the word
-    /// stored and forgets the phrase.
-    fn move_to_custom_dictionary(
+    /// A row's word made a custom word: added unless it is stored already.
+    /// A learned phrase is then forgotten — the custom word offers it whole
+    /// from now on; a frequency row stays, still weighting its word. Two
+    /// files, so no one transaction: the add comes first and a refused or
+    /// failed add keeps the row; a forget that fails after it is a store
+    /// error, and the retry finds the word stored and forgets the phrase.
+    fn add_to_custom_dictionary(
         stores: &UserDataStores,
         kind: LearningRecordKind,
         record: &LearningRecord,
-    ) -> Result<LearningRecordMoved, RequestError> {
-        if kind != LearningRecordKind::LearnedPhrase {
-            return Err(RequestError::Invalid("only a learned phrase moves"));
+    ) -> Result<LearningRecordAddedToCustomDictionary, RequestError> {
+        // Decided again from the row's own text and TL: the request's
+        // `can_add_to_custom_dictionary` is the page's copy, not a permission.
+        if !learning_records::can_add_to_custom_dictionary(kind, &record.text, &record.tl) {
+            return Err(RequestError::Invalid(
+                "only a learned phrase or frequency row of two syllables or more with Hanji is added",
+            ));
         }
-        // A stored phrase always has a reading (`learn_phrase` drops one
-        // without search keys); one that does not is refused UNSEARCHABLE.
         let row = CustomDictionaryRow::new(record.tl.trim(), record.text.trim());
         if let Err(error) = stores.custom_dictionary.add_unless_stored(&row) {
             return match refusal(&error) {
-                Some(refusal) => Ok(LearningRecordMoved {
+                Some(refusal) => Ok(LearningRecordAddedToCustomDictionary {
                     refusal: refusal as i32,
                     detail: error.to_string(),
                 }),
@@ -238,8 +243,10 @@ impl UserDataHandle {
         }
         // `false` — the phrase is gone already (evicted, deleted, its id
         // reused): the word is in the dictionary, which is what was asked.
-        learning_records::delete(stores, kind, record).map_err(store_error)?;
-        Ok(LearningRecordMoved {
+        if kind == LearningRecordKind::LearnedPhrase {
+            learning_records::delete(stores, kind, record).map_err(store_error)?;
+        }
+        Ok(LearningRecordAddedToCustomDictionary {
             refusal: CustomDictionaryRefusal::None as i32,
             detail: String::new(),
         })
@@ -709,11 +716,11 @@ mod tests {
         ));
     }
 
-    fn learned_phrases(handle: &UserDataHandle) -> Vec<LearningRecord> {
+    fn learning_records(handle: &UserDataHandle, kind: LearningRecordKind) -> Vec<LearningRecord> {
         match call(
             handle,
             user_data_request::Method::ListLearningRecords(ListLearningRecords {
-                kind: LearningRecordKind::LearnedPhrase as i32,
+                kind: kind as i32,
                 limit: 50,
                 ..ListLearningRecords::default()
             }),
@@ -723,22 +730,30 @@ mod tests {
         }
     }
 
-    fn move_to_custom_dictionary(
+    fn learned_phrases(handle: &UserDataHandle) -> Vec<LearningRecord> {
+        learning_records(handle, LearningRecordKind::LearnedPhrase)
+    }
+
+    fn frequency_rows(handle: &UserDataHandle) -> Vec<LearningRecord> {
+        learning_records(handle, LearningRecordKind::Frequency)
+    }
+
+    fn add_to_custom_dictionary(
         handle: &UserDataHandle,
         record: LearningRecord,
-    ) -> Result<LearningRecordMoved, RequestError> {
+    ) -> Result<LearningRecordAddedToCustomDictionary, RequestError> {
         let request = UserDataRequest {
             method: Some(
-                user_data_request::Method::MoveLearningRecordToCustomDictionary(
-                    protos::engine::MoveLearningRecordToCustomDictionary {
+                user_data_request::Method::AddLearningRecordToCustomDictionary(
+                    protos::engine::AddLearningRecordToCustomDictionary {
                         record: Some(record),
                     },
                 ),
             ),
         };
         handle.handle(&request).map(|answer| match answer.result {
-            Some(user_data_response::Result::LearningRecordMoved(moved)) => moved,
-            other => panic!("expected a move, got {other:?}"),
+            Some(user_data_response::Result::LearningRecordAddedToCustomDictionary(added)) => added,
+            other => panic!("expected an add, got {other:?}"),
         })
     }
 
@@ -752,23 +767,39 @@ mod tests {
         handle
     }
 
+    /// An open handle whose frequency store counted each `(word, tl)` once.
+    fn handle_with_frequency_rows(
+        directory: &tempfile::TempDir,
+        rows: &[(&str, &str)],
+    ) -> UserDataHandle {
+        let handle = UserDataHandle::new();
+        handle.handle(&open_request(directory.path())).unwrap();
+        let stores = handle.stores().unwrap();
+        for (word, tl) in rows {
+            stores.frequency.record(word, tl);
+        }
+        stores.frequency.database.wait_for_queued_writes();
+        handle
+    }
+
     #[test]
-    fn a_moved_phrase_is_a_custom_word_and_no_longer_learned() {
+    fn an_added_phrase_is_a_custom_word_and_no_longer_learned() {
         let directory = tempfile::tempdir().unwrap();
         let handle = handle_with_a_learned_phrase(&directory);
         let seeded = list(&handle, "").total;
         let [phrase] = learned_phrases(&handle).try_into().unwrap();
+        assert!(phrase.can_add_to_custom_dictionary);
 
-        let moved = move_to_custom_dictionary(&handle, phrase.clone()).unwrap();
-        assert_eq!(moved.refusal(), CustomDictionaryRefusal::None);
-        assert!(moved.detail.is_empty());
+        let added = add_to_custom_dictionary(&handle, phrase.clone()).unwrap();
+        assert_eq!(added.refusal(), CustomDictionaryRefusal::None);
+        assert!(added.detail.is_empty());
         assert_eq!(search(&handle, "tsiahpng"), ["食飯"]);
         assert_eq!(list(&handle, "").total, seeded + 1);
         assert!(learned_phrases(&handle).is_empty());
 
         // The page still listed it: the word is stored, the phrase already
-        // gone — moved, not a second custom word.
-        let again = move_to_custom_dictionary(&handle, phrase).unwrap();
+        // gone — not a second custom word.
+        let again = add_to_custom_dictionary(&handle, phrase).unwrap();
         assert_eq!(again.refusal(), CustomDictionaryRefusal::None);
         assert_eq!(list(&handle, "").total, seeded + 1);
     }
@@ -783,14 +814,14 @@ mod tests {
         let seeded = list(&handle, "").total;
         let [phrase] = learned_phrases(&handle).try_into().unwrap();
 
-        let moved = move_to_custom_dictionary(&handle, phrase).unwrap();
-        assert_eq!(moved.refusal(), CustomDictionaryRefusal::None);
+        let added = add_to_custom_dictionary(&handle, phrase).unwrap();
+        assert_eq!(added.refusal(), CustomDictionaryRefusal::None);
         assert_eq!(list(&handle, "").total, seeded);
         assert!(learned_phrases(&handle).is_empty());
     }
 
     #[test]
-    fn a_forget_that_fails_after_the_add_is_an_error_and_the_retry_finishes_the_move() {
+    fn a_forget_that_fails_after_the_add_is_an_error_and_the_retry_finishes_it() {
         let directory = tempfile::tempdir().unwrap();
         let handle = handle_with_a_learned_phrase(&directory);
         let seeded = list(&handle, "").total;
@@ -809,49 +840,116 @@ mod tests {
         );
 
         assert!(matches!(
-            move_to_custom_dictionary(&handle, phrase.clone()),
+            add_to_custom_dictionary(&handle, phrase.clone()),
             Err(RequestError::Store(_))
         ));
         assert_eq!(list(&handle, "").total, seeded + 1, "added first");
         assert_eq!(learned_phrases(&handle), std::slice::from_ref(&phrase));
 
         set_blocked("DROP TRIGGER block_delete;");
-        let retried = move_to_custom_dictionary(&handle, phrase).unwrap();
+        let retried = add_to_custom_dictionary(&handle, phrase).unwrap();
         assert_eq!(retried.refusal(), CustomDictionaryRefusal::None);
         assert_eq!(list(&handle, "").total, seeded + 1, "not added twice");
         assert!(learned_phrases(&handle).is_empty());
     }
 
     #[test]
-    fn a_refused_move_keeps_the_phrase_and_only_a_phrase_moves() {
+    fn an_added_frequency_row_is_a_custom_word_and_keeps_its_count_and_time() {
         let directory = tempfile::tempdir().unwrap();
-        let handle = handle_with_a_learned_phrase(&directory);
+        let handle = handle_with_frequency_rows(&directory, &[("食飯", "tsia̍h-pn̄g")]);
         let seeded = list(&handle, "").total;
-        let [phrase] = learned_phrases(&handle).try_into().unwrap();
+        let [row] = frequency_rows(&handle).try_into().unwrap();
+        assert!(row.can_add_to_custom_dictionary);
 
-        let without_reading = LearningRecord {
-            tl: " ".into(),
-            ..phrase.clone()
+        let added = add_to_custom_dictionary(&handle, row.clone()).unwrap();
+        assert_eq!(added.refusal(), CustomDictionaryRefusal::None);
+        assert_eq!(search(&handle, "tsiahpng"), ["食飯"]);
+        assert_eq!(list(&handle, "").total, seeded + 1);
+        // Same id, word, count and last-used time: the row still weights 食飯.
+        assert_eq!(frequency_rows(&handle), std::slice::from_ref(&row));
+
+        let again = add_to_custom_dictionary(&handle, row.clone()).unwrap();
+        assert_eq!(again.refusal(), CustomDictionaryRefusal::None);
+        assert_eq!(list(&handle, "").total, seeded + 1, "not added twice");
+        assert_eq!(frequency_rows(&handle), [row]);
+    }
+
+    #[test]
+    fn only_a_hanji_row_of_two_syllables_or_more_is_offered_and_added() {
+        let directory = tempfile::tempdir().unwrap();
+        // trace: tl_syllables splits on `-` / ` ` and drops the empty piece
+        // of `--`: "sī" → 1, "gín--á" → 2 ("gín", "á"), "guá sī" → 2.
+        let handle = handle_with_frequency_rows(
+            &directory,
+            &[
+                ("是", "sī"),
+                ("guá sī", "guá sī"),
+                ("囡仔", "gín--á"),
+                ("a好", "a-hó"),
+            ],
+        );
+        let seeded = list(&handle, "").total;
+        let offered = |text: &str| {
+            frequency_rows(&handle)
+                .into_iter()
+                .find(|row| row.text == text)
+                .unwrap()
         };
-        let refused = move_to_custom_dictionary(&handle, without_reading).unwrap();
-        assert_eq!(refused.refusal(), CustomDictionaryRefusal::Unsearchable);
-        assert_eq!(learned_phrases(&handle), std::slice::from_ref(&phrase));
+        assert!(!offered("是").can_add_to_custom_dictionary, "one syllable");
+        assert!(!offered("guá sī").can_add_to_custom_dictionary, "no Hanji");
+        assert!(
+            offered("囡仔").can_add_to_custom_dictionary,
+            "khinsiann `--`"
+        );
+        assert!(offered("a好").can_add_to_custom_dictionary, "mixed text");
 
-        for kind in [
-            LearningRecordKind::Frequency,
-            LearningRecordKind::Association,
-        ] {
-            let other_kind = LearningRecord {
-                kind: kind as i32,
-                ..phrase.clone()
+        let refusal = RequestError::Invalid(
+            "only a learned phrase or frequency row of two syllables or more with Hanji is added",
+        );
+        for text in ["是", "guá sī"] {
+            // The page's copy of the flag is not a permission.
+            let forged = LearningRecord {
+                can_add_to_custom_dictionary: true,
+                ..offered(text)
             };
             assert_eq!(
-                move_to_custom_dictionary(&handle, other_kind).unwrap_err(),
-                RequestError::Invalid("only a learned phrase moves")
+                add_to_custom_dictionary(&handle, forged).unwrap_err(),
+                refusal
             );
         }
+        let association = LearningRecord {
+            kind: LearningRecordKind::Association as i32,
+            ..offered("囡仔")
+        };
+        assert_eq!(
+            add_to_custom_dictionary(&handle, association).unwrap_err(),
+            refusal
+        );
         assert_eq!(list(&handle, "").total, seeded);
-        assert_eq!(learned_phrases(&handle), [phrase]);
+        assert_eq!(frequency_rows(&handle).len(), 4);
+    }
+
+    #[test]
+    fn a_set_count_answer_carries_the_flag() {
+        let directory = tempfile::tempdir().unwrap();
+        let handle = handle_with_frequency_rows(&directory, &[("食飯", "tsia̍h-pn̄g")]);
+        let [row] = frequency_rows(&handle).try_into().unwrap();
+        match call(
+            &handle,
+            user_data_request::Method::SetLearningRecordCount(
+                protos::engine::SetLearningRecordCount {
+                    record: Some(row),
+                    count: 7,
+                },
+            ),
+        ) {
+            user_data_response::Result::LearningRecordSaved(saved) => {
+                let saved = saved.record.unwrap();
+                assert_eq!(saved.count, 7);
+                assert!(saved.can_add_to_custom_dictionary);
+            }
+            other => panic!("expected a saved record, got {other:?}"),
+        }
     }
 
     #[test]

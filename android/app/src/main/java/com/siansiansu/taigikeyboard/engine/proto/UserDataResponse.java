@@ -34,7 +34,7 @@ public  final class UserDataResponse extends
     LEARNING_RECORDS(12),
     LEARNING_RECORD_SAVED(13),
     LEARNING_RECORD_DELETED(14),
-    LEARNING_RECORD_MOVED(15),
+    LEARNING_RECORD_ADDED_TO_CUSTOM_DICTIONARY(15),
     RESULT_NOT_SET(0);
     private final int value;
     private ResultCase(int value) {
@@ -64,7 +64,7 @@ public  final class UserDataResponse extends
         case 12: return LEARNING_RECORDS;
         case 13: return LEARNING_RECORD_SAVED;
         case 14: return LEARNING_RECORD_DELETED;
-        case 15: return LEARNING_RECORD_MOVED;
+        case 15: return LEARNING_RECORD_ADDED_TO_CUSTOM_DICTIONARY;
         case 0: return RESULT_NOT_SET;
         default: return null;
       }
@@ -786,40 +786,40 @@ public  final class UserDataResponse extends
     }
   }
 
-  public static final int LEARNING_RECORD_MOVED_FIELD_NUMBER = 15;
+  public static final int LEARNING_RECORD_ADDED_TO_CUSTOM_DICTIONARY_FIELD_NUMBER = 15;
   /**
-   * <code>.taigi.engine.LearningRecordMoved learning_record_moved = 15;</code>
+   * <code>.taigi.engine.LearningRecordAddedToCustomDictionary learning_record_added_to_custom_dictionary = 15;</code>
    */
   @java.lang.Override
-  public boolean hasLearningRecordMoved() {
+  public boolean hasLearningRecordAddedToCustomDictionary() {
     return resultCase_ == 15;
   }
   /**
-   * <code>.taigi.engine.LearningRecordMoved learning_record_moved = 15;</code>
+   * <code>.taigi.engine.LearningRecordAddedToCustomDictionary learning_record_added_to_custom_dictionary = 15;</code>
    */
   @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.LearningRecordMoved getLearningRecordMoved() {
+  public com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionary getLearningRecordAddedToCustomDictionary() {
     if (resultCase_ == 15) {
-       return (com.siansiansu.taigikeyboard.engine.proto.LearningRecordMoved) result_;
+       return (com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionary) result_;
     }
-    return com.siansiansu.taigikeyboard.engine.proto.LearningRecordMoved.getDefaultInstance();
+    return com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionary.getDefaultInstance();
   }
   /**
-   * <code>.taigi.engine.LearningRecordMoved learning_record_moved = 15;</code>
+   * <code>.taigi.engine.LearningRecordAddedToCustomDictionary learning_record_added_to_custom_dictionary = 15;</code>
    */
-  private void setLearningRecordMoved(com.siansiansu.taigikeyboard.engine.proto.LearningRecordMoved value) {
+  private void setLearningRecordAddedToCustomDictionary(com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionary value) {
     java.util.Objects.requireNonNull(value);
     result_ = value;
     resultCase_ = 15;
   }
   /**
-   * <code>.taigi.engine.LearningRecordMoved learning_record_moved = 15;</code>
+   * <code>.taigi.engine.LearningRecordAddedToCustomDictionary learning_record_added_to_custom_dictionary = 15;</code>
    */
-  private void mergeLearningRecordMoved(com.siansiansu.taigikeyboard.engine.proto.LearningRecordMoved value) {
+  private void mergeLearningRecordAddedToCustomDictionary(com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionary value) {
     java.util.Objects.requireNonNull(value);
     if (resultCase_ == 15 &&
-        result_ != com.siansiansu.taigikeyboard.engine.proto.LearningRecordMoved.getDefaultInstance()) {
-      result_ = com.siansiansu.taigikeyboard.engine.proto.LearningRecordMoved.newBuilder((com.siansiansu.taigikeyboard.engine.proto.LearningRecordMoved) result_)
+        result_ != com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionary.getDefaultInstance()) {
+      result_ = com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionary.newBuilder((com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionary) result_)
           .mergeFrom(value).buildPartial();
     } else {
       result_ = value;
@@ -827,9 +827,9 @@ public  final class UserDataResponse extends
     resultCase_ = 15;
   }
   /**
-   * <code>.taigi.engine.LearningRecordMoved learning_record_moved = 15;</code>
+   * <code>.taigi.engine.LearningRecordAddedToCustomDictionary learning_record_added_to_custom_dictionary = 15;</code>
    */
-  private void clearLearningRecordMoved() {
+  private void clearLearningRecordAddedToCustomDictionary() {
     if (resultCase_ == 15) {
       resultCase_ = 0;
       result_ = null;
@@ -1618,50 +1618,50 @@ public  final class UserDataResponse extends
     }
 
     /**
-     * <code>.taigi.engine.LearningRecordMoved learning_record_moved = 15;</code>
+     * <code>.taigi.engine.LearningRecordAddedToCustomDictionary learning_record_added_to_custom_dictionary = 15;</code>
      */
     @java.lang.Override
-    public boolean hasLearningRecordMoved() {
-      return instance.hasLearningRecordMoved();
+    public boolean hasLearningRecordAddedToCustomDictionary() {
+      return instance.hasLearningRecordAddedToCustomDictionary();
     }
     /**
-     * <code>.taigi.engine.LearningRecordMoved learning_record_moved = 15;</code>
+     * <code>.taigi.engine.LearningRecordAddedToCustomDictionary learning_record_added_to_custom_dictionary = 15;</code>
      */
     @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.LearningRecordMoved getLearningRecordMoved() {
-      return instance.getLearningRecordMoved();
+    public com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionary getLearningRecordAddedToCustomDictionary() {
+      return instance.getLearningRecordAddedToCustomDictionary();
     }
     /**
-     * <code>.taigi.engine.LearningRecordMoved learning_record_moved = 15;</code>
+     * <code>.taigi.engine.LearningRecordAddedToCustomDictionary learning_record_added_to_custom_dictionary = 15;</code>
      */
-    public Builder setLearningRecordMoved(com.siansiansu.taigikeyboard.engine.proto.LearningRecordMoved value) {
+    public Builder setLearningRecordAddedToCustomDictionary(com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionary value) {
       copyOnWrite();
-      instance.setLearningRecordMoved(value);
+      instance.setLearningRecordAddedToCustomDictionary(value);
       return this;
     }
     /**
-     * <code>.taigi.engine.LearningRecordMoved learning_record_moved = 15;</code>
+     * <code>.taigi.engine.LearningRecordAddedToCustomDictionary learning_record_added_to_custom_dictionary = 15;</code>
      */
-    public Builder setLearningRecordMoved(
-        com.siansiansu.taigikeyboard.engine.proto.LearningRecordMoved.Builder builderForValue) {
+    public Builder setLearningRecordAddedToCustomDictionary(
+        com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionary.Builder builderForValue) {
       copyOnWrite();
-      instance.setLearningRecordMoved(builderForValue.build());
+      instance.setLearningRecordAddedToCustomDictionary(builderForValue.build());
       return this;
     }
     /**
-     * <code>.taigi.engine.LearningRecordMoved learning_record_moved = 15;</code>
+     * <code>.taigi.engine.LearningRecordAddedToCustomDictionary learning_record_added_to_custom_dictionary = 15;</code>
      */
-    public Builder mergeLearningRecordMoved(com.siansiansu.taigikeyboard.engine.proto.LearningRecordMoved value) {
+    public Builder mergeLearningRecordAddedToCustomDictionary(com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionary value) {
       copyOnWrite();
-      instance.mergeLearningRecordMoved(value);
+      instance.mergeLearningRecordAddedToCustomDictionary(value);
       return this;
     }
     /**
-     * <code>.taigi.engine.LearningRecordMoved learning_record_moved = 15;</code>
+     * <code>.taigi.engine.LearningRecordAddedToCustomDictionary learning_record_added_to_custom_dictionary = 15;</code>
      */
-    public Builder clearLearningRecordMoved() {
+    public Builder clearLearningRecordAddedToCustomDictionary() {
       copyOnWrite();
-      instance.clearLearningRecordMoved();
+      instance.clearLearningRecordAddedToCustomDictionary();
       return this;
     }
 
@@ -1697,7 +1697,7 @@ public  final class UserDataResponse extends
             com.siansiansu.taigikeyboard.engine.proto.LearningRecords.class,
             com.siansiansu.taigikeyboard.engine.proto.LearningRecordSaved.class,
             com.siansiansu.taigikeyboard.engine.proto.LearningRecordDeleted.class,
-            com.siansiansu.taigikeyboard.engine.proto.LearningRecordMoved.class,
+            com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionary.class,
           };
           java.lang.String info =
               "\u0000\u000f\u0001\u0000\u0001\u000f\u000f\u0000\u0000\u0000\u0001<\u0000\u0002<" +

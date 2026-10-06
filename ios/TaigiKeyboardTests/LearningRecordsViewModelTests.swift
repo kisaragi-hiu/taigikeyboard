@@ -33,8 +33,8 @@ final class LearningRecordsViewModelTests: XCTestCase {
         private var storedIsHolding = false
         private var storedFailure: Unreadable?
         private var storedListsFail = false
-        private var storedMoveRefusal: String?
-        private var storedMoved: [Taigi_Engine_LearningRecord] = []
+        private var storedAddRefusal: String?
+        private var storedAdded: [Taigi_Engine_LearningRecord] = []
 
         init(rows: [Taigi_Engine_LearningRecord]) {
             storedRows = rows
@@ -66,16 +66,16 @@ final class LearningRecordsViewModelTests: XCTestCase {
             set { lock.withLock { storedListsFail = newValue } }
         }
 
-        /// The engine's refusal detail every move throws while set; the
-        /// phrase stays.
-        var moveRefusal: String? {
-            get { lock.withLock { storedMoveRefusal } }
-            set { lock.withLock { storedMoveRefusal = newValue } }
+        /// The engine's refusal detail every add throws while set; the row
+        /// stays.
+        var addRefusal: String? {
+            get { lock.withLock { storedAddRefusal } }
+            set { lock.withLock { storedAddRefusal = newValue } }
         }
 
-        /// The phrases filed in the custom dictionary, in order.
-        var moved: [Taigi_Engine_LearningRecord] {
-            lock.withLock { storedMoved }
+        /// The rows whose words were filed in the custom dictionary, in order.
+        var added: [Taigi_Engine_LearningRecord] {
+            lock.withLock { storedAdded }
         }
 
         var parkedCount: Int {
@@ -131,18 +131,21 @@ final class LearningRecordsViewModelTests: XCTestCase {
             }
         }
 
-        /// The engine's move: a refusal keeps the row; otherwise the phrase
-        /// is filed and its row forgotten (one already gone is no failure).
-        override func moveLearningRecordToCustomDictionary(_ record: Taigi_Engine_LearningRecord) async throws {
+        /// The engine's add: a refusal keeps the row; otherwise the word is
+        /// filed, and a learned phrase's row forgotten (one already gone is no
+        /// failure) while a frequency row stays.
+        override func addLearningRecordToCustomDictionary(_ record: Taigi_Engine_LearningRecord) async throws {
             if let failure {
                 throw failure
             }
             try lock.withLock {
-                if let storedMoveRefusal {
-                    throw UserDataRefused(detail: storedMoveRefusal)
+                if let storedAddRefusal {
+                    throw UserDataRefused(detail: storedAddRefusal)
                 }
-                storedMoved.append(record)
-                storedRows.removeAll { $0.isSameRow(as: record) }
+                storedAdded.append(record)
+                if record.kind == .learnedPhrase {
+                    storedRows.removeAll { $0.isSameRow(as: record) }
+                }
             }
         }
 
@@ -516,9 +519,9 @@ final class LearningRecordsViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.records.map(\.id), [1, 2])
     }
 
-    // MARK: - Move to the custom dictionary
+    // MARK: - Add to the custom dictionary
 
-    func testAMove_saysItLandedAndTheReloadDropsThePhrase() async {
+    func testAddingAPhrase_saysItLandedAndTheReloadDropsThePhrase() async {
         let fake = FakeLearningRecords(rows: [
             record(1, "台語", tl: "tâi-gí", kind: .learnedPhrase),
             record(2, "食飽", tl: "tsia̍h-pá", kind: .learnedPhrase),
@@ -526,26 +529,41 @@ final class LearningRecordsViewModelTests: XCTestCase {
         let viewModel = makeViewModel(fake, kind: .learnedPhrase)
         await viewModel.load()
 
-        await viewModel.moveToCustomDictionary(viewModel.records[0])
+        await viewModel.addToCustomDictionary(viewModel.records[0])
 
-        XCTAssertEqual(viewModel.notice, .moved)
-        XCTAssertEqual(fake.moved.map(\.text), ["台語"])
+        XCTAssertEqual(viewModel.notice, .addedToCustomDictionary)
+        XCTAssertEqual(fake.added.map(\.text), ["台語"])
         XCTAssertEqual(viewModel.records.map(\.id), [2])
-        XCTAssertEqual(fake.calls.map(\.offset), [0, 0], "the move reloads the listed rows")
+        XCTAssertEqual(fake.calls.map(\.offset), [0, 0], "the add reloads the listed rows")
     }
 
-    func testARefusedMove_isAWriteFailureAndKeepsThePhrase() async {
+    func testAddingAFrequencyRow_saysItLandedAndKeepsTheRow() async {
+        let fake = FakeLearningRecords(rows: [
+            record(1, "台語", tl: "tâi-gí", kind: .frequency),
+            record(2, "食飽", tl: "tsia̍h-pá", kind: .frequency),
+        ])
+        let viewModel = makeViewModel(fake, kind: .frequency)
+        await viewModel.load()
+
+        await viewModel.addToCustomDictionary(viewModel.records[0])
+
+        XCTAssertEqual(viewModel.notice, .addedToCustomDictionary)
+        XCTAssertEqual(fake.added.map(\.text), ["台語"])
+        XCTAssertEqual(viewModel.records.map(\.id), [1, 2], "a frequency row still weights its word")
+    }
+
+    func testARefusedAdd_isAWriteFailureAndKeepsThePhrase() async {
         let fake = FakeLearningRecords(rows: [record(1, "台語", tl: "tâi-gí", kind: .learnedPhrase)])
         let viewModel = makeViewModel(fake, kind: .learnedPhrase)
         await viewModel.load()
-        fake.moveRefusal = "custom dictionary is full"
+        fake.addRefusal = "custom dictionary is full"
 
-        await viewModel.moveToCustomDictionary(viewModel.records[0])
+        await viewModel.addToCustomDictionary(viewModel.records[0])
 
         XCTAssertEqual(viewModel.notice, .writeFailed(detail: "custom dictionary is full"))
-        XCTAssertTrue(fake.moved.isEmpty)
+        XCTAssertTrue(fake.added.isEmpty)
         XCTAssertEqual(viewModel.records.map(\.id), [1])
-        XCTAssertEqual(fake.calls.count, 2, "a refused move still reloads")
+        XCTAssertEqual(fake.calls.count, 2, "a refused add still reloads")
     }
 
     // MARK: - Edit field and labels

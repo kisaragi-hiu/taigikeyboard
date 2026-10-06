@@ -62,7 +62,7 @@ class LearningRecordsViewModelTest {
 
         val setCalls = mutableListOf<Pair<LearningRecord, Long>>()
         val deleteCalls = mutableListOf<LearningRecord>()
-        val moveCalls = mutableListOf<LearningRecord>()
+        val addCalls = mutableListOf<LearningRecord>()
         var isRowGone = false
         var writeFailure: Exception? = null
 
@@ -112,11 +112,13 @@ class LearningRecordsViewModelTest {
             return !isRowGone
         }
 
-        /** Like the engine: the row leaves the list once added; a refusal keeps it. */
-        override suspend fun moveLearningRecordToCustomDictionary(record: LearningRecord) {
-            moveCalls += record
+        /** Like the engine: a learned phrase leaves the list once added, a frequency row stays; a refusal keeps it. */
+        override suspend fun addLearningRecordToCustomDictionary(record: LearningRecord) {
+            addCalls += record
             writeFailure?.let { throw it }
-            rows = rows.filterNot { it.id == record.id }
+            if (record.kind == LearningRecordKind.LEARNING_RECORD_KIND_LEARNED_PHRASE) {
+                rows = rows.filterNot { it.id == record.id }
+            }
         }
     }
 
@@ -487,18 +489,18 @@ class LearningRecordsViewModelTest {
         }
 
     @Test
-    fun `a moved learned phrase is said and leaves the reloaded list`() =
+    fun `an added learned phrase is said and leaves the reloaded list`() =
         runTest(dispatcher) {
             val client = FakeLearningRecords(listOf(record(7, "台灣", phrase), record(8, "食飯", phrase)))
             val model = viewModel(client, phrase)
             advanceUntilIdle()
             val listed = model.state.value.records[0]
 
-            model.moveToCustomDictionary(listed)
+            model.addToCustomDictionary(listed)
             advanceUntilIdle()
 
-            assertEquals(listOf(listed), client.moveCalls)
-            assertEquals(LearningRecordsMessage.Moved, model.state.value.message)
+            assertEquals(listOf(listed), client.addCalls)
+            assertEquals(LearningRecordsMessage.AddedToCustomDictionary, model.state.value.message)
             assertEquals(2, client.listCalls.size)
             assertEquals(
                 listOf(8L),
@@ -508,14 +510,35 @@ class LearningRecordsViewModelTest {
         }
 
     @Test
-    fun `a refused move carries the engine's words and keeps the row`() =
+    fun `an added frequency row is said and stays in the reloaded list`() =
+        runTest(dispatcher) {
+            val client = FakeLearningRecords(listOf(record(7, "台灣"), record(8, "食飯")))
+            val model = viewModel(client)
+            advanceUntilIdle()
+            val listed = model.state.value.records[0]
+
+            model.addToCustomDictionary(listed)
+            advanceUntilIdle()
+
+            assertEquals(listOf(listed), client.addCalls)
+            assertEquals(LearningRecordsMessage.AddedToCustomDictionary, model.state.value.message)
+            assertEquals(2, client.listCalls.size)
+            assertEquals(
+                listOf(7L, 8L),
+                model.state.value.records
+                    .map { it.id },
+            )
+        }
+
+    @Test
+    fun `a refused add carries the engine's words and keeps the row`() =
         runTest(dispatcher) {
             val client = FakeLearningRecords(listOf(record(7, "台灣", phrase)))
             val model = viewModel(client, phrase)
             advanceUntilIdle()
             client.writeFailure = UserDataException.Refused(CustomDictionaryRefusal.CUSTOM_DICTIONARY_REFUSAL_FULL, "the custom dictionary is full")
 
-            model.moveToCustomDictionary(model.state.value.records[0])
+            model.addToCustomDictionary(model.state.value.records[0])
             advanceUntilIdle()
 
             assertEquals(LearningRecordsMessage.WriteFailed("the custom dictionary is full"), model.state.value.message)

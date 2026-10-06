@@ -179,18 +179,18 @@ extension RustEngineBridge {
         return deleted
     }
 
-    /// Files the listed learned phrase as a custom word, then forgets it; a
-    /// refusal keeps the phrase.
-    static func learningRecordMoveToCustomDictionary(
+    /// Files the listed row's word as a custom word, then forgets a learned
+    /// phrase (a frequency row stays); a refusal keeps the row.
+    static func learningRecordAddToCustomDictionary(
         _ record: Taigi_Engine_LearningRecord,
-    ) -> Taigi_Engine_LearningRecordMoved? {
-        var move = Taigi_Engine_MoveLearningRecordToCustomDictionary()
-        move.record = record
-        guard case let .learningRecordMoved(moved)? = userDataResult(
-            .moveLearningRecordToCustomDictionary(move),
-            op: "learningRecordMoveToCustomDictionary",
+    ) -> Taigi_Engine_LearningRecordAddedToCustomDictionary? {
+        var add = Taigi_Engine_AddLearningRecordToCustomDictionary()
+        add.record = record
+        guard case let .learningRecordAddedToCustomDictionary(added)? = userDataResult(
+            .addLearningRecordToCustomDictionary(add),
+            op: "learningRecordAddToCustomDictionary",
         ) else { return nil }
-        return moved
+        return added
     }
 
     // MARK: - Backup

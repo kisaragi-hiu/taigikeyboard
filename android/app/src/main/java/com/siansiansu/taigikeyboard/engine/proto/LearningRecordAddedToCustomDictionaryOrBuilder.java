@@ -6,8 +6,8 @@
 package com.siansiansu.taigikeyboard.engine.proto;
 
 @com.google.protobuf.Generated
-public interface LearningRecordMovedOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:taigi.engine.LearningRecordMoved)
+public interface LearningRecordAddedToCustomDictionaryOrBuilder extends
+    // @@protoc_insertion_point(interface_extends:taigi.engine.LearningRecordAddedToCustomDictionary)
     com.google.protobuf.MessageLiteOrBuilder {
 
   /**
@@ -23,7 +23,7 @@ public interface LearningRecordMovedOrBuilder extends
 
   /**
    * <pre>
-   * The refusal in English, for an alert's diagnostic line; empty when moved.
+   * The refusal in English, for an alert's diagnostic line; empty when added.
    * </pre>
    *
    * <code>string detail = 2;</code>
@@ -32,7 +32,7 @@ public interface LearningRecordMovedOrBuilder extends
   java.lang.String getDetail();
   /**
    * <pre>
-   * The refusal in English, for an alert's diagnostic line; empty when moved.
+   * The refusal in English, for an alert's diagnostic line; empty when added.
    * </pre>
    *
    * <code>string detail = 2;</code>

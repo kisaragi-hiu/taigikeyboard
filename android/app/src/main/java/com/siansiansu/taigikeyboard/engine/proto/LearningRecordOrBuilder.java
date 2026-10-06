@@ -114,4 +114,18 @@ public interface LearningRecordOrBuilder extends
    * @return The lastUsedMs.
    */
   long getLastUsedMs();
+
+  /**
+   * <pre>
+   * Whether the page offers Add to Custom Dictionary for this row: a
+   * learned phrase or word-frequency row whose text holds Hanji and whose TL
+   * has two syllables or more. Set by the engine on every row it answers;
+   * ignored on a request (`AddLearningRecordToCustomDictionary` decides
+   * again from `text` and `tl`).
+   * </pre>
+   *
+   * <code>bool can_add_to_custom_dictionary = 9;</code>
+   * @return The canAddToCustomDictionary.
+   */
+  boolean getCanAddToCustomDictionary();
 }
