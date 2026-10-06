@@ -402,7 +402,7 @@
       }
     },
     "exportSuccess": {
-      "comment": "Toast/dialog confirming the custom dictionary exported successfully.",
+      "comment": "Toast/dialog confirming an export finished (custom dictionary CSV or full backup).",
       "scope": {
         "platforms": [
           "android",
@@ -413,11 +413,11 @@
         ]
       },
       "values": {
-        "hanji": "CSV 順利匯出",
-        "tailo": "CSV sūn-lī huē-tshut",
-        "poj": "CSV sūn-lī hōe-chhut",
-        "en": "CSV exported successfully",
-        "ja": "CSV をエクスポートしました"
+        "hanji": "匯出完成",
+        "tailo": "Huē-tshut uân-sîng",
+        "poj": "Hōe-chhut oân-sêng",
+        "en": "Export Complete",
+        "ja": "エクスポートが完了しました"
       }
     },
     "importResult": {
@@ -974,11 +974,11 @@
         ]
       },
       "values": {
-        "hanji": "清單干焦顯示頭 100 項。欲揣其他紀錄，請用下跤 ê「揣字」。",
-        "tailo": "Tshing-tuann kan-ta hián-sī thâu 100 hāng. Beh tshuē kî-thann kì-lio̍k, tshiánn iōng ē-kha ê \"tshuē jī\".",
-        "poj": "Chheng-toaⁿ kan-ta hián-sī thâu 100 hāng. Beh chhōe kî-thaⁿ kì-lio̍k, chhiáⁿ iōng ē-kha ê \"chhōe jī\".",
-        "en": "The list shows the first 100 records. Use the \"Type to search\" field below to find other records.",
-        "ja": "一覧には先頭の 100 件だけを表示します。ほかの記録は、下の「入力して検索」で検索してください。"
+        "hanji": "清單干焦顯示頭 100 項，其他請用「揣字」。",
+        "tailo": "Tshing-tuann kan-ta hián-sī thâu 100 hāng, kî-thann tshiánn iōng \"tshuē jī\".",
+        "poj": "Chheng-toaⁿ kan-ta hián-sī thâu 100 hāng, kî-thaⁿ chhiáⁿ iōng \"chhōe jī\".",
+        "en": "The list shows the first 100 records. Use \"Type to search\" for the rest.",
+        "ja": "一覧には先頭の 100 件だけを表示します。ほかは「入力して検索」で検索してください。"
       }
     },
     "backupRestore": {
@@ -1038,25 +1038,6 @@
         "ja": "すべてを一括インポート"
       }
     },
-    "exportBackupSuccess": {
-      "comment": "Toast/dialog confirming the full backup exported successfully.",
-      "scope": {
-        "platforms": [
-          "android",
-          "ios"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "備份順利匯出",
-        "tailo": "Pī-hūn sūn-lī huē-tshut",
-        "poj": "Pī-hūn sūn-lī hōe-chhut",
-        "en": "Backup exported successfully",
-        "ja": "バックアップをエクスポートしました"
-      }
-    },
     "importBackupResult": {
       "comment": "Backup-import result message: counts of custom-dictionary, frequency, and association records imported.",
       "scope": {
@@ -1082,7 +1063,7 @@
       }
     },
     "backupPrivacyWarning": {
-      "comment": "Privacy note that backup files contain all usage records and are cross-platform.",
+      "comment": "Privacy note that backup files contain all usage records.",
       "scope": {
         "platforms": [
           "android",
@@ -1093,11 +1074,11 @@
         ]
       },
       "values": {
-        "hanji": "備份檔案包含自訂詞、詞頻佮詞關聯紀錄，會當佇 iOS 佮 Android 匯入。檔案可能包含私人內容，請妥當保管。",
-        "tailo": "Pī-hūn tòng-àn pau-hâm tsū-tīng-sû, sû pîn kah sû kuan-liân kì-lio̍k, ē-tàng tī iOS kah Android huē-ji̍p. Tòng-àn khó-lîng pau-hâm su-jîn luē-iông, tshiánn thò-tòng pó-kuán.",
-        "poj": "Pī-hūn tòng-àn pau-hâm chū-tēng-sû, sû pîn kah sû koan-liân kì-lio̍k, ē-tàng tī iOS kah Android hōe-ji̍p. Tòng-àn khó-lêng pau-hâm su-jîn lōe-iông, chhiáⁿ thò-tòng pó-koán.",
-        "en": "A backup contains your custom words, frequency records, and association records. You can import it on iOS or Android. Store the file securely because it may contain private content.",
-        "ja": "バックアップには、カスタム単語、単語頻度、単語連携の記録が含まれます。iOS と Android のどちらでもインポートできます。個人的な内容が含まれる場合があるため、安全に保管してください。"
+        "hanji": "備份包含自訂詞、詞頻佮詞關聯紀錄，可能有私人內容，請妥當保管。",
+        "tailo": "Pī-hūn pau-hâm tsū-tīng-sû, sû pîn kah sû kuan-liân kì-lio̍k, khó-lîng ū su-jîn luē-iông, tshiánn thò-tòng pó-kuán.",
+        "poj": "Pī-hūn pau-hâm chū-tēng-sû, sû pîn kah sû koan-liân kì-lio̍k, khó-lêng ū su-jîn lōe-iông, chhiáⁿ thò-tòng pó-koán.",
+        "en": "A backup contains your custom words, frequency records, and association records, which may be private. Store it securely.",
+        "ja": "バックアップには、カスタム単語、単語頻度、単語連携の記録が含まれ、個人的な内容が含まれる場合があります。安全に保管してください。"
       }
     },
     "moeDescription": {

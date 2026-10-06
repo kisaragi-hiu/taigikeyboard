@@ -81,7 +81,6 @@ enum StringKey: String {
     case dictionaryBackupRestore = "i18n_dictionary_backupRestore"
     case dictionaryExportBackup = "i18n_dictionary_exportBackup"
     case dictionaryImportBackup = "i18n_dictionary_importBackup"
-    case dictionaryExportBackupSuccess = "i18n_dictionary_exportBackupSuccess"
     case dictionaryImportBackupResult = "i18n_dictionary_importBackupResult"
     case dictionaryBackupPrivacyWarning = "i18n_dictionary_backupPrivacyWarning"
     case dictionaryMoeDescription = "i18n_dictionary_moeDescription"

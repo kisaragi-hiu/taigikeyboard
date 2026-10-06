@@ -50,7 +50,7 @@ class DataManagementActivity : ComponentActivity() {
                     Toast
                         .makeText(
                             this@DataManagementActivity,
-                            commonString(StringKey.DICTIONARY_EXPORT_BACKUP_SUCCESS),
+                            commonString(StringKey.DICTIONARY_EXPORT_SUCCESS),
                             Toast.LENGTH_SHORT,
                         ).show()
                 } catch (_: Exception) {

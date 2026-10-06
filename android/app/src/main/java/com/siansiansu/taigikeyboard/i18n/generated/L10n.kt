@@ -166,8 +166,6 @@ object L10n {
         @Composable get() = stringRes(StringKey.DICTIONARY_EXPORT_BACKUP)
     val dictionaryImportBackup: String
         @Composable get() = stringRes(StringKey.DICTIONARY_IMPORT_BACKUP)
-    val dictionaryExportBackupSuccess: String
-        @Composable get() = stringRes(StringKey.DICTIONARY_EXPORT_BACKUP_SUCCESS)
     val dictionaryBackupPrivacyWarning: String
         @Composable get() = stringRes(StringKey.DICTIONARY_BACKUP_PRIVACY_WARNING)
     val dictionaryMoeDescription: String
