@@ -217,10 +217,10 @@ API verified against Xcode 16.4's macOS 15.5 SDK, `HIToolbox/IMKInputSession.h`
 (2026-10-06): the override accepts a system keyboard's unique name and must be
 called on every activation. `TaigiInputControllerKeyboardLayoutTests` covers
 the client calls, live settings, TPS switches, reset, and ownership. Installed
-IME acceptance still needs checking in TextEdit and a Chromium host: choose
-each layout inside TaigiKeyboard, type letters and shifted punctuation both
-idle and composing, check Caps Lock and Command shortcuts, switch input
-sources and applications, and confirm TPS positions remain fixed.
+IME acceptance passed in TextEdit and a Chromium host (#431): each layout
+chosen inside TaigiKeyboard, letters and shifted punctuation both idle and
+composing, Caps Lock and Command shortcuts, input-source and application
+switches, and fixed TPS positions.
 
 ---
 
