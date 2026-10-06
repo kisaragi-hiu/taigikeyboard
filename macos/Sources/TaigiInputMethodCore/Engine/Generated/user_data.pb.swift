@@ -1024,8 +1024,8 @@ public nonisolated struct Taigi_Engine_LearningRecord: Sendable {
   public var lastUsedMs: Int64 = 0
 
   /// Whether the page offers Add to Custom Dictionary for this row: a
-  /// learned phrase or word-frequency row whose text holds Hanji and whose TL
-  /// has two syllables or more. Set by the engine on every row it answers;
+  /// learned phrase or word-frequency row whose text holds Hanji. Set by the
+  /// engine on every row it answers;
   /// ignored on a request (`AddLearningRecordToCustomDictionary` decides
   /// again from `text` and `tl`).
   public var canAddToCustomDictionary: Bool = false
@@ -1178,9 +1178,7 @@ public nonisolated struct Taigi_Engine_LearningRecordDeleted: Sendable {
 /// Refused as `SaveCustomEntry` is (FULL, or UNSEARCHABLE for a TL that
 /// derives no search key), and a refused add keeps the row. A row whose
 /// `can_add_to_custom_dictionary` the engine would answer false (an
-/// association, no Hanji, a one-syllable TL) is `FAIL_INVARIANT`: a custom
-/// word overrides its toneless key in continuous input, so one syllable is
-/// left to a deliberate custom-word entry.
+/// association, or no Hanji) is `FAIL_INVARIANT`.
 public nonisolated struct Taigi_Engine_AddLearningRecordToCustomDictionary: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for

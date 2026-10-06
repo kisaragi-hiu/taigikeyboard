@@ -19,9 +19,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * Refused as `SaveCustomEntry` is (FULL, or UNSEARCHABLE for a TL that
  * derives no search key), and a refused add keeps the row. A row whose
  * `can_add_to_custom_dictionary` the engine would answer false (an
- * association, no Hanji, a one-syllable TL) is `FAIL_INVARIANT`: a custom
- * word overrides its toneless key in continuous input, so one syllable is
- * left to a deliberate custom-word entry.
+ * association, or no Hanji) is `FAIL_INVARIANT`.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.AddLearningRecordToCustomDictionary}
@@ -179,9 +177,7 @@ public  final class AddLearningRecordToCustomDictionary extends
    * Refused as `SaveCustomEntry` is (FULL, or UNSEARCHABLE for a TL that
    * derives no search key), and a refused add keeps the row. A row whose
    * `can_add_to_custom_dictionary` the engine would answer false (an
-   * association, no Hanji, a one-syllable TL) is `FAIL_INVARIANT`: a custom
-   * word overrides its toneless key in continuous input, so one syllable is
-   * left to a deliberate custom-word entry.
+   * association, or no Hanji) is `FAIL_INVARIANT`.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.AddLearningRecordToCustomDictionary}

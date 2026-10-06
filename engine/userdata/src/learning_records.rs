@@ -119,13 +119,13 @@ fn target(
 }
 
 fn decode(kind: LearningRecordKind, row: &rusqlite::Row<'_>) -> rusqlite::Result<LearningRecord> {
-    let (text, tl): (String, String) = (row.get(1)?, row.get(2)?);
+    let text: String = row.get(1)?;
     Ok(LearningRecord {
         kind: kind as i32,
         id: row.get(0)?,
-        can_add_to_custom_dictionary: can_add_to_custom_dictionary(kind, &text, &tl),
+        can_add_to_custom_dictionary: can_add_to_custom_dictionary(kind, &text),
         text,
-        tl,
+        tl: row.get(2)?,
         previous_text: row.get(3)?,
         previous_tl: row.get(4)?,
         count: row.get(5)?,
@@ -134,16 +134,15 @@ fn decode(kind: LearningRecordKind, row: &rusqlite::Row<'_>) -> rusqlite::Result
 }
 
 /// Whether Add to Custom Dictionary takes this row: a learned phrase or a
-/// word-frequency row whose text holds Hanji and whose TL has two syllables
-/// or more. A custom word overrides its toneless key in continuous input,
-/// so a one-tap add of a one-syllable word (是 / sī) would take every
-/// toneless `si`; a romanization pick has no Hanji to file.
-pub(crate) fn can_add_to_custom_dictionary(kind: LearningRecordKind, text: &str, tl: &str) -> bool {
+/// word-frequency row whose text holds Hanji; a romanization pick has no
+/// Hanji to file. Any syllable count: a one-syllable custom word (是 / sī)
+/// takes its toneless key in continuous input as any custom word does, and
+/// that is the user's choice to make.
+pub(crate) fn can_add_to_custom_dictionary(kind: LearningRecordKind, text: &str) -> bool {
     matches!(
         kind,
         LearningRecordKind::LearnedPhrase | LearningRecordKind::Frequency
     ) && phonetics::api::is_hanji(text)
-        && phonetics::api::tl_syllables(tl).count() >= 2
 }
 
 /// One page of `kind`, with the totals, read from one snapshot. `filter` is

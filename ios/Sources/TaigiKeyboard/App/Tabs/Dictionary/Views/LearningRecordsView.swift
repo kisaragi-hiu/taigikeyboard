@@ -192,7 +192,7 @@ struct LearningRecordsView: View {
             }
         }
         .swipeActions(edge: .leading, allowsFullSwipe: false) {
-            // Rows the engine says can be added: one syllable or no Hanji is not.
+            // Rows the engine says can be added: a row with no Hanji is not.
             if record.canAddToCustomDictionary {
                 Button {
                     Task { await viewModel.addToCustomDictionary(record) }

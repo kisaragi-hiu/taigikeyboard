@@ -224,11 +224,11 @@ impl UserDataHandle {
         kind: LearningRecordKind,
         record: &LearningRecord,
     ) -> Result<LearningRecordAddedToCustomDictionary, RequestError> {
-        // Decided again from the row's own text and TL: the request's
+        // Decided again from the row's own text: the request's
         // `can_add_to_custom_dictionary` is the page's copy, not a permission.
-        if !learning_records::can_add_to_custom_dictionary(kind, &record.text, &record.tl) {
+        if !learning_records::can_add_to_custom_dictionary(kind, &record.text) {
             return Err(RequestError::Invalid(
-                "only a learned phrase or frequency row of two syllables or more with Hanji is added",
+                "only a learned phrase or frequency row with Hanji is added",
             ));
         }
         let row = CustomDictionaryRow::new(record.tl.trim(), record.text.trim());
@@ -876,10 +876,8 @@ mod tests {
     }
 
     #[test]
-    fn only_a_hanji_row_of_two_syllables_or_more_is_offered_and_added() {
+    fn only_a_hanji_row_is_offered_and_added() {
         let directory = tempfile::tempdir().unwrap();
-        // trace: tl_syllables splits on `-` / ` ` and drops the empty piece
-        // of `--`: "sī" → 1, "gín--á" → 2 ("gín", "á"), "guá sī" → 2.
         let handle = handle_with_frequency_rows(
             &directory,
             &[
@@ -896,28 +894,22 @@ mod tests {
                 .find(|row| row.text == text)
                 .unwrap()
         };
-        assert!(!offered("是").can_add_to_custom_dictionary, "one syllable");
+        assert!(offered("是").can_add_to_custom_dictionary, "one syllable");
         assert!(!offered("guá sī").can_add_to_custom_dictionary, "no Hanji");
-        assert!(
-            offered("囡仔").can_add_to_custom_dictionary,
-            "khinsiann `--`"
-        );
+        assert!(offered("囡仔").can_add_to_custom_dictionary);
         assert!(offered("a好").can_add_to_custom_dictionary, "mixed text");
 
-        let refusal = RequestError::Invalid(
-            "only a learned phrase or frequency row of two syllables or more with Hanji is added",
+        let refusal =
+            RequestError::Invalid("only a learned phrase or frequency row with Hanji is added");
+        // The page's copy of the flag is not a permission.
+        let forged = LearningRecord {
+            can_add_to_custom_dictionary: true,
+            ..offered("guá sī")
+        };
+        assert_eq!(
+            add_to_custom_dictionary(&handle, forged).unwrap_err(),
+            refusal
         );
-        for text in ["是", "guá sī"] {
-            // The page's copy of the flag is not a permission.
-            let forged = LearningRecord {
-                can_add_to_custom_dictionary: true,
-                ..offered(text)
-            };
-            assert_eq!(
-                add_to_custom_dictionary(&handle, forged).unwrap_err(),
-                refusal
-            );
-        }
         let association = LearningRecord {
             kind: LearningRecordKind::Association as i32,
             ..offered("囡仔")
@@ -927,6 +919,11 @@ mod tests {
             refusal
         );
         assert_eq!(list(&handle, "").total, seeded);
+
+        // A one-syllable word is the user's to file, like any custom word.
+        let added = add_to_custom_dictionary(&handle, offered("是")).unwrap();
+        assert_eq!(added.refusal(), CustomDictionaryRefusal::None);
+        assert_eq!(list(&handle, "").total, seeded + 1);
         assert_eq!(frequency_rows(&handle).len(), 4);
     }
 

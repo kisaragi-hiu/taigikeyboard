@@ -562,7 +562,7 @@ impl LearningRecordsPage {
 
     /// The ✎, + and − buttons: on while a row is selected and nothing runs.
     /// The + (add to custom dictionary) also needs a row the engine says can
-    /// be added: one syllable or no Hanji keeps it off on either kind.
+    /// be added: no Hanji keeps it off on either kind.
     fn render_verbs(&self) {
         let (is_busy, has_selection, can_add_selection) = {
             let state = self.state.borrow();
