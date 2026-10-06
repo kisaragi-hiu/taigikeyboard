@@ -6,15 +6,15 @@
 package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
- * Protobuf type {@code taigi.engine.LearningRecordMoved}
+ * Protobuf type {@code taigi.engine.LearningRecordAddedToCustomDictionary}
  */
 @com.google.protobuf.Generated
-public  final class LearningRecordMoved extends
+public  final class LearningRecordAddedToCustomDictionary extends
     com.google.protobuf.GeneratedMessageLite<
-        LearningRecordMoved, LearningRecordMoved.Builder> implements
-    // @@protoc_insertion_point(message_implements:taigi.engine.LearningRecordMoved)
-    LearningRecordMovedOrBuilder {
-  private LearningRecordMoved() {
+        LearningRecordAddedToCustomDictionary, LearningRecordAddedToCustomDictionary.Builder> implements
+    // @@protoc_insertion_point(message_implements:taigi.engine.LearningRecordAddedToCustomDictionary)
+    LearningRecordAddedToCustomDictionaryOrBuilder {
+  private LearningRecordAddedToCustomDictionary() {
     detail_ = "";
   }
   public static final int REFUSAL_FIELD_NUMBER = 1;
@@ -64,7 +64,7 @@ public  final class LearningRecordMoved extends
   private java.lang.String detail_;
   /**
    * <pre>
-   * The refusal in English, for an alert's diagnostic line; empty when moved.
+   * The refusal in English, for an alert's diagnostic line; empty when added.
    * </pre>
    *
    * <code>string detail = 2;</code>
@@ -76,7 +76,7 @@ public  final class LearningRecordMoved extends
   }
   /**
    * <pre>
-   * The refusal in English, for an alert's diagnostic line; empty when moved.
+   * The refusal in English, for an alert's diagnostic line; empty when added.
    * </pre>
    *
    * <code>string detail = 2;</code>
@@ -89,7 +89,7 @@ public  final class LearningRecordMoved extends
   }
   /**
    * <pre>
-   * The refusal in English, for an alert's diagnostic line; empty when moved.
+   * The refusal in English, for an alert's diagnostic line; empty when added.
    * </pre>
    *
    * <code>string detail = 2;</code>
@@ -103,7 +103,7 @@ public  final class LearningRecordMoved extends
   }
   /**
    * <pre>
-   * The refusal in English, for an alert's diagnostic line; empty when moved.
+   * The refusal in English, for an alert's diagnostic line; empty when added.
    * </pre>
    *
    * <code>string detail = 2;</code>
@@ -114,7 +114,7 @@ public  final class LearningRecordMoved extends
   }
   /**
    * <pre>
-   * The refusal in English, for an alert's diagnostic line; empty when moved.
+   * The refusal in English, for an alert's diagnostic line; empty when added.
    * </pre>
    *
    * <code>string detail = 2;</code>
@@ -127,50 +127,50 @@ public  final class LearningRecordMoved extends
 
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.LearningRecordMoved parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionary parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.LearningRecordMoved parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionary parseFrom(
       java.nio.ByteBuffer data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.LearningRecordMoved parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionary parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.LearningRecordMoved parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionary parseFrom(
       com.google.protobuf.ByteString data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.LearningRecordMoved parseFrom(byte[] data)
+  public static com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionary parseFrom(byte[] data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.LearningRecordMoved parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionary parseFrom(
       byte[] data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.LearningRecordMoved parseFrom(java.io.InputStream input)
+  public static com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionary parseFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, input);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.LearningRecordMoved parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionary parseFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -178,24 +178,24 @@ public  final class LearningRecordMoved extends
         DEFAULT_INSTANCE, input, extensionRegistry);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.LearningRecordMoved parseDelimitedFrom(java.io.InputStream input)
+  public static com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionary parseDelimitedFrom(java.io.InputStream input)
       throws java.io.IOException {
     return parseDelimitedFrom(DEFAULT_INSTANCE, input);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.LearningRecordMoved parseDelimitedFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionary parseDelimitedFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return parseDelimitedFrom(DEFAULT_INSTANCE, input, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.LearningRecordMoved parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionary parseFrom(
       com.google.protobuf.CodedInputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, input);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.LearningRecordMoved parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionary parseFrom(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -206,19 +206,19 @@ public  final class LearningRecordMoved extends
   public static Builder newBuilder() {
     return (Builder) DEFAULT_INSTANCE.createBuilder();
   }
-  public static Builder newBuilder(com.siansiansu.taigikeyboard.engine.proto.LearningRecordMoved prototype) {
+  public static Builder newBuilder(com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionary prototype) {
     return DEFAULT_INSTANCE.createBuilder(prototype);
   }
 
   /**
-   * Protobuf type {@code taigi.engine.LearningRecordMoved}
+   * Protobuf type {@code taigi.engine.LearningRecordAddedToCustomDictionary}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageLite.Builder<
-        com.siansiansu.taigikeyboard.engine.proto.LearningRecordMoved, Builder> implements
-      // @@protoc_insertion_point(builder_implements:taigi.engine.LearningRecordMoved)
-      com.siansiansu.taigikeyboard.engine.proto.LearningRecordMovedOrBuilder {
-    // Construct using com.siansiansu.taigikeyboard.engine.proto.LearningRecordMoved.newBuilder()
+        com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionary, Builder> implements
+      // @@protoc_insertion_point(builder_implements:taigi.engine.LearningRecordAddedToCustomDictionary)
+      com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionaryOrBuilder {
+    // Construct using com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionary.newBuilder()
     private Builder() {
       super(DEFAULT_INSTANCE);
     }
@@ -273,7 +273,7 @@ public  final class LearningRecordMoved extends
 
     /**
      * <pre>
-     * The refusal in English, for an alert's diagnostic line; empty when moved.
+     * The refusal in English, for an alert's diagnostic line; empty when added.
      * </pre>
      *
      * <code>string detail = 2;</code>
@@ -285,7 +285,7 @@ public  final class LearningRecordMoved extends
     }
     /**
      * <pre>
-     * The refusal in English, for an alert's diagnostic line; empty when moved.
+     * The refusal in English, for an alert's diagnostic line; empty when added.
      * </pre>
      *
      * <code>string detail = 2;</code>
@@ -298,7 +298,7 @@ public  final class LearningRecordMoved extends
     }
     /**
      * <pre>
-     * The refusal in English, for an alert's diagnostic line; empty when moved.
+     * The refusal in English, for an alert's diagnostic line; empty when added.
      * </pre>
      *
      * <code>string detail = 2;</code>
@@ -313,7 +313,7 @@ public  final class LearningRecordMoved extends
     }
     /**
      * <pre>
-     * The refusal in English, for an alert's diagnostic line; empty when moved.
+     * The refusal in English, for an alert's diagnostic line; empty when added.
      * </pre>
      *
      * <code>string detail = 2;</code>
@@ -326,7 +326,7 @@ public  final class LearningRecordMoved extends
     }
     /**
      * <pre>
-     * The refusal in English, for an alert's diagnostic line; empty when moved.
+     * The refusal in English, for an alert's diagnostic line; empty when added.
      * </pre>
      *
      * <code>string detail = 2;</code>
@@ -340,7 +340,7 @@ public  final class LearningRecordMoved extends
       return this;
     }
 
-    // @@protoc_insertion_point(builder_scope:taigi.engine.LearningRecordMoved)
+    // @@protoc_insertion_point(builder_scope:taigi.engine.LearningRecordAddedToCustomDictionary)
   }
   @java.lang.Override
   @java.lang.SuppressWarnings({"ThrowNull"})
@@ -349,7 +349,7 @@ public  final class LearningRecordMoved extends
       java.lang.Object arg0, java.lang.Object arg1) {
     switch (method) {
       case NEW_MUTABLE_INSTANCE: {
-        return new com.siansiansu.taigikeyboard.engine.proto.LearningRecordMoved();
+        return new com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionary();
       }
       case NEW_BUILDER: {
         return new Builder();
@@ -368,13 +368,13 @@ public  final class LearningRecordMoved extends
         return DEFAULT_INSTANCE;
       }
       case GET_PARSER: {
-        com.google.protobuf.Parser<com.siansiansu.taigikeyboard.engine.proto.LearningRecordMoved> parser = PARSER;
+        com.google.protobuf.Parser<com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionary> parser = PARSER;
         if (parser == null) {
-          synchronized (com.siansiansu.taigikeyboard.engine.proto.LearningRecordMoved.class) {
+          synchronized (com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionary.class) {
             parser = PARSER;
             if (parser == null) {
               parser =
-                  new DefaultInstanceBasedParser<com.siansiansu.taigikeyboard.engine.proto.LearningRecordMoved>(
+                  new DefaultInstanceBasedParser<com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionary>(
                       DEFAULT_INSTANCE);
               PARSER = parser;
             }
@@ -394,24 +394,24 @@ public  final class LearningRecordMoved extends
   }
 
 
-  // @@protoc_insertion_point(class_scope:taigi.engine.LearningRecordMoved)
-  private static final com.siansiansu.taigikeyboard.engine.proto.LearningRecordMoved DEFAULT_INSTANCE;
+  // @@protoc_insertion_point(class_scope:taigi.engine.LearningRecordAddedToCustomDictionary)
+  private static final com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionary DEFAULT_INSTANCE;
   static {
-    LearningRecordMoved defaultInstance = new LearningRecordMoved();
+    LearningRecordAddedToCustomDictionary defaultInstance = new LearningRecordAddedToCustomDictionary();
     // New instances are implicitly immutable so no need to make
     // immutable.
     DEFAULT_INSTANCE = defaultInstance;
     com.google.protobuf.GeneratedMessageLite.registerDefaultInstance(
-      LearningRecordMoved.class, defaultInstance);
+      LearningRecordAddedToCustomDictionary.class, defaultInstance);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.LearningRecordMoved getDefaultInstance() {
+  public static com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionary getDefaultInstance() {
     return DEFAULT_INSTANCE;
   }
 
-  private static volatile com.google.protobuf.Parser<LearningRecordMoved> PARSER;
+  private static volatile com.google.protobuf.Parser<LearningRecordAddedToCustomDictionary> PARSER;
 
-  public static com.google.protobuf.Parser<LearningRecordMoved> parser() {
+  public static com.google.protobuf.Parser<LearningRecordAddedToCustomDictionary> parser() {
     return DEFAULT_INSTANCE.getParserForType();
   }
 }

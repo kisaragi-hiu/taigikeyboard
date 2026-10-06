@@ -69,8 +69,8 @@ private val ORDERS =
 /** Load the next page once the last visible item is this close to the end of the list. */
 private const val LOAD_MORE_THRESHOLD = 10
 
-// Learning Records — what the keyboard learned: correct one row's count, delete one row, move a
-// learned phrase into the custom dictionary
+// Learning Records — what the keyboard learned: correct one row's count, delete one row, add a
+// row's word to the custom dictionary
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LearningRecordsScreen(
@@ -182,9 +182,9 @@ fun LearningRecordsScreen(
                             record = record,
                             onEdit = { editingRecord = record },
                             onDelete = { viewModel.delete(record) },
-                            onMoveToCustomDictionary =
-                                if (viewModel.kind == LearningRecordKind.LEARNING_RECORD_KIND_LEARNED_PHRASE) {
-                                    { viewModel.moveToCustomDictionary(record) }
+                            onAddToCustomDictionary =
+                                if (record.canAddToCustomDictionary) {
+                                    { viewModel.addToCustomDictionary(record) }
                                 } else {
                                     null
                                 },
@@ -246,7 +246,7 @@ internal fun kindLabel(kind: LearningRecordKind): String =
 private fun messageText(message: LearningRecordsMessage): String =
     when (message) {
         LearningRecordsMessage.Gone -> L10n.dictionaryLearningRecordGone
-        LearningRecordsMessage.Moved -> L10n.dictionaryLearningRecordsMovedToCustomDictionary
+        LearningRecordsMessage.AddedToCustomDictionary -> L10n.dictionaryLearningRecordsAddedToCustomDictionary
         is LearningRecordsMessage.ReadFailed -> resultMessage(L10n.dictionaryLearningRecordsReadFailed, message.detail)
         is LearningRecordsMessage.WriteFailed -> resultMessage(L10n.dictionaryLearningRecordsWriteFailed, message.detail)
     }
@@ -256,8 +256,8 @@ private fun RecordRow(
     record: LearningRecord,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
-    /** Shown only when non-null: the row may go to the custom dictionary. */
-    onMoveToCustomDictionary: (() -> Unit)? = null,
+    /** Shown only when non-null: the engine says the row's word can be added (`canAddToCustomDictionary`). */
+    onAddToCustomDictionary: (() -> Unit)? = null,
 ) {
     val lastUsed = learningRecordLastUsedLabel(record.lastUsedMs)
     val usage =
@@ -299,11 +299,11 @@ private fun RecordRow(
                 style = MaterialTheme.typography.bodySmall,
             )
         }
-        onMoveToCustomDictionary?.let { onMove ->
-            IconButton(onClick = onMove) {
+        onAddToCustomDictionary?.let { onAdd ->
+            IconButton(onClick = onAdd) {
                 Icon(
                     imageVector = Icons.Default.Add,
-                    contentDescription = L10n.dictionaryLearningRecordsMoveToCustomDictionary,
+                    contentDescription = L10n.dictionaryLearningRecordsAddToCustomDictionary,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }

@@ -51,7 +51,7 @@ sealed interface LearningRecordsMessage {
         val detail: String,
     ) : LearningRecordsMessage
 
-    /** A count edit, a delete or a move failed — a move the engine refused included. */
+    /** A count edit, a delete or an add failed — an add the engine refused included. */
     data class WriteFailed(
         val detail: String,
     ) : LearningRecordsMessage
@@ -59,8 +59,8 @@ sealed interface LearningRecordsMessage {
     /** The row was no longer stored (deleted, evicted, its id reused) — said, not a failure. */
     data object Gone : LearningRecordsMessage
 
-    /** The learned phrase is in the custom dictionary now, and gone from this list. */
-    data object Moved : LearningRecordsMessage
+    /** The row's word is in the custom dictionary now; a learned phrase is gone from this list, a frequency row stays. */
+    data object AddedToCustomDictionary : LearningRecordsMessage
 }
 
 data class LearningRecordsState(
@@ -156,11 +156,11 @@ class LearningRecordsViewModel internal constructor(
     /** No confirmation, like deleting one custom word: the keyboard learns the row again on the next pick. */
     fun delete(record: LearningRecord) = write { goneUnless(userData.deleteLearningRecord(record)) }
 
-    /** Phrases only — a frequency row keeps weighting its word; a refusal keeps the row and is said. */
-    fun moveToCustomDictionary(record: LearningRecord) =
+    /** Offered where `canAddToCustomDictionary` — the engine forgets a learned phrase, keeps a frequency row; a refusal keeps the row and is said. */
+    fun addToCustomDictionary(record: LearningRecord) =
         write {
-            userData.moveLearningRecordToCustomDictionary(record)
-            LearningRecordsMessage.Moved
+            userData.addLearningRecordToCustomDictionary(record)
+            LearningRecordsMessage.AddedToCustomDictionary
         }
 
     /**

@@ -50,5 +50,5 @@ open class StubUserDataClient : UserDataClient {
 
     override suspend fun deleteLearningRecord(record: LearningRecord): Boolean = error("unused")
 
-    override suspend fun moveLearningRecordToCustomDictionary(record: LearningRecord): Unit = error("unused")
+    override suspend fun addLearningRecordToCustomDictionary(record: LearningRecord): Unit = error("unused")
 }

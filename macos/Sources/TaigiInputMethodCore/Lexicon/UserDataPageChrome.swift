@@ -346,8 +346,9 @@ struct UserDataListControls<Trailing: View>: View {
     let isRemoveEnabled: Bool
     let onRemove: () -> Void
     /// One more verb on the selected row, a worded button beside `−` (Learning
-    /// Records' Add to Custom Dictionary), enabled as `−` is. Nil draws none.
-    var rowAction: (labelKey: StringKey, action: () -> Void)?
+    /// Records' Add to Custom Dictionary), enabled when `isEnabled` says the
+    /// selected row takes it. Nil draws none.
+    var rowAction: (labelKey: StringKey, isEnabled: Bool, action: () -> Void)?
     @ViewBuilder let trailing: () -> Trailing
 
     var body: some View {
@@ -367,7 +368,7 @@ struct UserDataListControls<Trailing: View>: View {
 
             if let rowAction {
                 Button(language.string(rowAction.labelKey), action: rowAction.action)
-                    .disabled(!isRemoveEnabled)
+                    .disabled(!rowAction.isEnabled)
             }
 
             Spacer()

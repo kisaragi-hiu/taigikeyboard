@@ -3,8 +3,8 @@ import SwiftUI
 /// One kind's Learning Records list (word frequency or learned phrases),
 /// opened from its row on the Learning Records subpage.
 /// What the keyboard learned from the user's picks, in the order picked: edit
-/// one row's count, swipe to delete one row, swipe a learned phrase the
-/// other way to move it into the custom dictionary. No add by hand (a word
+/// one row's count, swipe to delete one row, swipe a row the other way to
+/// add its word to the custom dictionary. No add by hand (a word
 /// the user wants is a custom word) and no wipe — Delete Learning Records
 /// stays on the Custom Dictionary page.
 struct LearningRecordsView: View {
@@ -191,15 +191,15 @@ struct LearningRecordsView: View {
             }
         }
         .swipeActions(edge: .leading, allowsFullSwipe: false) {
-            // Phrases only: a frequency row keeps weighting its word.
-            if viewModel.kind == .learnedPhrase {
+            // Rows the engine says can be added: one syllable or no Hanji is not.
+            if record.canAddToCustomDictionary {
                 Button {
-                    Task { await viewModel.moveToCustomDictionary(record) }
+                    Task { await viewModel.addToCustomDictionary(record) }
                 } label: {
                     Image(latinSystemName: "text.badge.plus")
                 }
                 .tint(.accentColor)
-                .accessibilityLabel(lang.string(.dictionaryLearningRecordsMoveToCustomDictionary))
+                .accessibilityLabel(lang.string(.dictionaryLearningRecordsAddToCustomDictionary))
             }
         }
     }
@@ -218,14 +218,14 @@ private extension LearningRecordsNotice {
         case .readFailed: .dictionaryLearningRecordsReadFailed
         case .writeFailed: .dictionaryLearningRecordsWriteFailed
         case .gone: .dictionaryLearningRecordGone
-        case .moved: .dictionaryLearningRecordsMovedToCustomDictionary
+        case .addedToCustomDictionary: .dictionaryLearningRecordsAddedToCustomDictionary
         }
     }
 
     var detail: String? {
         switch self {
         case let .readFailed(detail), let .writeFailed(detail): detail
-        case .gone, .moved: nil
+        case .gone, .addedToCustomDictionary: nil
         }
     }
 }

@@ -548,6 +548,8 @@ pub use crate::custom_search::{
     derive_custom_query_key, derive_custom_search_keys, CustomSearchKey,
 };
 
+pub use crate::hanji::{is_hanji, CJK_RANGES};
+
 /// The syllables of a canonical TL string — `-` inside a word, ` ` between
 /// the words of a multi-word entry (`iā sī`); an empty piece (the khinsiann
 /// `--`) is not a syllable. The one tokenizer `tps` already keys records by.

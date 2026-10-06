@@ -1,6 +1,7 @@
-//! A learned phrase moved into the custom dictionary over the wire
-//! (learning-records-page-roadmap P7); a frequency row is refused with
-//! `FAIL_INVARIANT` and no payload.
+//! Learning rows added to the custom dictionary over the wire
+//! (learning-records-page-roadmap P7 / P8): a frequency row stays, a learned
+//! phrase is forgotten, a one-syllable word is refused with `FAIL_INVARIANT`
+//! and no payload.
 //! Its own process: the user-data handle is process-wide.
 #![cfg(feature = "user-data")]
 
@@ -9,8 +10,8 @@ mod common;
 use common::{open_user_data, user_data};
 
 use protos::engine::{
-    response, user_data_request, user_data_response, CustomDictionaryRefusal, ErrorCode,
-    LearningRecord, LearningRecordKind, ListLearningRecords, MoveLearningRecordToCustomDictionary,
+    response, user_data_request, user_data_response, AddLearningRecordToCustomDictionary,
+    CustomDictionaryRefusal, ErrorCode, LearningRecord, LearningRecordKind, ListLearningRecords,
     RecordUsage, Response, SearchCustomEntries,
 };
 use userdata::{JournalMode, UserDataPaths, UserDataStores};
@@ -37,14 +38,33 @@ fn listed(kind: LearningRecordKind) -> Vec<LearningRecord> {
     }
 }
 
-fn move_to_custom_dictionary(record: LearningRecord) -> Response {
+fn add_to_custom_dictionary(record: LearningRecord) -> Response {
     user_data(
-        user_data_request::Method::MoveLearningRecordToCustomDictionary(
-            MoveLearningRecordToCustomDictionary {
+        user_data_request::Method::AddLearningRecordToCustomDictionary(
+            AddLearningRecordToCustomDictionary {
                 record: Some(record),
             },
         ),
     )
+}
+
+fn added(response: Response) {
+    match answer(response) {
+        user_data_response::Result::LearningRecordAddedToCustomDictionary(added) => {
+            assert_eq!(added.refusal(), CustomDictionaryRefusal::None);
+        }
+        other => panic!("expected an add, got {other:?}"),
+    }
+}
+
+fn record_usage(word: &str, tl: &str) {
+    answer(user_data(user_data_request::Method::RecordUsage(
+        RecordUsage {
+            display_text: word.into(),
+            canonical_tl: tl.into(),
+            hanji: Some(word.into()),
+        },
+    )));
 }
 
 fn custom_words(query: &str) -> Vec<String> {
@@ -65,7 +85,7 @@ fn custom_words(query: &str) -> Vec<String> {
 }
 
 #[test]
-fn a_learned_phrase_moves_and_a_counted_word_stays() {
+fn a_counted_word_is_added_and_stays_and_a_learned_phrase_is_added_and_goes() {
     let directory = tempfile::tempdir().unwrap();
     // A phrase the keyboard learned from a segment-by-segment commit.
     {
@@ -79,30 +99,29 @@ fn a_learned_phrase_moves_and_a_counted_word_stays() {
     }
     open_user_data(directory.path());
     // Picked again: the word is counted and the phrase touched.
-    answer(user_data(user_data_request::Method::RecordUsage(
-        RecordUsage {
-            display_text: "台灣".into(),
-            canonical_tl: "tâi-uân".into(),
-            hanji: Some("台灣".into()),
-        },
-    )));
-    let [word] = listed(LearningRecordKind::Frequency).try_into().unwrap();
+    record_usage("台灣", "tâi-uân");
+    record_usage("是", "sī");
+    let words = listed(LearningRecordKind::Frequency);
+    let word = |text: &str| words.iter().find(|row| row.text == text).unwrap().clone();
     let [phrase] = listed(LearningRecordKind::LearnedPhrase)
         .try_into()
         .unwrap();
 
-    // A frequency row keeps weighting its word: it never moves.
-    let refused = move_to_custom_dictionary(word);
+    // One syllable: never offered, refused when sent anyway.
+    assert!(!word("是").can_add_to_custom_dictionary);
+    let refused = add_to_custom_dictionary(word("是"));
     assert_eq!(refused.error, ErrorCode::FailInvariant as i32);
     assert!(refused.payload.is_none());
 
-    match answer(move_to_custom_dictionary(phrase)) {
-        user_data_response::Result::LearningRecordMoved(moved) => {
-            assert_eq!(moved.refusal(), CustomDictionaryRefusal::None);
-        }
-        other => panic!("expected a move, got {other:?}"),
-    }
+    // A frequency row keeps weighting its word: added, and still listed.
+    assert!(word("台灣").can_add_to_custom_dictionary);
+    added(add_to_custom_dictionary(word("台灣")));
+    assert_eq!(custom_words("taiuan"), ["台灣"]);
+    assert_eq!(listed(LearningRecordKind::Frequency), words);
+
+    // The word is stored already: the phrase is forgotten, not added twice.
+    assert!(phrase.can_add_to_custom_dictionary);
+    added(add_to_custom_dictionary(phrase));
     assert!(listed(LearningRecordKind::LearnedPhrase).is_empty());
-    assert_eq!(listed(LearningRecordKind::Frequency).len(), 1);
     assert_eq!(custom_words("taiuan"), ["台灣"]);
 }

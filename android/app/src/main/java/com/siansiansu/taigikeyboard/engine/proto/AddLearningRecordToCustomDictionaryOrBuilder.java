@@ -6,8 +6,8 @@
 package com.siansiansu.taigikeyboard.engine.proto;
 
 @com.google.protobuf.Generated
-public interface MoveLearningRecordToCustomDictionaryOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:taigi.engine.MoveLearningRecordToCustomDictionary)
+public interface AddLearningRecordToCustomDictionaryOrBuilder extends
+    // @@protoc_insertion_point(interface_extends:taigi.engine.AddLearningRecordToCustomDictionary)
     com.google.protobuf.MessageLiteOrBuilder {
 
   /**

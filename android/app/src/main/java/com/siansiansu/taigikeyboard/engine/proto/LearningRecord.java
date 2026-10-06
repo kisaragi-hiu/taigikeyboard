@@ -407,6 +407,56 @@ public  final class LearningRecord extends
     lastUsedMs_ = 0L;
   }
 
+  public static final int CAN_ADD_TO_CUSTOM_DICTIONARY_FIELD_NUMBER = 9;
+  private boolean canAddToCustomDictionary_;
+  /**
+   * <pre>
+   * Whether the page offers Add to Custom Dictionary for this row: a
+   * learned phrase or word-frequency row whose text holds Hanji and whose TL
+   * has two syllables or more. Set by the engine on every row it answers;
+   * ignored on a request (`AddLearningRecordToCustomDictionary` decides
+   * again from `text` and `tl`).
+   * </pre>
+   *
+   * <code>bool can_add_to_custom_dictionary = 9;</code>
+   * @return The canAddToCustomDictionary.
+   */
+  @java.lang.Override
+  public boolean getCanAddToCustomDictionary() {
+    return canAddToCustomDictionary_;
+  }
+  /**
+   * <pre>
+   * Whether the page offers Add to Custom Dictionary for this row: a
+   * learned phrase or word-frequency row whose text holds Hanji and whose TL
+   * has two syllables or more. Set by the engine on every row it answers;
+   * ignored on a request (`AddLearningRecordToCustomDictionary` decides
+   * again from `text` and `tl`).
+   * </pre>
+   *
+   * <code>bool can_add_to_custom_dictionary = 9;</code>
+   * @param value The canAddToCustomDictionary to set.
+   */
+  private void setCanAddToCustomDictionary(boolean value) {
+
+    canAddToCustomDictionary_ = value;
+  }
+  /**
+   * <pre>
+   * Whether the page offers Add to Custom Dictionary for this row: a
+   * learned phrase or word-frequency row whose text holds Hanji and whose TL
+   * has two syllables or more. Set by the engine on every row it answers;
+   * ignored on a request (`AddLearningRecordToCustomDictionary` decides
+   * again from `text` and `tl`).
+   * </pre>
+   *
+   * <code>bool can_add_to_custom_dictionary = 9;</code>
+   */
+  private void clearCanAddToCustomDictionary() {
+
+    canAddToCustomDictionary_ = false;
+  }
+
   public static com.siansiansu.taigikeyboard.engine.proto.LearningRecord parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -909,6 +959,58 @@ public  final class LearningRecord extends
       return this;
     }
 
+    /**
+     * <pre>
+     * Whether the page offers Add to Custom Dictionary for this row: a
+     * learned phrase or word-frequency row whose text holds Hanji and whose TL
+     * has two syllables or more. Set by the engine on every row it answers;
+     * ignored on a request (`AddLearningRecordToCustomDictionary` decides
+     * again from `text` and `tl`).
+     * </pre>
+     *
+     * <code>bool can_add_to_custom_dictionary = 9;</code>
+     * @return The canAddToCustomDictionary.
+     */
+    @java.lang.Override
+    public boolean getCanAddToCustomDictionary() {
+      return instance.getCanAddToCustomDictionary();
+    }
+    /**
+     * <pre>
+     * Whether the page offers Add to Custom Dictionary for this row: a
+     * learned phrase or word-frequency row whose text holds Hanji and whose TL
+     * has two syllables or more. Set by the engine on every row it answers;
+     * ignored on a request (`AddLearningRecordToCustomDictionary` decides
+     * again from `text` and `tl`).
+     * </pre>
+     *
+     * <code>bool can_add_to_custom_dictionary = 9;</code>
+     * @param value The canAddToCustomDictionary to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCanAddToCustomDictionary(boolean value) {
+      copyOnWrite();
+      instance.setCanAddToCustomDictionary(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Whether the page offers Add to Custom Dictionary for this row: a
+     * learned phrase or word-frequency row whose text holds Hanji and whose TL
+     * has two syllables or more. Set by the engine on every row it answers;
+     * ignored on a request (`AddLearningRecordToCustomDictionary` decides
+     * again from `text` and `tl`).
+     * </pre>
+     *
+     * <code>bool can_add_to_custom_dictionary = 9;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearCanAddToCustomDictionary() {
+      copyOnWrite();
+      instance.clearCanAddToCustomDictionary();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.LearningRecord)
   }
   @java.lang.Override
@@ -933,10 +1035,11 @@ public  final class LearningRecord extends
             "previousTl_",
             "count_",
             "lastUsedMs_",
+            "canAddToCustomDictionary_",
           };
           java.lang.String info =
-              "\u0000\b\u0000\u0000\u0001\b\b\u0000\u0000\u0000\u0001\f\u0002\u0002\u0003\u0208" +
-              "\u0004\u0208\u0005\u0208\u0006\u0208\u0007\u0002\b\u0002";
+              "\u0000\t\u0000\u0000\u0001\t\t\u0000\u0000\u0000\u0001\f\u0002\u0002\u0003\u0208" +
+              "\u0004\u0208\u0005\u0208\u0006\u0208\u0007\u0002\b\u0002\t\u0007";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

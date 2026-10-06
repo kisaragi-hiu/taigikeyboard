@@ -15,6 +15,7 @@ pub mod case_transform;
 mod custom_search;
 mod derivation;
 mod external_lookup;
+mod hanji;
 mod key_family;
 mod normalization;
 mod poj;

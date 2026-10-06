@@ -72,7 +72,7 @@ class UserDataClientStub: UserDataClient, @unchecked Sendable {
         return false
     }
 
-    func moveLearningRecordToCustomDictionary(_: Taigi_Engine_LearningRecord) async throws {
+    func addLearningRecordToCustomDictionary(_: Taigi_Engine_LearningRecord) async throws {
         XCTFail("unused")
     }
 }

@@ -165,15 +165,15 @@ public interface UserDataResponseOrBuilder extends
   com.siansiansu.taigikeyboard.engine.proto.LearningRecordDeleted getLearningRecordDeleted();
 
   /**
-   * <code>.taigi.engine.LearningRecordMoved learning_record_moved = 15;</code>
-   * @return Whether the learningRecordMoved field is set.
+   * <code>.taigi.engine.LearningRecordAddedToCustomDictionary learning_record_added_to_custom_dictionary = 15;</code>
+   * @return Whether the learningRecordAddedToCustomDictionary field is set.
    */
-  boolean hasLearningRecordMoved();
+  boolean hasLearningRecordAddedToCustomDictionary();
   /**
-   * <code>.taigi.engine.LearningRecordMoved learning_record_moved = 15;</code>
-   * @return The learningRecordMoved.
+   * <code>.taigi.engine.LearningRecordAddedToCustomDictionary learning_record_added_to_custom_dictionary = 15;</code>
+   * @return The learningRecordAddedToCustomDictionary.
    */
-  com.siansiansu.taigikeyboard.engine.proto.LearningRecordMoved getLearningRecordMoved();
+  com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionary getLearningRecordAddedToCustomDictionary();
 
   public com.siansiansu.taigikeyboard.engine.proto.UserDataResponse.ResultCase getResultCase();
 }

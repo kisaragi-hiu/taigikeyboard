@@ -21,13 +21,13 @@ import com.siansiansu.taigikeyboard.engine.proto.ImportCustomCsv
 import com.siansiansu.taigikeyboard.engine.proto.LearningRecord
 import com.siansiansu.taigikeyboard.engine.proto.LearningRecordDeleted
 import com.siansiansu.taigikeyboard.engine.proto.LearningRecordKind
-import com.siansiansu.taigikeyboard.engine.proto.LearningRecordMoved
+import com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionary
 import com.siansiansu.taigikeyboard.engine.proto.LearningRecordOrder
 import com.siansiansu.taigikeyboard.engine.proto.LearningRecordSaved
 import com.siansiansu.taigikeyboard.engine.proto.LearningRecords
 import com.siansiansu.taigikeyboard.engine.proto.ListCustomEntries
 import com.siansiansu.taigikeyboard.engine.proto.ListLearningRecords
-import com.siansiansu.taigikeyboard.engine.proto.MoveLearningRecordToCustomDictionary
+import com.siansiansu.taigikeyboard.engine.proto.AddLearningRecordToCustomDictionary
 import com.siansiansu.taigikeyboard.engine.proto.OpenUserData
 import com.siansiansu.taigikeyboard.engine.proto.RecordUsage
 import com.siansiansu.taigikeyboard.engine.proto.ResetUserData
@@ -228,12 +228,12 @@ fun RustEngineBridge.learningRecordDelete(record: LearningRecord): LearningRecor
         ?.learningRecordDeleted
 }
 
-/** Adds the listed learned phrase to the custom dictionary and forgets the row; a refusal keeps the row. */
-fun RustEngineBridge.learningRecordMoveToCustomDictionary(record: LearningRecord): LearningRecordMoved? {
-    val move = MoveLearningRecordToCustomDictionary.newBuilder().setRecord(record).build()
-    return userData("learningRecordMoveToCustomDictionary") { setMoveLearningRecordToCustomDictionary(move) }
-        ?.takeIf { it.hasLearningRecordMoved() }
-        ?.learningRecordMoved
+/** Adds the listed row's word to the custom dictionary (a learned phrase is then forgotten, a frequency row kept); a refusal keeps the row. */
+fun RustEngineBridge.learningRecordAddToCustomDictionary(record: LearningRecord): LearningRecordAddedToCustomDictionary? {
+    val add = AddLearningRecordToCustomDictionary.newBuilder().setRecord(record).build()
+    return userData("learningRecordAddToCustomDictionary") { setAddLearningRecordToCustomDictionary(add) }
+        ?.takeIf { it.hasLearningRecordAddedToCustomDictionary() }
+        ?.learningRecordAddedToCustomDictionary
 }
 
 /**

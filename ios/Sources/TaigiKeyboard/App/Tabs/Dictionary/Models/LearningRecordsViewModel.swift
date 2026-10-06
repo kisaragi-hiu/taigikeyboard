@@ -159,12 +159,13 @@ final class LearningRecordsViewModel: ObservableObject {
         await write { try await $0.deleteLearningRecord(record) ? nil : .gone }
     }
 
-    /// Files the learned phrase as a custom word and forgets it; the reload
-    /// drops its row. A refusal keeps the phrase and says why.
-    func moveToCustomDictionary(_ record: Taigi_Engine_LearningRecord) async {
+    /// Files the row's word as a custom word; the engine then forgets a
+    /// learned phrase (the reload drops its row) and keeps a frequency row.
+    /// A refusal keeps the row and says why.
+    func addToCustomDictionary(_ record: Taigi_Engine_LearningRecord) async {
         await write {
-            try await $0.moveLearningRecordToCustomDictionary(record)
-            return .moved
+            try await $0.addLearningRecordToCustomDictionary(record)
+            return .addedToCustomDictionary
         }
     }
 
@@ -270,8 +271,9 @@ enum LearningRecordsNotice: Equatable {
     case writeFailed(detail: String)
     /// An edit or delete found the row deleted, evicted, or its id taken.
     case gone
-    /// A learned phrase was filed in the custom dictionary and forgotten here.
-    case moved
+    /// A row's word was filed in the custom dictionary (a learned phrase is
+    /// then forgotten here, a frequency row stays).
+    case addedToCustomDictionary
 }
 
 extension Taigi_Engine_LearningRecord {

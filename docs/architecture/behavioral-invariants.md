@@ -380,7 +380,7 @@ The prior platform-layer parity tests (iOS `LexiconServiceHanziGuardTests.swift`
 
 ## 15. Lexicon — input classification (v3.5.7)
 
-**Added**: 2026-05-02 (v3.5.7 classification slice + Tab3 hanzi-range parity correction). Codex sandwich rounds 1+2 + post-draft APPROVED. Implementation in Rust `engine/lexicon::classification::is_hanji`.
+**Added**: 2026-05-02 (v3.5.7 classification slice + Tab3 hanzi-range parity correction). Codex sandwich rounds 1+2 + post-draft APPROVED. Implementation in Rust `engine/lexicon::classification::is_hanji` (since learning-records P8 defined in `engine/phonetics/src/hanji.rs` and re-exported there, so `userdata` reads the same predicate).
 
 **2026-09-25**: the `ClassifyInput` op had no production caller and was removed with `classify_input` / `contains_numeric_tone`; `NUMERIC_TONE_SET`, `PRECEDENCE` and `SEARCH_KEY` are **retired** (their tests deleted). Only `HANJI_RANGE` remains live. The proto `InputType` enum and `SearchRequest` went with the `Search` op on 2026-09-30 (no production caller); the in-process `lexicon::search::SearchInputType` remains.
 
@@ -405,7 +405,7 @@ Removed with `classify_input` / `contains_numeric_tone` (no production caller). 
 
 ### Tests
 
-- **Rust engine unit** — `engine/lexicon/src/classification.rs::tests` covers the range bounds.
+- **Rust engine unit** — `engine/phonetics/src/hanji.rs::tests` covers the range bounds.
 - **Rust engine prod** — `engine/lexicon/tests/cjk_ranges_parity.rs`: table parity with `cjk.py`, and 𰣻 / U+2F801 / U+FA0D reach their `search_by_hanji` rows.
 - **Continuous guard** — `engine/composing/tests/dispatch_continuous.rs::decode_fetch_at_pos_mixed_hanji_buffer_returns_empty_carrier` (`a好b`, `a𰣻`, `a\u{2F801}`, `a\u{FA0D}`).
 - **iOS / Android** — Tab3 routes through `RustEngineBridge.isHanji` / `LexiconBridge.isHanji`; no platform-side range check.

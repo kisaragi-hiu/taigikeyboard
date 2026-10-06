@@ -371,12 +371,12 @@ public nonisolated struct Taigi_Engine_UserDataRequest: Sendable {
     set {method = .deleteLearningRecord(newValue)}
   }
 
-  public var moveLearningRecordToCustomDictionary: Taigi_Engine_MoveLearningRecordToCustomDictionary {
+  public var addLearningRecordToCustomDictionary: Taigi_Engine_AddLearningRecordToCustomDictionary {
     get {
-      if case .moveLearningRecordToCustomDictionary(let v)? = method {return v}
-      return Taigi_Engine_MoveLearningRecordToCustomDictionary()
+      if case .addLearningRecordToCustomDictionary(let v)? = method {return v}
+      return Taigi_Engine_AddLearningRecordToCustomDictionary()
     }
-    set {method = .moveLearningRecordToCustomDictionary(newValue)}
+    set {method = .addLearningRecordToCustomDictionary(newValue)}
   }
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -396,7 +396,7 @@ public nonisolated struct Taigi_Engine_UserDataRequest: Sendable {
     case listLearningRecords(Taigi_Engine_ListLearningRecords)
     case setLearningRecordCount(Taigi_Engine_SetLearningRecordCount)
     case deleteLearningRecord(Taigi_Engine_DeleteLearningRecord)
-    case moveLearningRecordToCustomDictionary(Taigi_Engine_MoveLearningRecordToCustomDictionary)
+    case addLearningRecordToCustomDictionary(Taigi_Engine_AddLearningRecordToCustomDictionary)
 
   }
 
@@ -522,12 +522,12 @@ public nonisolated struct Taigi_Engine_UserDataResponse: Sendable {
     set {result = .learningRecordDeleted(newValue)}
   }
 
-  public var learningRecordMoved: Taigi_Engine_LearningRecordMoved {
+  public var learningRecordAddedToCustomDictionary: Taigi_Engine_LearningRecordAddedToCustomDictionary {
     get {
-      if case .learningRecordMoved(let v)? = result {return v}
-      return Taigi_Engine_LearningRecordMoved()
+      if case .learningRecordAddedToCustomDictionary(let v)? = result {return v}
+      return Taigi_Engine_LearningRecordAddedToCustomDictionary()
     }
-    set {result = .learningRecordMoved(newValue)}
+    set {result = .learningRecordAddedToCustomDictionary(newValue)}
   }
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -547,7 +547,7 @@ public nonisolated struct Taigi_Engine_UserDataResponse: Sendable {
     case learningRecords(Taigi_Engine_LearningRecords)
     case learningRecordSaved(Taigi_Engine_LearningRecordSaved)
     case learningRecordDeleted(Taigi_Engine_LearningRecordDeleted)
-    case learningRecordMoved(Taigi_Engine_LearningRecordMoved)
+    case learningRecordAddedToCustomDictionary(Taigi_Engine_LearningRecordAddedToCustomDictionary)
 
   }
 
@@ -1023,6 +1023,13 @@ public nonisolated struct Taigi_Engine_LearningRecord: Sendable {
   /// Epoch milliseconds; 0 when the stored time cannot be read.
   public var lastUsedMs: Int64 = 0
 
+  /// Whether the page offers Add to Custom Dictionary for this row: a
+  /// learned phrase or word-frequency row whose text holds Hanji and whose TL
+  /// has two syllables or more. Set by the engine on every row it answers;
+  /// ignored on a request (`AddLearningRecordToCustomDictionary` decides
+  /// again from `text` and `tl`).
+  public var canAddToCustomDictionary: Bool = false
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -1159,18 +1166,22 @@ public nonisolated struct Taigi_Engine_LearningRecordDeleted: Sendable {
   public init() {}
 }
 
-/// Moves one learned phrase into the custom dictionary: adds it as a custom
-/// word (roman = `record.tl`, hanji = `record.text`) unless the dictionary
-/// already holds that word — the same Hanji with the same canonical TL,
-/// however its roman is spelled — then forgets the learned phrase as
-/// `DeleteLearningRecord` does (a row already gone is not a failure). The
-/// custom word offers the whole phrase from then on, as the learned phrase
-/// did, so nothing is lost. Refused as `SaveCustomEntry` is (FULL, or
-/// UNSEARCHABLE for a TL that derives no search key), and a refused move
-/// keeps the phrase. Learned phrases only:
-/// a frequency row keeps weighting the word it counts, and an association is
-/// not a word (`FAIL_INVARIANT`).
-public nonisolated struct Taigi_Engine_MoveLearningRecordToCustomDictionary: Sendable {
+/// Adds one row's word to the custom dictionary (roman = `record.tl`,
+/// hanji = `record.text`) unless the dictionary already holds that word —
+/// the same Hanji with the same canonical TL, however its roman is spelled.
+/// What happens to the row after depends on its kind:
+/// - a learned phrase is then forgotten as `DeleteLearningRecord` forgets it
+///   (a row already gone is not a failure): the custom word offers the whole
+///   phrase from then on, as the learned phrase did, so nothing is lost;
+/// - a word-frequency row stays as it is: it keeps weighting the word it
+///   counts.
+/// Refused as `SaveCustomEntry` is (FULL, or UNSEARCHABLE for a TL that
+/// derives no search key), and a refused add keeps the row. A row whose
+/// `can_add_to_custom_dictionary` the engine would answer false (an
+/// association, no Hanji, a one-syllable TL) is `FAIL_INVARIANT`: a custom
+/// word overrides its toneless key in continuous input, so one syllable is
+/// left to a deliberate custom-word entry.
+public nonisolated struct Taigi_Engine_AddLearningRecordToCustomDictionary: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1191,14 +1202,14 @@ public nonisolated struct Taigi_Engine_MoveLearningRecordToCustomDictionary: Sen
   fileprivate var _record: Taigi_Engine_LearningRecord? = nil
 }
 
-public nonisolated struct Taigi_Engine_LearningRecordMoved: Sendable {
+public nonisolated struct Taigi_Engine_LearningRecordAddedToCustomDictionary: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
   public var refusal: Taigi_Engine_CustomDictionaryRefusal = .none
 
-  /// The refusal in English, for an alert's diagnostic line; empty when moved.
+  /// The refusal in English, for an alert's diagnostic line; empty when added.
   public var detail: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -1232,7 +1243,7 @@ nonisolated extension Taigi_Engine_LearningRecordOrder: SwiftProtobuf._ProtoName
 
 nonisolated extension Taigi_Engine_UserDataRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".UserDataRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}open\0\u{1}reset\0\u{3}record_usage\0\u{3}list_custom_entries\0\u{3}save_custom_entry\0\u{3}delete_custom_entry\0\u{3}import_custom_csv\0\u{3}export_custom_csv\0\u{3}export_backup\0\u{3}import_backup\0\u{3}search_custom_entries\0\u{3}list_learning_records\0\u{3}set_learning_record_count\0\u{3}delete_learning_record\0\u{3}move_learning_record_to_custom_dictionary\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}open\0\u{1}reset\0\u{3}record_usage\0\u{3}list_custom_entries\0\u{3}save_custom_entry\0\u{3}delete_custom_entry\0\u{3}import_custom_csv\0\u{3}export_custom_csv\0\u{3}export_backup\0\u{3}import_backup\0\u{3}search_custom_entries\0\u{3}list_learning_records\0\u{3}set_learning_record_count\0\u{3}delete_learning_record\0\u{3}add_learning_record_to_custom_dictionary\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1423,16 +1434,16 @@ nonisolated extension Taigi_Engine_UserDataRequest: SwiftProtobuf.Message, Swift
         }
       }()
       case 15: try {
-        var v: Taigi_Engine_MoveLearningRecordToCustomDictionary?
+        var v: Taigi_Engine_AddLearningRecordToCustomDictionary?
         var hadOneofValue = false
         if let current = self.method {
           hadOneofValue = true
-          if case .moveLearningRecordToCustomDictionary(let m) = current {v = m}
+          if case .addLearningRecordToCustomDictionary(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.method = .moveLearningRecordToCustomDictionary(v)
+          self.method = .addLearningRecordToCustomDictionary(v)
         }
       }()
       default: break
@@ -1502,8 +1513,8 @@ nonisolated extension Taigi_Engine_UserDataRequest: SwiftProtobuf.Message, Swift
       guard case .deleteLearningRecord(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 14)
     }()
-    case .moveLearningRecordToCustomDictionary?: try {
-      guard case .moveLearningRecordToCustomDictionary(let v)? = self.method else { preconditionFailure() }
+    case .addLearningRecordToCustomDictionary?: try {
+      guard case .addLearningRecordToCustomDictionary(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 15)
     }()
     case nil: break
@@ -1520,7 +1531,7 @@ nonisolated extension Taigi_Engine_UserDataRequest: SwiftProtobuf.Message, Swift
 
 nonisolated extension Taigi_Engine_UserDataResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".UserDataResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}opened\0\u{1}reset\0\u{3}usage_recorded\0\u{3}custom_entries\0\u{3}custom_entry_saved\0\u{3}custom_entry_deleted\0\u{3}custom_csv_imported\0\u{3}custom_csv_exported\0\u{3}backup_exported\0\u{3}backup_imported\0\u{3}custom_entry_matches\0\u{3}learning_records\0\u{3}learning_record_saved\0\u{3}learning_record_deleted\0\u{3}learning_record_moved\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}opened\0\u{1}reset\0\u{3}usage_recorded\0\u{3}custom_entries\0\u{3}custom_entry_saved\0\u{3}custom_entry_deleted\0\u{3}custom_csv_imported\0\u{3}custom_csv_exported\0\u{3}backup_exported\0\u{3}backup_imported\0\u{3}custom_entry_matches\0\u{3}learning_records\0\u{3}learning_record_saved\0\u{3}learning_record_deleted\0\u{3}learning_record_added_to_custom_dictionary\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1711,16 +1722,16 @@ nonisolated extension Taigi_Engine_UserDataResponse: SwiftProtobuf.Message, Swif
         }
       }()
       case 15: try {
-        var v: Taigi_Engine_LearningRecordMoved?
+        var v: Taigi_Engine_LearningRecordAddedToCustomDictionary?
         var hadOneofValue = false
         if let current = self.result {
           hadOneofValue = true
-          if case .learningRecordMoved(let m) = current {v = m}
+          if case .learningRecordAddedToCustomDictionary(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.result = .learningRecordMoved(v)
+          self.result = .learningRecordAddedToCustomDictionary(v)
         }
       }()
       default: break
@@ -1790,8 +1801,8 @@ nonisolated extension Taigi_Engine_UserDataResponse: SwiftProtobuf.Message, Swif
       guard case .learningRecordDeleted(let v)? = self.result else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 14)
     }()
-    case .learningRecordMoved?: try {
-      guard case .learningRecordMoved(let v)? = self.result else { preconditionFailure() }
+    case .learningRecordAddedToCustomDictionary?: try {
+      guard case .learningRecordAddedToCustomDictionary(let v)? = self.result else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 15)
     }()
     case nil: break
@@ -2647,7 +2658,7 @@ nonisolated extension Taigi_Engine_BackupImported: SwiftProtobuf.Message, SwiftP
 
 nonisolated extension Taigi_Engine_LearningRecord: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".LearningRecord"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}kind\0\u{1}id\0\u{1}text\0\u{1}tl\0\u{3}previous_text\0\u{3}previous_tl\0\u{1}count\0\u{3}last_used_ms\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}kind\0\u{1}id\0\u{1}text\0\u{1}tl\0\u{3}previous_text\0\u{3}previous_tl\0\u{1}count\0\u{3}last_used_ms\0\u{3}can_add_to_custom_dictionary\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2663,6 +2674,7 @@ nonisolated extension Taigi_Engine_LearningRecord: SwiftProtobuf.Message, SwiftP
       case 6: try { try decoder.decodeSingularStringField(value: &self.previousTl) }()
       case 7: try { try decoder.decodeSingularInt64Field(value: &self.count) }()
       case 8: try { try decoder.decodeSingularInt64Field(value: &self.lastUsedMs) }()
+      case 9: try { try decoder.decodeSingularBoolField(value: &self.canAddToCustomDictionary) }()
       default: break
       }
     }
@@ -2693,6 +2705,9 @@ nonisolated extension Taigi_Engine_LearningRecord: SwiftProtobuf.Message, SwiftP
     if self.lastUsedMs != 0 {
       try visitor.visitSingularInt64Field(value: self.lastUsedMs, fieldNumber: 8)
     }
+    if self.canAddToCustomDictionary != false {
+      try visitor.visitSingularBoolField(value: self.canAddToCustomDictionary, fieldNumber: 9)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -2705,6 +2720,7 @@ nonisolated extension Taigi_Engine_LearningRecord: SwiftProtobuf.Message, SwiftP
     if lhs.previousTl != rhs.previousTl {return false}
     if lhs.count != rhs.count {return false}
     if lhs.lastUsedMs != rhs.lastUsedMs {return false}
+    if lhs.canAddToCustomDictionary != rhs.canAddToCustomDictionary {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -2942,8 +2958,8 @@ nonisolated extension Taigi_Engine_LearningRecordDeleted: SwiftProtobuf.Message,
   }
 }
 
-nonisolated extension Taigi_Engine_MoveLearningRecordToCustomDictionary: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".MoveLearningRecordToCustomDictionary"
+nonisolated extension Taigi_Engine_AddLearningRecordToCustomDictionary: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".AddLearningRecordToCustomDictionary"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}record\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -2969,15 +2985,15 @@ nonisolated extension Taigi_Engine_MoveLearningRecordToCustomDictionary: SwiftPr
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Taigi_Engine_MoveLearningRecordToCustomDictionary, rhs: Taigi_Engine_MoveLearningRecordToCustomDictionary) -> Bool {
+  public static func ==(lhs: Taigi_Engine_AddLearningRecordToCustomDictionary, rhs: Taigi_Engine_AddLearningRecordToCustomDictionary) -> Bool {
     if lhs._record != rhs._record {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-nonisolated extension Taigi_Engine_LearningRecordMoved: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".LearningRecordMoved"
+nonisolated extension Taigi_Engine_LearningRecordAddedToCustomDictionary: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".LearningRecordAddedToCustomDictionary"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}refusal\0\u{1}detail\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -3003,7 +3019,7 @@ nonisolated extension Taigi_Engine_LearningRecordMoved: SwiftProtobuf.Message, S
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Taigi_Engine_LearningRecordMoved, rhs: Taigi_Engine_LearningRecordMoved) -> Bool {
+  public static func ==(lhs: Taigi_Engine_LearningRecordAddedToCustomDictionary, rhs: Taigi_Engine_LearningRecordAddedToCustomDictionary) -> Bool {
     if lhs.refusal != rhs.refusal {return false}
     if lhs.detail != rhs.detail {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
