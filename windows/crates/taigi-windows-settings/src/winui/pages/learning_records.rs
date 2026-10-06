@@ -474,8 +474,8 @@ fn record_table(
         })
         .collect::<Vec<_>>();
     let has_selection = model.listing.selected_row().is_some();
-    // On for a selected row the engine says can be added: one syllable or no
-    // Hanji greys it out on either kind.
+    // On for a selected row the engine says can be added: no Hanji greys it
+    // out on either kind.
     let can_add_selection = model
         .listing
         .selected_row()

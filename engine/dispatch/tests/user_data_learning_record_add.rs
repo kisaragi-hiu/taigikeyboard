@@ -1,7 +1,7 @@
 //! Learning rows added to the custom dictionary over the wire
-//! (learning-records-page-roadmap P7 / P8): a frequency row stays, a learned
-//! phrase is forgotten, a one-syllable word is refused with `FAIL_INVARIANT`
-//! and no payload.
+//! (learning-records-page-roadmap P7 / P8 / P10): a frequency row stays, a
+//! learned phrase is forgotten, a one-syllable word is added, a word with no
+//! Hanji is refused with `FAIL_INVARIANT` and no payload.
 //! Its own process: the user-data handle is process-wide.
 #![cfg(feature = "user-data")]
 
@@ -101,17 +101,23 @@ fn a_counted_word_is_added_and_stays_and_a_learned_phrase_is_added_and_goes() {
     // Picked again: the word is counted and the phrase touched.
     record_usage("台灣", "tâi-uân");
     record_usage("是", "sī");
+    record_usage("guá", "guá");
     let words = listed(LearningRecordKind::Frequency);
     let word = |text: &str| words.iter().find(|row| row.text == text).unwrap().clone();
     let [phrase] = listed(LearningRecordKind::LearnedPhrase)
         .try_into()
         .unwrap();
 
-    // One syllable: never offered, refused when sent anyway.
-    assert!(!word("是").can_add_to_custom_dictionary);
-    let refused = add_to_custom_dictionary(word("是"));
+    // No Hanji: never offered, refused when sent anyway.
+    assert!(!word("guá").can_add_to_custom_dictionary);
+    let refused = add_to_custom_dictionary(word("guá"));
     assert_eq!(refused.error, ErrorCode::FailInvariant as i32);
     assert!(refused.payload.is_none());
+
+    // One syllable: the user's to file, like any custom word.
+    assert!(word("是").can_add_to_custom_dictionary);
+    added(add_to_custom_dictionary(word("是")));
+    assert_eq!(custom_words("si"), ["是"]);
 
     // A frequency row keeps weighting its word: added, and still listed.
     assert!(word("台灣").can_add_to_custom_dictionary);

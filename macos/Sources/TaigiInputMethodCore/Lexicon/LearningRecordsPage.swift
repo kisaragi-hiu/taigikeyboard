@@ -383,7 +383,7 @@ struct LearningRecordsPage: View {
 
     /// The button form of the context menu's Add to Custom Dictionary, so it
     /// is found without a right-click. Off unless the selected row is one the
-    /// engine says can be added (one syllable or no Hanji is not).
+    /// engine says can be added (a row with no Hanji is not).
     private var addToCustomDictionaryControl: (labelKey: StringKey, isEnabled: Bool, action: () -> Void) {
         (
             .dictionaryLearningRecordsAddToCustomDictionary,
