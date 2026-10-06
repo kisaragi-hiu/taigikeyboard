@@ -4,11 +4,13 @@ import com.siansiansu.taigikeyboard.engine.proto.Platform
 import com.siansiansu.taigikeyboard.ime.settings.CandidateDisplayMode
 import com.siansiansu.taigikeyboard.ime.settings.PojMarkerOptions
 import com.siansiansu.taigikeyboard.ime.settings.StubEngineSettings
+import com.siansiansu.taigikeyboard.ime.settings.SyllableSeparator
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import com.siansiansu.taigikeyboard.engine.proto.CandidateDisplayMode as ProtoCandidateDisplayMode
+import com.siansiansu.taigikeyboard.engine.proto.SyllableSeparator as ProtoSyllableSeparator
 
 /**
  * The wire config every request carries: what [appConfig] and the composing
@@ -17,14 +19,14 @@ import com.siansiansu.taigikeyboard.engine.proto.CandidateDisplayMode as ProtoCa
  * engine is needed.
  */
 class EngineAppConfigTest {
-    // The TPS layout goes out as "tps" with the swap and No Hyphens as stored — the engine
-    // applies the TPS fold itself (`AppConfig::renders_hanji_first` / `renders_hyphenless`).
+    // The TPS layout goes out as "tps" with the swap and Syllable Separator as stored — the engine
+    // applies the TPS fold itself (`AppConfig::renders_hanji_first` / `rendered_syllable_joiner`).
     @Test
     fun continuousAppConfig_tpsLayout_sendsTpsWithTheStoredFlags() {
         val settings = StubEngineSettings(
             inputMode = "tps",
             isHanjiFirst = false,
-            isHyphenlessRomanEnabled = true,
+            syllableSeparator = SyllableSeparator.NONE,
             isTpsOrMappedToER = true,
         )
 
@@ -32,7 +34,11 @@ class EngineAppConfigTest {
 
         assertEquals("tps", config.inputMode)
         assertFalse("the swap goes out unfolded; the engine reads tps as Hanji-first", config.isHanjiFirst)
-        assertTrue("No Hyphens goes out as stored; the engine exempts tps", config.hyphenlessRoman)
+        assertEquals(
+            "the separator goes out as stored; the engine exempts tps",
+            ProtoSyllableSeparator.SYLLABLE_SEPARATOR_NONE,
+            config.syllableSeparator,
+        )
         assertTrue("the or→er dialect switch rides the config", config.tpsOrMapsToEr)
         assertEquals(Platform.PLATFORM_ANDROID, config.platformId)
     }
@@ -45,7 +51,7 @@ class EngineAppConfigTest {
                 candidateDisplayMode = CandidateDisplayMode.COMBINED,
                 isHanjiFirst = true,
                 isOutputBothScripts = true,
-                isHyphenlessRomanEnabled = true,
+                syllableSeparator = SyllableSeparator.SPACE,
                 pojMarkerOptions = PojMarkerOptions(
                     isDoubleTapOOEnabled = true,
                     isDoubleTapNNEnabled = true,
@@ -59,7 +65,7 @@ class EngineAppConfigTest {
             assertTrue(mode, config.isHanjiFirst)
             assertTrue(mode, config.outputBothScripts)
             assertEquals(mode, ProtoCandidateDisplayMode.CANDIDATE_DISPLAY_MODE_COMBINED, config.candidateDisplayMode)
-            assertTrue(mode, config.hyphenlessRoman)
+            assertEquals(mode, ProtoSyllableSeparator.SYLLABLE_SEPARATOR_SPACE, config.syllableSeparator)
             assertTrue(mode, config.ooDoubletapEnabled)
             assertTrue(mode, config.nnDoubletapEnabled)
             assertTrue("$mode: ⁿ becomes ᴺ OFF is inverted on the wire", config.forceLowercaseNasalMarker)
@@ -82,7 +88,7 @@ class EngineAppConfigTest {
         assertFalse(config.forceLowercaseNasalMarker)
         assertFalse(config.outputBothScripts)
         assertEquals(ProtoCandidateDisplayMode.CANDIDATE_DISPLAY_MODE_SIDE_BY_SIDE, config.candidateDisplayMode)
-        assertFalse(config.hyphenlessRoman)
+        assertEquals(ProtoSyllableSeparator.SYLLABLE_SEPARATOR_HYPHEN, config.syllableSeparator)
         assertFalse(config.tpsOrMapsToEr)
     }
 

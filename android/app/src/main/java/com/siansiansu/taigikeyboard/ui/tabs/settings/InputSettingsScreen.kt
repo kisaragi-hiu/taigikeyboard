@@ -72,6 +72,7 @@ fun InputSettingsScreen(
     var showInputModePicker by remember { mutableStateOf(false) }
     var showCandidateDisplayModePicker by remember { mutableStateOf(false) }
     var showNasalMarkerStylePicker by remember { mutableStateOf(false) }
+    var showSyllableSeparatorPicker by remember { mutableStateOf(false) }
     var showFontPicker by remember { mutableStateOf(false) }
     // Authoritative SELECTED display language (may be SYSTEM) — driven by the Activity-root
     // ProvideDisplayLanguage(prefs) Flow, so it stays correct across reset/live-switch without a local
@@ -85,7 +86,7 @@ fun InputSettingsScreen(
     // Annotate in Brackets binds the STORED flag; it is only disabled (not cleared) while roman-only.
     var outputBoth by remember(resetCounter) { mutableStateOf(prefs.storedOutputBothScripts) }
     var literalRomanCandidate by remember(resetCounter) { mutableStateOf(prefs.literalRomanCandidateEnabled) }
-    var hyphenlessRoman by remember(resetCounter) { mutableStateOf(prefs.isHyphenlessRomanEnabled) }
+    var syllableSeparator by remember(resetCounter) { mutableStateOf(prefs.syllableSeparator) }
     var autoCap by remember(resetCounter) { mutableStateOf(prefs.autoCapitalizationEnabled) }
     var autoSpace by remember(resetCounter) { mutableStateOf(prefs.isAutoSpaceEnabled) }
     var doubleOO by remember(resetCounter) { mutableStateOf(prefs.enableDoubleTapOO) }
@@ -125,6 +126,15 @@ fun InputSettingsScreen(
                 prefs.candidateDisplayMode = it
             },
             onBack = { showCandidateDisplayModePicker = false },
+        )
+    } else if (showSyllableSeparatorPicker) {
+        SyllableSeparatorScreen(
+            selected = syllableSeparator,
+            onSelected = {
+                syllableSeparator = it
+                prefs.syllableSeparator = it
+            },
+            onBack = { showSyllableSeparatorPicker = false },
         )
     } else if (showNasalMarkerStylePicker) {
         NasalMarkerStyleScreen(
@@ -230,14 +240,11 @@ fun InputSettingsScreen(
                         },
                     )
                     SettingsDivider()
-                    SwitchRow(
-                        label = L10n.settingsHyphenlessRoman,
-                        checked = hyphenlessRoman,
-                        infoText = L10n.settingsHyphenlessRomanInfo,
-                        onCheckedChange = {
-                            hyphenlessRoman = it
-                            prefs.isHyphenlessRomanEnabled = it
-                        },
+                    SettingNavigationRow(
+                        label = L10n.settingsSyllableSeparator,
+                        value = syllableSeparatorDisplayName(syllableSeparator),
+                        infoText = L10n.settingsSyllableSeparatorInfo,
+                        onClick = { showSyllableSeparatorPicker = true },
                     )
                     SettingsDivider()
                     SwitchRow(

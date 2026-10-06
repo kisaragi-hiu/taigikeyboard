@@ -134,7 +134,7 @@ class CandidateClickHandler(
             usage.record(Usage(selectedWord.displayText, canonicalTl))
 
             // NextWord learns the canonical reading, not the rendered `roman`
-            // (No Hyphens strips its hyphens, §49) — mirrors iOS
+            // (the Syllable Separator rewrites its hyphens, §49) — mirrors iOS
             // ActionHandler+Suggestions.swift `associationRoman` (`additionalInfo["tl"]`).
             onNextWordPrediction(selectedWord.displayText, canonicalTl.ifEmpty { selectedWord.roman })
         }

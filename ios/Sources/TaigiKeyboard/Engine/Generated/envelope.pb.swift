@@ -205,6 +205,52 @@ public nonisolated enum Taigi_Engine_CandidateDisplayMode: SwiftProtobuf.Enum, S
 
 }
 
+/// How the rendered romanization separates syllables (Syllable Separator,
+/// `behavioral-invariants.md` §49). `UNSPECIFIED` (proto3 default) and any
+/// unknown value mean HYPHEN — the dictionary form; normalise through
+/// `AppConfig::rendered_syllable_joiner`, never compare the raw i32.
+public nonisolated enum Taigi_Engine_SyllableSeparator: SwiftProtobuf.Enum, Swift.CaseIterable {
+  public typealias RawValue = Int
+  case unspecified // = 0
+  case hyphen // = 1
+  case none // = 2
+  case space // = 3
+  case UNRECOGNIZED(Int)
+
+  public init() {
+    self = .unspecified
+  }
+
+  public init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .unspecified
+    case 1: self = .hyphen
+    case 2: self = .none
+    case 3: self = .space
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  public var rawValue: Int {
+    switch self {
+    case .unspecified: return 0
+    case .hyphen: return 1
+    case .none: return 2
+    case .space: return 3
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  public static let allCases: [Taigi_Engine_SyllableSeparator] = [
+    .unspecified,
+    .hyphen,
+    .none,
+    .space,
+  ]
+
+}
+
 /// 2026-09-01 added `candidate_display_mode`: Romanization Only cells hide the hanji, so
 /// rows that differ only in hanji (homophones 食/𤆬 tsia̍h) become visible
 /// duplicates that only the engine can collapse consistently for four
@@ -225,6 +271,14 @@ public nonisolated enum Taigi_Engine_CandidateDisplayMode: SwiftProtobuf.Enum, S
 /// applies it only off the TPS layout (`AppConfig::renders_hyphenless`): the
 /// platform re-splits `roman` on `-` for bopomofo.
 ///
+/// 2026-10-06 replaced it with `syllable_separator` (field 14; tag 10
+/// reserved, USER: "No Hyphens becomes two options: space-separated and
+/// no-space-separated"): Hyphen keeps the dictionary form, None is the old
+/// No Hyphens, Space writes each syllable boundary as a space and the marker
+/// as ` ·` (`tâi uân`, `hōo ·guá`). Same readers, same identity / TPS rules,
+/// through `AppConfig::rendered_syllable_joiner` and
+/// `phonetics::api::syllable_joiner_display`.
+///
 /// 2026-09-22 added `force_lowercase_nasal_marker` (ⁿ becomes ᴺ in capitals OFF, USER): the
 /// POJ nasal marker is always `ⁿ` U+207F, never `ᴺ` U+1D3A (Caps Lock
 /// `SIANN5` → `SIÂⁿ`). Inverted so the proto default keeps PR #102 (the
@@ -236,11 +290,11 @@ public nonisolated enum Taigi_Engine_CandidateDisplayMode: SwiftProtobuf.Enum, S
 /// `tps_or_maps_to_er` carries the TPS or→er dialect choice (the same flag
 /// `TlNumericToTps` / `TlDisplayToTps` take as `or_maps_to_er`). Under
 /// `"tps"` the engine composes with the TL tables and applies the TPS fold
-/// itself (`AppConfig::renders_hanji_first` / `renders_hyphenless` in
+/// itself (`AppConfig::renders_hanji_first` / `rendered_syllable_joiner` in
 /// `engine/protos/src/lib.rs`), so `is_hanji_first` and
-/// `hyphenless_roman` are the Candidate-Display-projected stored values
+/// `syllable_separator` are the Candidate-Display-projected stored values
 /// WITHOUT the TPS fold. A platform may still send the pre-R6 wire (`"tl"`
-/// plus the TPS-folded swap / hyphenless) — composing renders both
+/// plus the TPS-folded swap / separator) — composing renders both
 /// identically. Nextword's empty-romanization drop and Enter skip read the
 /// swap as sent, not folded; today every platform sends nextword the stored
 /// swap, so moving to `"tps"` changes nothing there.
@@ -265,9 +319,6 @@ public nonisolated struct Taigi_Engine_AppConfig: Sendable {
 
   public var candidateDisplayMode: Taigi_Engine_CandidateDisplayMode = .unspecified
 
-  /// No Hyphens as stored, without the TPS fold.
-  public var hyphenlessRoman: Bool = false
-
   public var forceLowercaseNasalMarker: Bool = false
 
   /// TPS or→er dialect switch; no engine reader yet.
@@ -283,6 +334,9 @@ public nonisolated struct Taigi_Engine_AppConfig: Sendable {
   public var hasHanjiConversion: Bool {self._hanjiConversion != nil}
   /// Clears the value of `hanjiConversion`. Subsequent reads from it will return its default value.
   public mutating func clearHanjiConversion() {self._hanjiConversion = nil}
+
+  /// Syllable Separator as stored, without the TPS fold.
+  public var syllableSeparator: Taigi_Engine_SyllableSeparator = .unspecified
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -512,9 +566,13 @@ nonisolated extension Taigi_Engine_CandidateDisplayMode: SwiftProtobuf._ProtoNam
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0CANDIDATE_DISPLAY_MODE_UNSPECIFIED\0\u{1}CANDIDATE_DISPLAY_MODE_SIDE_BY_SIDE\0\u{1}CANDIDATE_DISPLAY_MODE_ROMAN_ONLY\0\u{1}CANDIDATE_DISPLAY_MODE_COMBINED\0")
 }
 
+nonisolated extension Taigi_Engine_SyllableSeparator: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0SYLLABLE_SEPARATOR_UNSPECIFIED\0\u{1}SYLLABLE_SEPARATOR_HYPHEN\0\u{1}SYLLABLE_SEPARATOR_NONE\0\u{1}SYLLABLE_SEPARATOR_SPACE\0")
+}
+
 nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AppConfig"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{2}input_mode\0\u{3}oo_doubletap_enabled\0\u{3}nn_doubletap_enabled\0\u{3}is_hanji_first\0\u{4}\u{2}platform_id\0\u{3}output_both_scripts\0\u{3}candidate_display_mode\0\u{3}hyphenless_roman\0\u{3}force_lowercase_nasal_marker\0\u{3}tps_or_maps_to_er\0\u{3}hanji_conversion\0\u{b}tone_mode\0\u{b}is_association_recording_enabled\0\u{c}\u{1}\u{1}\u{c}\u{6}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{2}input_mode\0\u{3}oo_doubletap_enabled\0\u{3}nn_doubletap_enabled\0\u{3}is_hanji_first\0\u{4}\u{2}platform_id\0\u{3}output_both_scripts\0\u{3}candidate_display_mode\0\u{4}\u{2}force_lowercase_nasal_marker\0\u{3}tps_or_maps_to_er\0\u{3}hanji_conversion\0\u{3}syllable_separator\0\u{b}tone_mode\0\u{b}is_association_recording_enabled\0\u{b}hyphenless_roman\0\u{c}\u{1}\u{1}\u{c}\u{6}\u{1}\u{c}\u{a}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -529,10 +587,10 @@ nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtob
       case 7: try { try decoder.decodeSingularEnumField(value: &self.platformID) }()
       case 8: try { try decoder.decodeSingularBoolField(value: &self.outputBothScripts) }()
       case 9: try { try decoder.decodeSingularEnumField(value: &self.candidateDisplayMode) }()
-      case 10: try { try decoder.decodeSingularBoolField(value: &self.hyphenlessRoman) }()
       case 11: try { try decoder.decodeSingularBoolField(value: &self.forceLowercaseNasalMarker) }()
       case 12: try { try decoder.decodeSingularBoolField(value: &self.tpsOrMapsToEr) }()
       case 13: try { try decoder.decodeSingularMessageField(value: &self._hanjiConversion) }()
+      case 14: try { try decoder.decodeSingularEnumField(value: &self.syllableSeparator) }()
       default: break
       }
     }
@@ -564,9 +622,6 @@ nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtob
     if self.candidateDisplayMode != .unspecified {
       try visitor.visitSingularEnumField(value: self.candidateDisplayMode, fieldNumber: 9)
     }
-    if self.hyphenlessRoman != false {
-      try visitor.visitSingularBoolField(value: self.hyphenlessRoman, fieldNumber: 10)
-    }
     if self.forceLowercaseNasalMarker != false {
       try visitor.visitSingularBoolField(value: self.forceLowercaseNasalMarker, fieldNumber: 11)
     }
@@ -576,6 +631,9 @@ nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtob
     try { if let v = self._hanjiConversion {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 13)
     } }()
+    if self.syllableSeparator != .unspecified {
+      try visitor.visitSingularEnumField(value: self.syllableSeparator, fieldNumber: 14)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -587,10 +645,10 @@ nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtob
     if lhs.platformID != rhs.platformID {return false}
     if lhs.outputBothScripts != rhs.outputBothScripts {return false}
     if lhs.candidateDisplayMode != rhs.candidateDisplayMode {return false}
-    if lhs.hyphenlessRoman != rhs.hyphenlessRoman {return false}
     if lhs.forceLowercaseNasalMarker != rhs.forceLowercaseNasalMarker {return false}
     if lhs.tpsOrMapsToEr != rhs.tpsOrMapsToEr {return false}
     if lhs._hanjiConversion != rhs._hanjiConversion {return false}
+    if lhs.syllableSeparator != rhs.syllableSeparator {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

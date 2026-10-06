@@ -31,6 +31,30 @@ final class RetiredSettingsCleanupTests: XCTestCase {
         XCTAssertNil(userDefaults.object(forKey: "outputBothScripts"))
     }
 
+    /// No Hyphens left a stored `true` behind: it becomes Syllable Separator
+    /// `none`, a picker choice already stored wins, and the switch goes either way.
+    func testAStoredNoHyphensSwitch_carriesOverAsNone() {
+        let separatorName = SettingsStore.Keys.syllableSeparator.name
+        let retiredName = RetiredSettingsCleanup.retiredHyphenlessRomanName
+
+        userDefaults.set(true, forKey: retiredName)
+        RetiredSettingsCleanup.run(userDefaults: userDefaults)
+        XCTAssertEqual(userDefaults.string(forKey: separatorName), "none")
+        XCTAssertNil(userDefaults.object(forKey: retiredName))
+
+        userDefaults.removeObject(forKey: separatorName)
+        userDefaults.set(false, forKey: retiredName)
+        RetiredSettingsCleanup.run(userDefaults: userDefaults)
+        XCTAssertNil(userDefaults.object(forKey: separatorName), "off carries nothing over")
+        XCTAssertNil(userDefaults.object(forKey: retiredName))
+
+        userDefaults.set("space", forKey: separatorName)
+        userDefaults.set(true, forKey: retiredName)
+        RetiredSettingsCleanup.run(userDefaults: userDefaults)
+        XCTAssertEqual(userDefaults.string(forKey: separatorName), "space", "a stored choice wins")
+        XCTAssertNil(userDefaults.object(forKey: retiredName))
+    }
+
     /// A tombstone for Show Typed Text First is what left its earlier pane row dead —
     /// the sweep cleared what the row wrote, every launch (`behavioral-invariants.md`
     /// §34 desktop notes). The row is back, so the sweep must leave the key alone.

@@ -92,6 +92,31 @@ enum CandidateDisplayMode: String, CaseIterable, Sendable {
     }
 }
 
+/// How the rendered romanization separates syllables (Syllable Separator,
+/// `behavioral-invariants.md` §49): the dictionary hyphen (`tâi-uân`), a space
+/// (`tâi uân`), or nothing (`tâiuân`). The engine rewrites the romanization
+/// itself; desktop-core reads the stored raw value through its key-path
+/// snapshot (`key_path.rs`).
+/// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/SettingsModels.swift
+/// `SyllableSeparator`, the Android `SyllableSeparator.storageValue` and
+/// desktop-core `SyllableSeparator::raw`. Drift changes which choice a stored
+/// value resolves to.
+enum SyllableSeparator: String, CaseIterable, Sendable {
+    case hyphen
+    case space
+    /// Raw `none`; spelled out in Swift so it never reads as `Optional.none`.
+    case noSeparator = "none"
+
+    /// The picker row's label.
+    var displayNameKey: StringKey {
+        switch self {
+        case .hyphen: .desktopTelexGuideHyphen
+        case .space: .settingsSyllableSeparatorSpace
+        case .noSeparator: .settingsSyllableSeparatorNone
+        }
+    }
+}
+
 /// What a fresh install composes under: the default table `SettingsStore.Keys`
 /// reads its engine-setting defaults from. Desktop-core reads the settings
 /// themselves, from the snapshot each request carries
@@ -130,12 +155,12 @@ struct EngineSettings: Sendable {
     /// Drift changes which candidate leads the list on a fresh install.
     let isLiteralRomanCandidateEnabled: Bool
 
-    /// No Hyphens (`behavioral-invariants.md` §49) — sent as
-    /// `AppConfig.hyphenless_roman` on every request; no TPS layout here.
-    /// CROSS-PLATFORM INVARIANT — mirrors `isHyphenlessRomanEnabled` in
+    /// Syllable Separator (`behavioral-invariants.md` §49) — sent as
+    /// `AppConfig.syllable_separator` on every request.
+    /// CROSS-PLATFORM INVARIANT — mirrors `syllableSeparator` in
     /// ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift and
-    /// android/…/ime/settings/PrefHelper.kt, both OFF.
-    let isHyphenlessRomanEnabled: Bool
+    /// android/…/ime/settings/PrefHelper.kt, both `hyphen`.
+    let syllableSeparator: SyllableSeparator
 
     /// Nasal mark in POJ capitals (`behavioral-invariants.md` §53) — the POJ nasal marker follows
     /// the case of the letters before it (`SIÂᴺ`); off, it is always `ⁿ`.
@@ -169,7 +194,7 @@ struct EngineSettings: Sendable {
         isHanjiFirst: true,
         candidateDisplayMode: .sideBySide,
         isLiteralRomanCandidateEnabled: false,
-        isHyphenlessRomanEnabled: false,
+        syllableSeparator: .hyphen,
         isNasalMarkerUppercaseEnabled: true,
         isCustomDictEnabled: true,
         dictionarySources: .defaults,

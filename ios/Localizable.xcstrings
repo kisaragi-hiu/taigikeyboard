@@ -523,6 +523,24 @@
         }
       }
     },
+    "i18n_desktop_telexGuideHyphen": {
+      "comment": "The syllable hyphen: the Telex guide row meaning for f, and the Syllable Separator picker's Hyphen value (settings.syllableSeparator).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hyphen"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ハイフン"
+          }
+        }
+      }
+    },
     "i18n_dictionary_addEntry": {
       "comment": "Title of the add-custom-entry dialog.",
       "extractionState": "manual",
@@ -3619,42 +3637,6 @@
         }
       }
     },
-    "i18n_settings_hyphenlessRoman": {
-      "comment": "Toggle label: render candidate / committed romanization without the dictionary's inter-syllable hyphen, neutral-tone -- as · (tâi-uân → tâiuân, hōo--guá → hōo·guá). All four platforms, host settings only.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No Hyphens"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ハイフンなし"
-          }
-        }
-      }
-    },
-    "i18n_settings_hyphenlessRomanInfo": {
-      "comment": "Help text for the No Hyphens toggle (mobile host app).",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Shows and commits romanization without hyphens between syllables (tâi-uân → tâiuân); the neutral-tone marker -- becomes · (hōo--guá → hōo·guá). Hyphens you type yourself are unaffected."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "候補と確定するローマ字から音節間のハイフンを省きます（tâi-uân → tâiuân）。軽声記号 -- は · になります（hōo--guá → hōo·guá）。自分で入力したハイフンは変わりません。"
-          }
-        }
-      }
-    },
     "i18n_settings_inputMode": {
       "comment": "Settings row + sub-screen title for selecting the active input mode (mobile). The desktop General pane labels its TL / POJ picker inputScript instead.",
       "extractionState": "manual",
@@ -3921,6 +3903,78 @@
           "stringUnit": {
             "state": "translated",
             "value": "キー音"
+          }
+        }
+      }
+    },
+    "i18n_settings_syllableSeparator": {
+      "comment": "Picker label: how candidate / committed romanization separates syllables — the dictionary hyphen, a space, or nothing (tâi-uân / tâi uân / tâiuân); the neutral-tone -- becomes · under Space and None. Options: desktop.telexGuideHyphen, settings.syllableSeparatorSpace, settings.syllableSeparatorNone. All five platforms, host settings only.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Syllable Separator"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音節の区切り"
+          }
+        }
+      }
+    },
+    "i18n_settings_syllableSeparatorInfo": {
+      "comment": "Help text for the Syllable Separator picker (mobile host app).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How candidates and committed romanization separate syllables: a hyphen (tâi-uân), a space (tâi uân), or nothing (tâiuân). With a space or nothing, the neutral-tone marker -- becomes · (hōo ·guá, hōo·guá)."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "候補と確定するローマ字の音節の区切り方：ハイフン（tâi-uân）、スペース（tâi uân）、なし（tâiuân）。スペースまたはなしの場合、軽声記号 -- は · になります（hōo ·guá、hōo·guá）。"
+          }
+        }
+      }
+    },
+    "i18n_settings_syllableSeparatorNone": {
+      "comment": "Syllable Separator picker value: nothing between syllables (tâiuân, hōo·guá).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "None"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "なし"
+          }
+        }
+      }
+    },
+    "i18n_settings_syllableSeparatorSpace": {
+      "comment": "Syllable Separator picker value: a space between syllables (tâi uân, hōo ·guá).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Space"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スペース"
           }
         }
       }

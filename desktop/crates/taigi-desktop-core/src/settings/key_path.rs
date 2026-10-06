@@ -39,7 +39,7 @@ impl KeyPathSetting {
     }
 }
 
-/// Every key-path setting: the three choices, the switches (the General
+/// Every key-path setting: the four choices, the switches (the General
 /// pane's, the custom dictionary's, every dictionary source), one chord row
 /// per composing action.
 pub fn key_path_settings() -> Vec<KeyPathSetting> {
@@ -48,7 +48,6 @@ pub fn key_path_settings() -> Vec<KeyPathSetting> {
         keys::IS_AUTO_SPACE_ENABLED,
         keys::IS_CANDIDATE_WINDOW_ENABLED,
         keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED,
-        keys::IS_HYPHENLESS_ROMAN_ENABLED,
         keys::IS_NASAL_MARKER_UPPERCASE_ENABLED,
         keys::IS_CUSTOM_DICT_ENABLED,
         keys::IS_KAUTIAN_ENABLED,
@@ -71,6 +70,7 @@ pub fn key_path_settings() -> Vec<KeyPathSetting> {
         KeyPathSetting::choice(keys::INPUT_MODE),
         KeyPathSetting::choice(keys::TONE_INPUT_SCHEME),
         KeyPathSetting::choice(keys::CANDIDATE_DISPLAY_MODE),
+        KeyPathSetting::choice(keys::SYLLABLE_SEPARATOR),
     ]
     .into_iter()
     .chain(switches)

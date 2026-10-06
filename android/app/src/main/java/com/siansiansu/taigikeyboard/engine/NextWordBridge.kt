@@ -9,6 +9,7 @@ import com.siansiansu.taigikeyboard.engine.proto.DecisionInput
 import com.siansiansu.taigikeyboard.engine.proto.NextWordRequest
 import com.siansiansu.taigikeyboard.engine.proto.NextWordResponse
 import com.siansiansu.taigikeyboard.ime.settings.CandidateDisplayMode
+import com.siansiansu.taigikeyboard.ime.settings.SyllableSeparator
 
 // region Decide intents (6)
 // UpdateLastSelectedWord was originally Android-only (Space-path); v3.5.8
@@ -193,7 +194,7 @@ fun RustEngineBridge.nextwordPredictNext(
     hanjiFirst: Boolean,
     generation: Long,
     candidateDisplayMode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
-    hyphenlessRoman: Boolean = false,
+    syllableSeparator: SyllableSeparator = SyllableSeparator.HYPHEN,
 ): RustEngineBridge.NextWordFilterResult {
     val builder = com.siansiansu.taigikeyboard.engine.proto.PredictNext
         .newBuilder()
@@ -207,15 +208,15 @@ fun RustEngineBridge.nextwordPredictNext(
         methodSetter = { it.predictNext = builder.build() },
         op = "nextwordPredictNext",
         generation = generation,
-        // Fields 9 / 10 ride only the predict request — the sole nextword reader
+        // Fields 9 / 14 ride only the predict request — the sole nextword reader
         // (`nextword/src/filter.rs` collapses same-roman predictions under ROMAN_ONLY
-        // and shapes `text` hyphenless under No Hyphens).
+        // and separates `text`'s syllables under the Syllable Separator).
         config =
             appConfig(
                 inputMode,
                 isHanjiFirst = hanjiFirst,
                 candidateDisplayMode = candidateDisplayMode,
-                isHyphenlessRomanEnabled = hyphenlessRoman,
+                syllableSeparator = syllableSeparator,
             ),
     ) ?: return RustEngineBridge.NextWordFilterResult(emptyList(), wasStale = false)
     if (!resp.hasFilter()) {

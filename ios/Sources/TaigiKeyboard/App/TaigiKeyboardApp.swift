@@ -46,6 +46,8 @@ struct TaigiKeyboardApp: App {
 
         // A look customized before themes existed becomes a user theme (once).
         SharedSettings.shared.retireLegacyAppearance(themeName: DisplayLanguageStore().string(.themeEditorTitleNew))
+        // The retired No Hyphens switch becomes the Syllable Separator (once).
+        SharedSettings.shared.carryOverHyphenlessRoman()
 
         // Navigation bar title font (UIKit appearance, not affected by SwiftUI .environment)
         let navAppearance = UINavigationBarAppearance()

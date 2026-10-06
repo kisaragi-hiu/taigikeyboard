@@ -361,7 +361,7 @@ class NextWordController(
                         hanjiFirst = settings.isHanjiFirst,
                         generation = generation,
                         candidateDisplayMode = settings.candidateDisplayMode,
-                        hyphenlessRoman = settings.isHyphenlessRomanEnabled,
+                        syllableSeparator = settings.syllableSeparator,
                     )
                 }
             // A context change meanwhile makes this answer another context's.

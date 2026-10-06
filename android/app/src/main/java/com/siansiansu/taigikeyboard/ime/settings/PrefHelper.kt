@@ -333,9 +333,15 @@ class PrefHelper(
     // §34/S22 — Show Typed Text First toggle. Default false (off; USER 2026-10-02).
     var literalRomanCandidateEnabled: Boolean by preference(PreferenceKeys.LITERAL_ROMAN_CANDIDATE, false)
 
-    // No Hyphens (§49), sent to the engine as stored: the engine exempts the
-    // TPS layout itself (`AppConfig::renders_hyphenless`).
-    override var isHyphenlessRomanEnabled: Boolean by preference(PreferenceKeys.HYPHENLESS_ROMAN, false)
+    // Syllable Separator (§49), sent to the engine as stored: the engine exempts
+    // the TPS layout itself (`AppConfig::rendered_syllable_joiner`). Unknown stored
+    // values coerce to HYPHEN.
+    override var syllableSeparator: SyllableSeparator
+        get() =
+            SyllableSeparator.fromStorage(
+                cached(PreferenceKeys.SYLLABLE_SEPARATOR, SyllableSeparator.HYPHEN.storageValue),
+            )
+        set(value) = updateCacheAndPersist(PreferenceKeys.SYLLABLE_SEPARATOR, value.storageValue)
 
     // Taigi-specific settings
     var enableDoubleTapOO: Boolean by preference(PreferenceKeys.ENABLE_DOUBLE_TAP_OO, true)
@@ -783,6 +789,7 @@ class PrefHelper(
             // Retired keys (2026-09-30): an older migration may have copied a
             // pre-repo value in; removing an absent key is free, so every start.
             PreferenceKeys.RETIRED.forEach { prefs.remove(it) }
+            carryOverHyphenlessRoman(prefs)
             // A look customized before themes existed becomes a user theme (once).
             LegacyAppearance.retire(prefs, themeName = legacyThemeName, now = System.currentTimeMillis())
         }
@@ -833,4 +840,18 @@ class PrefHelper(
         }
         clearPendingOverlay()
     }
+}
+
+/**
+ * The No Hyphens switch the Syllable Separator replaced (2026-10-06): a stored `true` becomes
+ * [SyllableSeparator.NONE] unless a separator is already stored, then the switch goes. Runs
+ * inside [PrefHelper.migrateFromSharedPreferences]'s transaction every start; once the switch
+ * is gone it does nothing. Mirrors iOS `SharedSettings.carryOverHyphenlessRoman`.
+ */
+internal fun carryOverHyphenlessRoman(prefs: MutablePreferences) {
+    val isNoHyphens = prefs[PreferenceKeys.RETIRED_HYPHENLESS_ROMAN] ?: return
+    if (isNoHyphens && PreferenceKeys.SYLLABLE_SEPARATOR !in prefs) {
+        prefs[PreferenceKeys.SYLLABLE_SEPARATOR] = SyllableSeparator.NONE.storageValue
+    }
+    prefs.remove(PreferenceKeys.RETIRED_HYPHENLESS_ROMAN)
 }

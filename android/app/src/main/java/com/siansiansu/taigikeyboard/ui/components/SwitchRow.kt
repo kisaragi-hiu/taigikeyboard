@@ -13,7 +13,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchColors
 import androidx.compose.material3.SwitchDefaults
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -67,22 +66,12 @@ fun SwitchRow(
             Spacer(Modifier.width(12.dp))
         }
         // Measure the trailing switch first; localized labels wrap within the remaining width.
-        Row(
-            modifier = Modifier.weight(1f),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = label,
-                modifier = Modifier.weight(1f, fill = false),
-                color = labelColor.copy(alpha = labelColor.alpha * contentAlpha),
-                fontFamily = fontFamily,
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            if (infoText != null) {
-                Spacer(Modifier.width(6.dp))
-                SettingInfoButton(description = infoText)
-            }
-        }
+        SettingRowLabel(
+            label = label,
+            color = labelColor.copy(alpha = labelColor.alpha * contentAlpha),
+            infoText = infoText,
+            fontFamily = fontFamily,
+        )
         // onCheckedChange = null: the row's toggleable owns the toggle, so the Switch is
         // display-only (no duplicate toggle semantics / role conflict with the row).
         Switch(

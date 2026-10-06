@@ -1151,7 +1151,7 @@ pub(crate) fn assemble_candidates(
     mode: phonetics::InputMode,
     enabled_sources_bitmask: u32,
     context: &ranking::ContextRanks,
-    hyphenless_roman: bool,
+    syllable_joiner: Option<&str>,
     force_lowercase_nasal_marker: bool,
     shape: ListShape,
 ) -> Vec<RawCandidate> {
@@ -1577,7 +1577,7 @@ pub(crate) fn assemble_candidates(
             }
         }
         // ---- Step 5: presentation pass (typed separators, POJ render,
-        // No Hyphens, ⁿ case).
+        // Syllable Separator, ⁿ case).
         // §55 — the separator at every typed boundary is the one the user
         // typed (`phonetics::api::render_typed_separators`). `roman` only:
         // `display_text` / `canonical_tl` keep the record's form, so the
@@ -1628,17 +1628,17 @@ pub(crate) fn assemble_candidates(
                 cand.roman = recase_tl_as_poj_display(&cand.roman);
             }
         }
-        // No Hyphens (§49) — same presentation seam, same field: only
-        // `roman`, for dictionary, custom and walker rows alike;
+        // Syllable Separator (§49) — same presentation seam, same field:
+        // only `roman`, for dictionary, custom and walker rows alike;
         // `display_text` / `canonical_tl` keep the dictionary form. After
         // the POJ render (which splits on `-`), before the rendered
         // dedupe (which keys on what the cell shows) and before the §34
         // literal prepend in dispatch (the literal keeps typed hyphens).
-        // The platform sends `false` under a TPS layout.
-        if hyphenless_roman {
+        // `None` under Hyphen and on the TPS layout.
+        if let Some(joiner) = syllable_joiner {
             for cand in &mut candidates {
                 if cand.roman.contains('-') {
-                    cand.roman = phonetics::api::hyphenless_display(&cand.roman);
+                    cand.roman = phonetics::api::syllable_joiner_display(&cand.roman, joiner);
                 }
             }
         }
@@ -1657,7 +1657,10 @@ pub(crate) fn assemble_candidates(
                 cand.roman = roman;
             }
         }
-        if mode == phonetics::InputMode::Poj || hyphenless_roman || typed_separators_rendered {
+        if mode == phonetics::InputMode::Poj
+            || syllable_joiner.is_some()
+            || typed_separators_rendered
+        {
             dedupe_rendered_continuous(&mut candidates);
         }
         // TPS visual-dedupe — TPS UI hides romanization so two rows

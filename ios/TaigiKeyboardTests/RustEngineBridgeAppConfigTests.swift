@@ -4,13 +4,13 @@ import XCTest
 // The wire config every request carries: what `RustEngineBridge.appConfig` and the composing
 // projection `continuousAppConfig` put on each field. Mirrors Android `EngineAppConfigTest`.
 final class RustEngineBridgeAppConfigTests: XCTestCase {
-    /// The TPS layout goes out as `"tps"` with the swap and No Hyphens as stored — the engine
-    /// applies the TPS fold itself (`AppConfig::renders_hanji_first` / `renders_hyphenless`).
+    /// The TPS layout goes out as `"tps"` with the swap and Syllable Separator as stored — the engine
+    /// applies the TPS fold itself (`AppConfig::renders_hanji_first` / `rendered_syllable_joiner`).
     func testContinuousAppConfig_tpsLayout_sendsTpsWithTheStoredFlags() {
         let settings = StubEngineSettings(
             inputMode: .tps,
             isHanjiFirst: false,
-            isHyphenlessRomanEnabled: true,
+            syllableSeparator: .noSeparator,
             isTpsOrMappedToER: true,
         )
 
@@ -18,7 +18,7 @@ final class RustEngineBridgeAppConfigTests: XCTestCase {
 
         XCTAssertEqual(config.inputMode, "tps")
         XCTAssertFalse(config.isHanjiFirst, "the swap goes out unfolded; the engine reads tps as Hanji-first")
-        XCTAssertTrue(config.hyphenlessRoman, "No Hyphens goes out as stored; the engine exempts tps")
+        XCTAssertEqual(config.syllableSeparator, .none, "the separator goes out as stored; the engine exempts tps")
         XCTAssertTrue(config.tpsOrMapsToEr, "the or→er dialect switch rides the config")
         XCTAssertEqual(config.platformID, .ios)
     }
@@ -31,7 +31,7 @@ final class RustEngineBridgeAppConfigTests: XCTestCase {
                 isHanjiFirst: true,
                 isOutputBothScripts: true,
                 candidateDisplayMode: .combined,
-                isHyphenlessRomanEnabled: true,
+                syllableSeparator: .space,
                 pojMarkerOptions: PojMarkerOptions(
                     isDoubleTapOOEnabled: true,
                     isDoubleTapNNEnabled: true,
@@ -45,7 +45,7 @@ final class RustEngineBridgeAppConfigTests: XCTestCase {
             XCTAssertTrue(config.isHanjiFirst, "\(mode)")
             XCTAssertTrue(config.outputBothScripts, "\(mode)")
             XCTAssertEqual(config.candidateDisplayMode, .combined, "\(mode)")
-            XCTAssertTrue(config.hyphenlessRoman, "\(mode)")
+            XCTAssertEqual(config.syllableSeparator, .space, "\(mode)")
             XCTAssertTrue(config.ooDoubletapEnabled, "\(mode)")
             XCTAssertTrue(config.nnDoubletapEnabled, "\(mode)")
             XCTAssertTrue(config.forceLowercaseNasalMarker, "\(mode): ⁿ becomes ᴺ OFF is inverted on the wire")
@@ -67,7 +67,7 @@ final class RustEngineBridgeAppConfigTests: XCTestCase {
         XCTAssertFalse(config.forceLowercaseNasalMarker)
         XCTAssertFalse(config.outputBothScripts)
         XCTAssertEqual(config.candidateDisplayMode, .sideBySide)
-        XCTAssertFalse(config.hyphenlessRoman)
+        XCTAssertEqual(config.syllableSeparator, .hyphen)
         XCTAssertFalse(config.tpsOrMapsToEr)
     }
 }

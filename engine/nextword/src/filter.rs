@@ -255,9 +255,9 @@ fn shape_prediction(m: MergedRow, config: &AppConfig) -> Option<EnginePrediction
     } else {
         phonetics::api::tl_display_to_poj_display(&m.tl)
     };
-    // No Hyphens — presentation only; `tl` below stays the association key.
-    if config.renders_hyphenless() {
-        roman = phonetics::api::hyphenless_display(&roman);
+    // Syllable Separator — presentation only; `tl` below stays the association key.
+    if let Some(joiner) = config.rendered_syllable_joiner() {
+        roman = phonetics::api::syllable_joiner_display(&roman, joiner);
     }
     // The stored swap, unfolded: a TPS prediction reads it as it always has.
     if !config.is_hanji_first && roman.is_empty() {
@@ -285,7 +285,7 @@ fn shape_prediction(m: MergedRow, config: &AppConfig) -> Option<EnginePrediction
 #[cfg(test)]
 mod tests {
     use super::*;
-    use protos::engine::{CandidateDisplayMode, Platform};
+    use protos::engine::{CandidateDisplayMode, Platform, SyllableSeparator};
 
     fn config_tl_mode_hanji_first(swapped: bool) -> AppConfig {
         AppConfig {
@@ -296,7 +296,7 @@ mod tests {
             platform_id: Platform::Ios as i32,
             output_both_scripts: false,
             candidate_display_mode: 0,
-            hyphenless_roman: false,
+            syllable_separator: 0,
             force_lowercase_nasal_marker: false,
             tps_or_maps_to_er: false,
             hanji_conversion: None,
@@ -312,7 +312,7 @@ mod tests {
             platform_id: Platform::Ios as i32,
             output_both_scripts: false,
             candidate_display_mode: 0,
-            hyphenless_roman: false,
+            syllable_separator: 0,
             force_lowercase_nasal_marker: false,
             tps_or_maps_to_er: false,
             hanji_conversion: None,
@@ -1063,10 +1063,18 @@ mod tests {
         );
     }
 
-    /// No Hyphens shapes only the cell text; `tl` stays the association key
-    /// the platform hands back on tap, in TL and POJ mode alike.
+    fn separated(separator: SyllableSeparator, config: AppConfig) -> AppConfig {
+        AppConfig {
+            syllable_separator: separator as i32,
+            ..config
+        }
+    }
+
+    /// The Syllable Separator shapes only the cell text; `tl` stays the
+    /// association key the platform hands back on tap, in TL and POJ mode
+    /// alike.
     #[test]
-    fn hyphenless_roman_strips_prediction_text_but_not_its_tl_key() {
+    fn syllable_separator_shapes_prediction_text_but_not_its_tl_key() {
         let state = PersistedState::default();
         let rows = || {
             vec![
@@ -1074,27 +1082,28 @@ mod tests {
                 dict_row("予我", "hōo--guá", 3),
             ]
         };
-        let tl = AppConfig {
-            hyphenless_roman: true,
-            ..config_tl_mode_hanji_first(false)
-        };
+        let tl = separated(SyllableSeparator::None, config_tl_mode_hanji_first(false));
         let shaped = filter(&state, rows(), 0, 0, 10, &tl).unwrap();
         assert_eq!(shaped.predictions[0].text, "tâiuân");
         assert_eq!(shaped.predictions[0].tl, "tâi-uân");
         assert_eq!(shaped.predictions[1].text, "hōo\u{00b7}guá");
         assert_eq!(shaped.predictions[1].tl, "hōo--guá");
 
-        let poj = AppConfig {
-            hyphenless_roman: true,
-            ..config_poj_mode()
-        };
+        let spaced = separated(SyllableSeparator::Space, config_tl_mode_hanji_first(false));
+        let shaped = filter(&state, rows(), 0, 0, 10, &spaced).unwrap();
+        assert_eq!(shaped.predictions[0].text, "tâi uân");
+        assert_eq!(shaped.predictions[0].tl, "tâi-uân");
+        assert_eq!(shaped.predictions[1].text, "hōo \u{00b7}guá");
+        assert_eq!(shaped.predictions[1].tl, "hōo--guá");
+
+        let poj = separated(SyllableSeparator::None, config_poj_mode());
         let shaped = filter(&state, rows(), 0, 0, 10, &poj).unwrap();
         assert_eq!(shaped.predictions[0].text, "tâioân");
         assert_eq!(shaped.predictions[0].tl, "tâi-uân");
     }
 
     /// R6: the TPS layout as `"tps"` with the stored flags shapes exactly what
-    /// the pre-R6 wire (`"tl"`, No Hyphens folded off, the stored swap) shaped:
+    /// the pre-R6 wire (`"tl"`, the separator folded to Hyphen, the stored swap) shaped:
     /// TL text, hyphens kept, and the empty-roman drop still reading the
     /// stored swap.
     #[test]
@@ -1110,16 +1119,20 @@ mod tests {
         for swapped in [false, true] {
             let legacy = config_tl_mode_hanji_first(swapped);
             let expected = filter(&state, rows(), 0, 0, 10, &legacy).unwrap();
-            for hyphenless in [false, true] {
+            for separator in [
+                SyllableSeparator::Hyphen,
+                SyllableSeparator::None,
+                SyllableSeparator::Space,
+            ] {
                 let tps = AppConfig {
                     input_mode: "tps".to_owned(),
-                    hyphenless_roman: hyphenless,
+                    syllable_separator: separator as i32,
                     ..config_tl_mode_hanji_first(swapped)
                 };
                 let shaped = filter(&state, rows(), 0, 0, 10, &tps).unwrap();
                 assert_eq!(
                     shaped, expected,
-                    "swapped={swapped} hyphenless={hyphenless}"
+                    "swapped={swapped} separator={separator:?}"
                 );
                 assert_eq!(shaped.predictions[0].text, "tâi-uân");
                 assert_eq!(shaped.predictions[1].text, "hōo--guá");

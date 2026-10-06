@@ -443,19 +443,52 @@ pub fn render_typed_separators(
     Some(out)
 }
 
-/// No Hyphens (`AppConfig.hyphenless_roman`, `behavioral-invariants.md` §49)
-/// — the rendered form of a dictionary-supplied romanization with the
-/// inter-syllable `-` dropped and the neutral-tone marker `--` written as
-/// [`crate::tps::KHINSIANN_DOT`] (`tâi-uân` → `tâiuân`, `hōo--guá` →
-/// `hōo·guá`). Spaces (word boundaries) are kept. Display only: identity
-/// keys (`display_text`, `canonical_tl`) never pass through here, and
-/// user-typed hyphens are rendered by `to_tone_marks` as typed.
-pub fn hyphenless_display(roman: &str) -> String {
-    roman
-        .replace("--", crate::tps::KHINSIANN_DOT)
-        .chars()
-        .filter(|&c| c != '-')
-        .collect()
+/// Syllable Separator (`AppConfig.syllable_separator`, `behavioral-invariants.md`
+/// §49) — the rendered form of a dictionary-supplied romanization with each
+/// run of `-` rewritten by [`push_syllable_joiner_run`]: `joiner` `""` (None)
+/// gives `tâi-uân` → `tâiuân`, `hōo--guá` → `hōo·guá`; `" "` (Space) gives
+/// `tâi uân`, `hōo ·guá`. The joiner only ever stands between two syllables:
+/// a run that opens the text or a word (`--ah` → `·ah`) or closes one adds
+/// none. Spaces (word boundaries) are kept. Display only: identity keys
+/// (`display_text`, `canonical_tl`) never pass through here, and user-typed
+/// hyphens are rendered by `to_tone_marks` as typed.
+pub fn syllable_joiner_display(roman: &str, joiner: &str) -> String {
+    let mut out = String::with_capacity(roman.len());
+    let mut chars = roman.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c != '-' {
+            out.push(c);
+            continue;
+        }
+        let mut run_len = 1;
+        while chars.next_if_eq(&'-').is_some() {
+            run_len += 1;
+        }
+        // A piece rendered on its own (a nailed `--guá`) opens here too;
+        // `composing::api::push_boundary` writes its joiner.
+        let opens_word = out.is_empty() || out.ends_with(' ');
+        let closes_word = matches!(chars.peek(), None | Some(' '));
+        let joiner = if opens_word || closes_word {
+            ""
+        } else {
+            joiner
+        };
+        push_syllable_joiner_run(&mut out, run_len, joiner);
+    }
+    out
+}
+
+/// Appends one run of `run_len` hyphens between two syllables, rendered:
+/// `joiner`, then one [`crate::tps::KHINSIANN_DOT`] per neutral-tone `--` (an
+/// odd hyphen left over is the plain syllable boundary the joiner already
+/// wrote). The dot stays glued to the syllable after it: `---` → ` ·`, never
+/// `· `. `composing::api::push_boundary` calls it for a typed run between
+/// nailed segments, where no run ever opens the text.
+pub fn push_syllable_joiner_run(out: &mut String, run_len: usize, joiner: &str) {
+    out.push_str(joiner);
+    for _ in 0..run_len / 2 {
+        out.push_str(crate::tps::KHINSIANN_DOT);
+    }
 }
 
 /// v3.5.9 B-4 — mode-aware canonicalizer for the `user_frequency.db`
@@ -639,18 +672,54 @@ mod tests {
     }
 
     #[test]
-    fn hyphenless_display_drops_hyphens_and_dots_the_khinsiann_marker() {
-        assert_eq!(hyphenless_display("tâi-uân"), "tâiuân");
-        assert_eq!(hyphenless_display("tshit-niû-má-senn"), "tshitniûmásenn");
-        assert_eq!(hyphenless_display("hōo--guá"), "hōo\u{00b7}guá");
-        assert_eq!(hyphenless_display("--ah"), "\u{00b7}ah");
-        assert_eq!(
-            hyphenless_display("tsáu--tshut-khì"),
-            "tsáu\u{00b7}tshutkhì"
-        );
+    fn syllable_joiner_display_none_drops_hyphens_and_dots_the_khinsiann_marker() {
+        let none = |roman| syllable_joiner_display(roman, "");
+        assert_eq!(none("tâi-uân"), "tâiuân");
+        assert_eq!(none("tshit-niû-má-senn"), "tshitniûmásenn");
+        assert_eq!(none("hōo--guá"), "hōo\u{00b7}guá");
+        assert_eq!(none("--ah"), "\u{00b7}ah");
+        assert_eq!(none("tsáu--tshut-khì"), "tsáu\u{00b7}tshutkhì");
+        // Longer runs: one dot per `--`, an odd hyphen adds nothing.
+        assert_eq!(none("sia̍p---khì"), "sia̍p\u{00b7}khì");
+        assert_eq!(none("a----b"), "a\u{00b7}\u{00b7}b");
         // Word boundaries and hyphen-free input are left alone.
-        assert_eq!(hyphenless_display("tâi gí"), "tâi gí");
-        assert_eq!(hyphenless_display("keng-lâm su-īⁿ"), "kenglâm suīⁿ");
+        assert_eq!(none("tâi gí"), "tâi gí");
+        assert_eq!(none("keng-lâm su-īⁿ"), "kenglâm suīⁿ");
+    }
+
+    #[test]
+    fn syllable_joiner_display_space_spaces_syllables_and_glues_the_dot_forward() {
+        let space = |roman| syllable_joiner_display(roman, " ");
+        assert_eq!(space("tâi-uân"), "tâi uân");
+        assert_eq!(space("tshit-niû-má-senn"), "tshit niû má senn");
+        assert_eq!(space("hōo--guá"), "hōo \u{00b7}guá");
+        assert_eq!(space("tsáu--tshut-khì"), "tsáu \u{00b7}tshut khì");
+        assert_eq!(space("sia̍p---khì"), "sia̍p \u{00b7}khì");
+        assert_eq!(
+            space("tshiànn--tsha̍t---kòo-kenn"),
+            "tshiànn \u{00b7}tsha̍t \u{00b7}kòo kenn"
+        );
+        // A run opening the text or a word, or closing one, adds no space.
+        assert_eq!(space("--ah"), "\u{00b7}ah");
+        assert_eq!(space("khioh piān--ê"), "khioh piān \u{00b7}ê");
+        assert_eq!(space("tâi --ah"), "tâi \u{00b7}ah");
+        assert_eq!(space("tai-"), "tai");
+        assert_eq!(space("keng-lâm su-īⁿ"), "keng lâm su īⁿ");
+    }
+
+    #[test]
+    fn push_syllable_joiner_run_writes_the_joiner_then_one_dot_per_pair() {
+        let run = |run_len, joiner| {
+            let mut out = String::new();
+            push_syllable_joiner_run(&mut out, run_len, joiner);
+            out
+        };
+        assert_eq!(run(1, ""), "");
+        assert_eq!(run(2, ""), "\u{00b7}");
+        assert_eq!(run(1, " "), " ");
+        assert_eq!(run(2, " "), " \u{00b7}");
+        assert_eq!(run(3, " "), " \u{00b7}");
+        assert_eq!(run(4, " "), " \u{00b7}\u{00b7}");
     }
 
     /// The premise `composing::derived::display_caret_utf16` aligns raw and

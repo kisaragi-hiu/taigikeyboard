@@ -31,7 +31,7 @@ final class ManualScreenshotTests: XCTestCase {
         SettingsStore.Keys.isHanjiFirst.name,
         SettingsStore.Keys.candidateDisplayMode.name,
         SettingsStore.Keys.isLiteralRomanCandidateEnabled.name,
-        SettingsStore.Keys.isHyphenlessRomanEnabled.name,
+        SettingsStore.Keys.syllableSeparator.name,
         SettingsStore.Keys.isAutoSpaceEnabled.name,
         SettingsStore.Keys.candidateLayout.name,
         SettingsStore.Keys.appearanceMode.name,

@@ -19,7 +19,7 @@ struct SettingsTab: View {
     @State private var candidateDisplayMode: CandidateDisplayMode
     @State private var isOutputBothScripts: Bool
     @State private var literalRomanCandidateEnabled: Bool
-    @State private var isHyphenlessRomanEnabled: Bool
+    @State private var syllableSeparator: SyllableSeparator
     @State private var isTpsOrMappedToER: Bool
     @State private var toolbarAutoCollapse: Bool
     @State private var isGlobeKeyEnabled: Bool
@@ -61,7 +61,7 @@ struct SettingsTab: View {
         // Toggle binds the STORED flag: it keeps showing the user's choice while disabled under Romanization Only.
         _isOutputBothScripts = State(initialValue: settings.storedIsOutputBothScripts)
         _literalRomanCandidateEnabled = State(initialValue: settings.isLiteralRomanCandidateEnabled)
-        _isHyphenlessRomanEnabled = State(initialValue: settings.isHyphenlessRomanEnabled)
+        _syllableSeparator = State(initialValue: settings.syllableSeparator)
         _isTpsOrMappedToER = State(initialValue: settings.isTpsOrMappedToER)
         _toolbarAutoCollapse = State(initialValue: settings.isToolbarAutoCollapse)
         _isGlobeKeyEnabled = State(initialValue: settings.isGlobeKeyEnabled)
@@ -150,14 +150,23 @@ struct SettingsTab: View {
                         settings.storedIsOutputBothScripts = newValue
                     }
 
-                    Toggle(isOn: $isHyphenlessRomanEnabled) {
-                        HStack {
-                            Text(lang.string(.settingsHyphenlessRoman))
-                            SettingInfoButton(description: lang.string(.settingsHyphenlessRomanInfo))
+                    // One line, like the switch it replaced: the label and its info button, then
+                    // a menu picker. The button sits beside the picker, not inside its label, so
+                    // tapping it never opens the menu.
+                    HStack {
+                        Text(lang.string(.settingsSyllableSeparator))
+                        SettingInfoButton(description: lang.string(.settingsSyllableSeparatorInfo))
+                        Spacer()
+                        Picker(lang.string(.settingsSyllableSeparator), selection: $syllableSeparator) {
+                            ForEach(SyllableSeparator.allCases, id: \.self) { separator in
+                                Text(lang.string(separator.displayNameKey)).tag(separator)
+                            }
                         }
+                        .labelsHidden()
+                        .pickerStyle(.menu)
                     }
-                    .onChange(of: isHyphenlessRomanEnabled) { _, newValue in
-                        settings.isHyphenlessRomanEnabled = newValue
+                    .onChange(of: syllableSeparator) { _, newValue in
+                        settings.syllableSeparator = newValue
                     }
 
                     Toggle(isOn: $literalRomanCandidateEnabled) {

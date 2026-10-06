@@ -229,7 +229,7 @@ final class NextWordController {
                     mode: settings.inputMode,
                     hanjiFirst: settings.isHanjiFirst,
                     candidateDisplayMode: settings.candidateDisplayMode,
-                    hyphenlessRoman: settings.isHyphenlessRomanEnabled,
+                    syllableSeparator: settings.syllableSeparator,
                     generation: envelope,
                 )
             }.value

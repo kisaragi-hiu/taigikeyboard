@@ -56,6 +56,30 @@ enum FontType: String, CaseIterable, Codable {
     }
 }
 
+// MARK: - Syllable Separator
+
+/// How the rendered romanization separates syllables (Syllable Separator,
+/// `behavioral-invariants.md` §49): the dictionary hyphen (`tâi-uân`), a space
+/// (`tâi uân`), or nothing (`tâiuân`). Sent as stored; the engine rewrites the
+/// romanization and leaves the TPS layout alone (`AppConfig::rendered_syllable_joiner`).
+// CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/settings/SyllableSeparator.kt
+// storageValue, macOS `EngineSettings.swift` `SyllableSeparator` and desktop-core `SyllableSeparator::raw`.
+// Drift changes which choice a stored value resolves to.
+public enum SyllableSeparator: String, CaseIterable, Codable {
+    case hyphen
+    case space
+    /// Raw `none`; spelled out in Swift so it never reads as `Optional.none`.
+    case noSeparator = "none"
+
+    var displayNameKey: StringKey {
+        switch self {
+        case .hyphen: .desktopTelexGuideHyphen
+        case .space: .settingsSyllableSeparatorSpace
+        case .noSeparator: .settingsSyllableSeparatorNone
+        }
+    }
+}
+
 // MARK: - Candidate Display Mode
 
 /// How TL/POJ candidate cells render (host Typing + in-keyboard settings overlay).

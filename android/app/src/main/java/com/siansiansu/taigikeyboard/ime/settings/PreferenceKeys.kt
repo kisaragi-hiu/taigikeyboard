@@ -59,7 +59,12 @@ object PreferenceKeys {
     // Raw value = CandidateDisplayMode.storageValue ("sideBySide" / "romanOnly" / "combined").
     val CANDIDATE_DISPLAY_MODE = stringPreferencesKey("keyboard__candidate_display_mode")
     val LITERAL_ROMAN_CANDIDATE = booleanPreferencesKey("keyboard__literal_roman_candidate")
-    val HYPHENLESS_ROMAN = booleanPreferencesKey("keyboard__hyphenless_roman")
+
+    // Raw value = SyllableSeparator.storageValue ("hyphen" / "space" / "none").
+    val SYLLABLE_SEPARATOR = stringPreferencesKey("keyboard__syllable_separator")
+
+    // Retired 2026-10-06: the No Hyphens switch, carried over by [carryOverHyphenlessRoman].
+    val RETIRED_HYPHENLESS_ROMAN = booleanPreferencesKey("keyboard__hyphenless_roman")
     val KEYBOARD_LAYOUT_TYPE = stringPreferencesKey("keyboard__layout_type")
     val INPUT_MODE_BEFORE_TPS = stringPreferencesKey("keyboard__input_mode_before_tps")
     val LAYOUT_BEFORE_TPS = stringPreferencesKey("keyboard__layout_before_tps")

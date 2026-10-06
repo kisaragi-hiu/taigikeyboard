@@ -105,7 +105,7 @@ fn wire_platform(platform: DesktopPlatform) -> Platform {
 /// leave both graphemes untypable in POJ.
 ///
 /// The engine collapses same-roman rows under roman-only
-/// (`candidate_display_mode`), shapes the romanization hyphenless (§49) and
+/// (`candidate_display_mode`), separates the romanization's syllables (§49) and
 /// cases the nasal marker (§53) in the preedit, the candidate fetch and the
 /// next-word filter; the nasal switch is inverted on the wire (proto default =
 /// the marker follows the case). The swap flag renders a continuous
@@ -127,7 +127,7 @@ pub(super) fn app_config(settings: &EngineSettings, platform: DesktopPlatform) -
         is_hanji_first: settings.is_hanji_first,
         platform_id: wire_platform(platform) as i32,
         candidate_display_mode: settings.candidate_display_mode.wire() as i32,
-        hyphenless_roman: settings.is_hyphenless_roman_enabled,
+        syllable_separator: settings.syllable_separator.wire() as i32,
         force_lowercase_nasal_marker: !settings.is_nasal_marker_uppercase_enabled,
         tps_or_maps_to_er: super::TPS_OR_MAPS_TO_ER,
         hanji_conversion: (settings.input_mode == InputMode::Tps).then(|| HanjiConversion {
@@ -141,8 +141,9 @@ pub(super) fn app_config(settings: &EngineSettings, platform: DesktopPlatform) -
 mod tests {
     use super::*;
     use crate::platform::test_support::TEST_PLATFORM;
-    use crate::settings::{CandidateDisplayMode, InputMode};
+    use crate::settings::{CandidateDisplayMode, InputMode, SyllableSeparator};
     use protos::engine::CandidateDisplayMode as WireDisplayMode;
+    use protos::engine::SyllableSeparator as WireSyllableSeparator;
 
     /// The rendering tests below are not about the platform.
     fn config(settings: &EngineSettings) -> AppConfig {
@@ -208,12 +209,22 @@ mod tests {
     }
 
     #[test]
-    fn hyphenless_roman_reaches_the_config() {
-        let settings = EngineSettings {
-            is_hyphenless_roman_enabled: true,
-            ..EngineSettings::default()
-        };
-        assert!(config(&settings).hyphenless_roman);
+    fn syllable_separator_reaches_the_config() {
+        for (separator, wire) in [
+            (SyllableSeparator::Hyphen, WireSyllableSeparator::Hyphen),
+            (SyllableSeparator::Space, WireSyllableSeparator::Space),
+            (SyllableSeparator::None, WireSyllableSeparator::None),
+        ] {
+            let settings = EngineSettings {
+                syllable_separator: separator,
+                ..EngineSettings::default()
+            };
+            assert_eq!(
+                config(&settings).syllable_separator(),
+                wire,
+                "{separator:?}"
+            );
+        }
     }
 
     // INVARIANT_NASAL_MARKER_CASE_FOLLOWS_THE_SWITCH (behavioral-invariants.md §53)

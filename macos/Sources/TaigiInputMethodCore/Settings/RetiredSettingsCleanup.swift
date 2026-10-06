@@ -122,7 +122,15 @@ enum RetiredSettingsCleanup {
         "composingShortcut.commitRomanization",
     ]
 
+    /// The No Hyphens switch, retired 2026-10-06 when the Syllable Separator
+    /// picker replaced it (`behavioral-invariants.md` §49). Unlike the names
+    /// above it described a choice this build still offers, so a stored `true`
+    /// carries over as `none` first — unless the picker already holds a choice.
+    /// desktop-core twin: `SettingsDocument::from_json`.
+    static let retiredHyphenlessRomanName = "hyphenlessRomanEnabled"
+
     static func run(userDefaults: UserDefaults = .standard) {
+        carryOverHyphenlessRoman(userDefaults: userDefaults)
         for name in retiredDefaultsNames {
             userDefaults.removeObject(forKey: name)
         }
@@ -137,5 +145,14 @@ enum RetiredSettingsCleanup {
         for name in retiredShortcutNames {
             KeyboardShortcuts.setShortcut(nil, for: name)
         }
+    }
+
+    private static func carryOverHyphenlessRoman(userDefaults: UserDefaults) {
+        guard let stored = userDefaults.object(forKey: retiredHyphenlessRomanName) else { return }
+        let separatorName = SettingsStore.Keys.syllableSeparator.name
+        if stored as? Bool == true, userDefaults.object(forKey: separatorName) == nil {
+            userDefaults.set(SyllableSeparator.noSeparator.rawValue, forKey: separatorName)
+        }
+        userDefaults.removeObject(forKey: retiredHyphenlessRomanName)
     }
 }

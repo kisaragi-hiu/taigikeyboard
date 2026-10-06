@@ -95,6 +95,8 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
         // A look customized before themes existed becomes a user theme (once;
         // the app does the same at its launch).
         SharedSettings.shared.retireLegacyAppearance(themeName: DisplayLanguageStore().string(.themeEditorTitleNew))
+        // The retired No Hyphens switch becomes the Syllable Separator (once; the app too).
+        SharedSettings.shared.carryOverHyphenlessRoman()
 
         // Install the lexicon engine state (fst + dictionary.bin +
         // association.bin) once at extension launch. Idempotent — calling

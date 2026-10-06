@@ -23,7 +23,7 @@ use protos::engine::effect::Kind;
 use protos::engine::CommitScript;
 use protos::engine::{
     AppConfig, CandidateMessage, CommitContinuous, CommitRaw, ComposingResponse, DeleteBackward,
-    FetchAtPos, Start,
+    FetchAtPos, Start, SyllableSeparator,
 };
 
 use crate::common::Fetch;
@@ -78,9 +78,9 @@ fn install_fixture() {
     install_rows(&fixture_rows(), &["hoo7", "gua2", "si7", "lai5"]);
 }
 
-fn fetch(raw: &str, input_mode: &str, hyphenless: bool) -> Vec<Cell> {
+fn fetch(raw: &str, input_mode: &str, separator: SyllableSeparator) -> Vec<Cell> {
     let cfg = AppConfig {
-        hyphenless_roman: hyphenless,
+        syllable_separator: separator as i32,
         ..config(input_mode)
     };
     fetch_cells(&cfg, raw, Fetch::default())
@@ -95,7 +95,7 @@ fn typed_separator_joins_the_two_word_reading() {
         ("gua-si", "guá-sī"),
         ("gua--si", "guá--sī"),
     ] {
-        let cells = fetch(raw, "tl", false);
+        let cells = fetch(raw, "tl", SyllableSeparator::Hyphen);
         let cell = cell_with_hanji(&cells, "我是");
         assert_eq!(cell.1, roman, "{raw}: rendered roman");
         assert_eq!(cell.2, "我是", "{raw}: display_text (詞頻 key)");
@@ -116,7 +116,7 @@ fn typed_separator_kind_selects_the_dictionary_word() {
     // (and §55 has nothing to rewrite — typed and stored agree); a plain
     // `-` is a different boundary kind and the word is not offered under
     // it — the typed join stands.
-    let cells = fetch("hoo--gua", "tl", false);
+    let cells = fetch("hoo--gua", "tl", SyllableSeparator::Hyphen);
     let cell = cell_with_hanji(&cells, "予我");
     assert_eq!(cell.1, "hōo--guá", "the record's own khinsiann form");
     assert_eq!(cell.3, "hōo--guá", "the record's identity");
@@ -124,7 +124,7 @@ fn typed_separator_kind_selects_the_dictionary_word() {
         !cells.iter().any(|c| c.1 == "hōo guá" || c.1 == "hōo-guá"),
         "no synth join beside the dictionary word; got {cells:?}"
     );
-    let cells = fetch("hoo-gua", "tl", false);
+    let cells = fetch("hoo-gua", "tl", SyllableSeparator::Hyphen);
     assert!(
         !cells.iter().any(|c| c.3 == "hōo--guá"),
         "a plain `-` never reads the khinsiann record; got {cells:?}"
@@ -138,12 +138,12 @@ fn typed_separator_kind_selects_the_dictionary_word() {
 fn typed_separator_joins_the_all_oov_reading() {
     let _lock = engine_install_lock();
     install_fixture();
-    let cells = fetch("lailai", "tl", false);
+    let cells = fetch("lailai", "tl", SyllableSeparator::Hyphen);
     assert!(
         cells.iter().any(|c| c.0.is_none() && c.1 == "lai lai"),
         "untyped OOV join stays the space; got {cells:?}"
     );
-    let cells = fetch("lai-lai", "tl", false);
+    let cells = fetch("lai-lai", "tl", SyllableSeparator::Hyphen);
     // The typed join reads exactly like the §34 literal, which absorbs the
     // identical bare-roman synth (`requests::handle_fetch_at_pos`) — one
     // `lai-lai` cell, no `lai lai` cell.
@@ -165,20 +165,25 @@ fn typed_separator_joins_the_all_oov_reading() {
 fn typed_separator_renders_under_poj() {
     let _lock = engine_install_lock();
     install_fixture();
-    let cells = fetch("goa--si", "poj", false);
+    let cells = fetch("goa--si", "poj", SyllableSeparator::Hyphen);
     let cell = cell_with_hanji(&cells, "我是");
     assert_eq!(cell.1, "góa--sī", "POJ spelling, typed khinsiann");
     assert_eq!(cell.3, "guá sī", "canonical TL keeps the space");
 }
 
 #[test]
-fn typed_separator_follows_the_hyphenless_setting() {
+fn typed_separator_follows_the_syllable_separator_setting() {
     let _lock = engine_install_lock();
     install_fixture();
-    let cells = fetch("gua--si", "tl", true);
+    let cells = fetch("gua--si", "tl", SyllableSeparator::None);
     assert_eq!(cell_with_hanji(&cells, "我是").1, "guá\u{00b7}sī");
-    let cells = fetch("gua-si", "tl", true);
+    let cells = fetch("gua-si", "tl", SyllableSeparator::None);
     assert_eq!(cell_with_hanji(&cells, "我是").1, "guásī");
+    assert_eq!(cells[0].1, "gua-si", "the literal keeps the typed hyphen");
+    let cells = fetch("gua--si", "tl", SyllableSeparator::Space);
+    assert_eq!(cell_with_hanji(&cells, "我是").1, "guá \u{00b7}sī");
+    let cells = fetch("gua-si", "tl", SyllableSeparator::Space);
+    assert_eq!(cell_with_hanji(&cells, "我是").1, "guá sī");
     assert_eq!(cells[0].1, "gua-si", "the literal keeps the typed hyphen");
 }
 
@@ -228,7 +233,7 @@ fn typed_hyphen_replaces_the_records_space() {
         // the typed run is its join.
         ("pang--tang-lai", "pàng--tāng-lāi"),
     ] {
-        let cells = fetch(raw, "tl", false);
+        let cells = fetch(raw, "tl", SyllableSeparator::Hyphen);
         let cell = cell_with_hanji(&cells, "放重利");
         assert_eq!(cell.1, roman, "{raw}: rendered roman; got {cells:?}");
         assert_eq!(
@@ -245,11 +250,13 @@ fn typed_hyphen_replaces_the_records_space() {
             "{raw}: one 放重利 cell; got {cells:?}"
         );
     }
-    let cells = fetch("pang-tang-lai", "poj", false);
+    let cells = fetch("pang-tang-lai", "poj", SyllableSeparator::Hyphen);
     assert_eq!(cell_with_hanji(&cells, "放重利").1, "pàng-tāng-lāi");
-    // No Hyphens drops the typed `-` like any other (§49).
-    let cells = fetch("pang-tang-lai", "tl", true);
+    // None drops the typed `-` like any other, Space spaces it (§49).
+    let cells = fetch("pang-tang-lai", "tl", SyllableSeparator::None);
     assert_eq!(cell_with_hanji(&cells, "放重利").1, "pàngtānglāi");
+    let cells = fetch("pang-tang-lai", "tl", SyllableSeparator::Space);
+    assert_eq!(cell_with_hanji(&cells, "放重利").1, "pàng tāng lāi");
 }
 
 // ---- Segment-by-segment commit keeps the typed run (USER 2026-09-22) ----
@@ -343,10 +350,10 @@ fn preedit(resp: &ComposingResponse) -> Option<String> {
     })
 }
 
-fn roman_cfg(hyphenless: bool) -> AppConfig {
+fn roman_cfg(separator: SyllableSeparator) -> AppConfig {
     AppConfig {
         is_hanji_first: false,
-        hyphenless_roman: hyphenless,
+        syllable_separator: separator as i32,
         ..config("tl")
     }
 }
@@ -363,7 +370,7 @@ fn two_picks_commit_the_typed_run_between_them() {
         // own `-` joins the two picks (the pending tail keeps the space).
         ("tnglai", "tńg lai", "tńg-lâi"),
     ] {
-        let cfg = roman_cfg(false);
+        let cfg = roman_cfg(SyllableSeparator::Hyphen);
         let mut engine = started(raw, &cfg);
         let first = pick(&mut engine, &cfg, "轉");
         assert_eq!(
@@ -381,20 +388,27 @@ fn two_picks_commit_the_typed_run_between_them() {
 }
 
 #[test]
-fn two_picks_under_hyphenless_render_the_run_as_a_dot() {
+fn two_picks_under_the_syllable_separator_render_the_run_through_its_joiner() {
     let _lock = engine_install_lock();
     install_tng_lai();
-    for (raw, fin) in [
-        ("tng--lai", "tńg·lâi"),
-        ("tng-lai", "tńglâi"),
-        // The oracle's joiner is the hyphen No Hyphens drops.
-        ("tnglai", "tńglâi"),
+    for (separator, raw, fin) in [
+        (SyllableSeparator::None, "tng--lai", "tńg·lâi"),
+        (SyllableSeparator::None, "tng-lai", "tńglâi"),
+        // The oracle's joiner is the hyphen the setting rewrites.
+        (SyllableSeparator::None, "tnglai", "tńglâi"),
+        (SyllableSeparator::Space, "tng--lai", "tńg ·lâi"),
+        (SyllableSeparator::Space, "tng-lai", "tńg lâi"),
+        (SyllableSeparator::Space, "tnglai", "tńg lâi"),
     ] {
-        let cfg = roman_cfg(true);
+        let cfg = roman_cfg(separator);
         let mut engine = started(raw, &cfg);
         pick(&mut engine, &cfg, "轉");
         let second = pick(&mut engine, &cfg, "來");
-        assert_eq!(commit_text(&second).as_deref(), Some(fin), "{raw}");
+        assert_eq!(
+            commit_text(&second).as_deref(),
+            Some(fin),
+            "{separator:?} {raw}"
+        );
     }
 }
 
@@ -417,7 +431,7 @@ fn two_picks_under_hanji_output_carry_no_separator() {
 fn enter_after_the_first_pick_commits_the_typed_tail_as_is() {
     let _lock = engine_install_lock();
     install_tng_lai();
-    let cfg = roman_cfg(false);
+    let cfg = roman_cfg(SyllableSeparator::Hyphen);
     let mut engine = started("tng--lai", &cfg);
     pick(&mut engine, &cfg, "轉");
     let resp = requests::handle(&req(Method::CommitRaw(CommitRaw {})), &mut engine, &cfg)
@@ -441,7 +455,7 @@ fn unnail_restores_the_run_and_a_repick_keeps_it() {
     });
     install_rows(&rows, &["tng2", "lai5", "khi3"]);
 
-    let cfg = roman_cfg(false);
+    let cfg = roman_cfg(SyllableSeparator::Hyphen);
     let mut engine = started("tng--lai-khi", &cfg);
     pick(&mut engine, &cfg, "轉");
     let mid = pick(&mut engine, &cfg, "來");

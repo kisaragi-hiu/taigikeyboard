@@ -20,7 +20,7 @@ use serde_json::Value;
 use super::choices::SettingChoice;
 use super::engine_settings::{
     next_input_mode, CandidateDisplayMode, DictionarySourceToggles, EngineSettings, InputMode,
-    InputModeRequest, KautianSubcollections,
+    InputModeRequest, KautianSubcollections, SyllableSeparator,
 };
 use super::keys;
 use crate::strings::DisplayLanguage;
@@ -58,7 +58,27 @@ impl SettingsDocument {
     /// may have written them); a malformed file is an error the caller keeps
     /// last-known-good over.
     pub fn from_json(json: &str) -> Result<Self, serde_json::Error> {
-        serde_json::from_str(json)
+        let mut document: Self = serde_json::from_str(json)?;
+        document.carry_over_hyphenless_roman();
+        Ok(document)
+    }
+
+    /// The retired No Hyphens switch becomes the Syllable Separator, in
+    /// memory: a stored `true` reads as `none` unless a separator is already
+    /// stored, and the switch goes either way. Every reader of the file
+    /// agrees, and the next write persists it; the revision stays — the
+    /// user's choice did not change. Twin of iOS / Android
+    /// `carryOverHyphenlessRoman`.
+    fn carry_over_hyphenless_roman(&mut self) {
+        let Some(retired) = self.values.remove(keys::RETIRED_HYPHENLESS_ROMAN_ENABLED) else {
+            return;
+        };
+        if retired.as_bool() == Some(true) && !self.contains(keys::SYLLABLE_SEPARATOR.name) {
+            self.values.insert(
+                keys::SYLLABLE_SEPARATOR.name.to_owned(),
+                Value::String(SyllableSeparator::None.raw().to_owned()),
+            );
+        }
     }
 
     /// Pretty JSON with sorted keys (the map is a `BTreeMap`), so two writes
@@ -309,7 +329,7 @@ impl SettingsDocument {
             // composes as TL there) and every TPS cell keeps its key.
             is_literal_roman_candidate_enabled: input_mode != InputMode::Tps
                 && self.bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED),
-            is_hyphenless_roman_enabled: self.bool(&keys::IS_HYPHENLESS_ROMAN_ENABLED),
+            syllable_separator: self.choice(&keys::SYLLABLE_SEPARATOR),
             is_nasal_marker_uppercase_enabled: self.bool(&keys::IS_NASAL_MARKER_UPPERCASE_ENABLED),
             is_custom_dict_enabled: self.bool(&keys::IS_CUSTOM_DICT_ENABLED),
             dictionary_sources: self.dictionary_sources(),
@@ -687,19 +707,47 @@ mod tests {
     }
 
     #[test]
-    fn hyphenless_roman_reads_the_stored_switch() {
+    fn syllable_separator_reads_the_stored_choice() {
         let mut doc = SettingsDocument::default();
-        assert!(
-            !doc.engine_settings().is_hyphenless_roman_enabled,
-            "ships OFF"
+        assert_eq!(
+            doc.engine_settings().syllable_separator,
+            SyllableSeparator::Hyphen,
+            "ships Hyphen"
         );
-        doc.set_bool(&keys::IS_HYPHENLESS_ROMAN_ENABLED, true);
-        assert!(doc.engine_settings().is_hyphenless_roman_enabled);
+        doc.set_choice(&keys::SYLLABLE_SEPARATOR, SyllableSeparator::Space);
+        assert_eq!(
+            doc.engine_settings().syllable_separator,
+            SyllableSeparator::Space
+        );
         doc.reset_general();
-        assert!(
-            !doc.contains(keys::IS_HYPHENLESS_ROMAN_ENABLED.name),
-            "一般's key"
+        assert!(!doc.contains(keys::SYLLABLE_SEPARATOR.name), "一般's key");
+    }
+
+    #[test]
+    fn a_stored_no_hyphens_switch_carries_over_as_none() {
+        let parse = |json: &str| SettingsDocument::from_json(json).unwrap();
+        let on = parse(r#"{"revision":3,"values":{"hyphenlessRomanEnabled":true}}"#);
+        assert_eq!(
+            on.choice(&keys::SYLLABLE_SEPARATOR),
+            SyllableSeparator::None
         );
+        assert!(!on.contains(keys::RETIRED_HYPHENLESS_ROMAN_ENABLED));
+        assert_eq!(on.revision, 3, "the user's choice did not change");
+        // The carried-over value is what the next write persists.
+        assert_eq!(parse(&on.to_json()), on);
+
+        let off = parse(r#"{"values":{"hyphenlessRomanEnabled":false}}"#);
+        assert!(!off.contains(keys::SYLLABLE_SEPARATOR.name));
+        assert!(!off.contains(keys::RETIRED_HYPHENLESS_ROMAN_ENABLED));
+
+        let both =
+            parse(r#"{"values":{"hyphenlessRomanEnabled":true,"syllableSeparator":"space"}}"#);
+        assert_eq!(
+            both.choice(&keys::SYLLABLE_SEPARATOR),
+            SyllableSeparator::Space,
+            "a stored successor wins"
+        );
+        assert!(!both.contains(keys::RETIRED_HYPHENLESS_ROMAN_ENABLED));
     }
 
     #[test]
@@ -740,7 +788,7 @@ mod tests {
         doc.set_choice(&keys::INPUT_MODE, InputMode::Poj);
         doc.set_bool(&keys::IS_HANJI_FIRST, false);
         doc.set_bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED, true);
-        doc.set_bool(&keys::IS_HYPHENLESS_ROMAN_ENABLED, true);
+        doc.set_choice(&keys::SYLLABLE_SEPARATOR, SyllableSeparator::None);
         doc.set_bool(&keys::IS_NASAL_MARKER_UPPERCASE_ENABLED, false);
         doc.set_bool(&keys::IS_CUSTOM_DICT_ENABLED, false);
         doc.set_bool(&keys::IS_KAUTIAN_ENABLED, false);
@@ -756,7 +804,7 @@ mod tests {
             is_full_width_punctuation: false,
             candidate_display_mode: CandidateDisplayMode::SideBySide,
             is_literal_roman_candidate_enabled: true,
-            is_hyphenless_roman_enabled: true,
+            syllable_separator: SyllableSeparator::None,
             is_nasal_marker_uppercase_enabled: false,
             is_custom_dict_enabled: false,
             dictionary_sources: DictionarySourceToggles {

@@ -19,15 +19,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 
-// Settings row that opens a value-picker sub-page: label + current-value caption +
-// chevron. Distinct from ActionRow (no trailing value) and NavigationRow (requires a
-// leading icon). Used for input-mode and font selection in the Settings tab.
+// Settings row that opens a value-picker sub-page: label (+ optional info button, as on
+// SwitchRow) + current-value caption + chevron. Distinct from ActionRow (no trailing value)
+// and NavigationRow (requires a leading icon). Used for input-mode and font selection in the
+// Settings tab.
 @Composable
 fun SettingNavigationRow(
     label: String,
     value: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    infoText: String? = null,
 ) {
     Row(
         modifier =
@@ -38,11 +40,10 @@ fun SettingNavigationRow(
                 .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = label,
-            modifier = Modifier.weight(1f),
+        SettingRowLabel(
+            label = label,
             color = MaterialTheme.colorScheme.onSurface,
-            style = MaterialTheme.typography.bodyLarge,
+            infoText = infoText,
         )
         Text(
             text = value,
