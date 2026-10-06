@@ -325,7 +325,7 @@ struct LearningRecordsPage: View {
             {
                 guard let selectedRecord = model.list.selectedRow else { return }
                 Task { await model.addToCustomDictionary(selectedRecord) }
-            }
+            },
         )
     }
 

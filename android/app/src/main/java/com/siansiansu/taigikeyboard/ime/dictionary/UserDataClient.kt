@@ -13,8 +13,8 @@ import com.siansiansu.taigikeyboard.engine.customDictionaryImportCsv
 import com.siansiansu.taigikeyboard.engine.customDictionaryList
 import com.siansiansu.taigikeyboard.engine.customDictionarySave
 import com.siansiansu.taigikeyboard.engine.customDictionarySearch
-import com.siansiansu.taigikeyboard.engine.learningRecordDelete
 import com.siansiansu.taigikeyboard.engine.learningRecordAddToCustomDictionary
+import com.siansiansu.taigikeyboard.engine.learningRecordDelete
 import com.siansiansu.taigikeyboard.engine.learningRecordSetCount
 import com.siansiansu.taigikeyboard.engine.learningRecordsList
 import com.siansiansu.taigikeyboard.engine.proto.BackupRefusal

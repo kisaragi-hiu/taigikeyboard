@@ -6,6 +6,7 @@
 package com.siansiansu.taigikeyboard.engine
 
 import com.google.protobuf.UnsafeByteOperations
+import com.siansiansu.taigikeyboard.engine.proto.AddLearningRecordToCustomDictionary
 import com.siansiansu.taigikeyboard.engine.proto.BackupImported
 import com.siansiansu.taigikeyboard.engine.proto.CustomCsvImported
 import com.siansiansu.taigikeyboard.engine.proto.CustomDictionaryEntry
@@ -19,15 +20,14 @@ import com.siansiansu.taigikeyboard.engine.proto.ExportCustomCsv
 import com.siansiansu.taigikeyboard.engine.proto.ImportBackup
 import com.siansiansu.taigikeyboard.engine.proto.ImportCustomCsv
 import com.siansiansu.taigikeyboard.engine.proto.LearningRecord
+import com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionary
 import com.siansiansu.taigikeyboard.engine.proto.LearningRecordDeleted
 import com.siansiansu.taigikeyboard.engine.proto.LearningRecordKind
-import com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionary
 import com.siansiansu.taigikeyboard.engine.proto.LearningRecordOrder
 import com.siansiansu.taigikeyboard.engine.proto.LearningRecordSaved
 import com.siansiansu.taigikeyboard.engine.proto.LearningRecords
 import com.siansiansu.taigikeyboard.engine.proto.ListCustomEntries
 import com.siansiansu.taigikeyboard.engine.proto.ListLearningRecords
-import com.siansiansu.taigikeyboard.engine.proto.AddLearningRecordToCustomDictionary
 import com.siansiansu.taigikeyboard.engine.proto.OpenUserData
 import com.siansiansu.taigikeyboard.engine.proto.RecordUsage
 import com.siansiansu.taigikeyboard.engine.proto.ResetUserData
