@@ -54,7 +54,7 @@ import kotlinx.coroutines.launch
  * Compose content for the keyboard settings overlay.
  *
  * Renders the Settings tab's (InputSettingsScreen) keyboard settings in its section order —
- * POJ / TPS / Typing / Keyboard / Feedback — styled for the keyboard overlay. Uses shared SwitchRow.
+ * Typing / Keyboard / POJ / TPS / Feedback — styled for the keyboard overlay. Uses shared SwitchRow.
  */
 @Composable
 fun SettingsOverlayContent(
@@ -121,59 +121,6 @@ fun SettingsOverlayContent(
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = 8.dp),
     ) {
-        SectionHeader(L10n.settingsPojMode, labelColor)
-        SwitchRow(
-            label = L10n.settingsDoubleTapOO,
-            checked = doubleOO,
-            onCheckedChange = {
-                doubleOO = it
-                prefs.enableDoubleTapOO = it
-                autoDismissIfNeeded()
-            },
-            labelColor = labelColor,
-            fontFamily = fontFamily,
-            switchColors = switchColors,
-        )
-        SwitchRow(
-            label = L10n.settingsDoubleTapNN,
-            checked = doubleNN,
-            onCheckedChange = {
-                doubleNN = it
-                prefs.enableDoubleTapNN = it
-                autoDismissIfNeeded()
-            },
-            labelColor = labelColor,
-            fontFamily = fontFamily,
-            switchColors = switchColors,
-        )
-        DropdownRow(
-            label = L10n.settingsNasalMarkerUppercase,
-            selected = nasalMarkerUppercase,
-            options = nasalMarkerStyleOptions,
-            onSelected = {
-                nasalMarkerUppercase = it
-                prefs.isNasalMarkerUppercaseEnabled = it
-                autoDismissIfNeeded()
-            },
-            labelColor = labelColor,
-            accent = appearance.accent,
-            fontFamily = fontFamily,
-        )
-
-        SectionHeader(L10n.settingsTpsMode, labelColor)
-        SwitchRow(
-            label = L10n.settingsTpsOrMapsToER,
-            checked = tpsOrER,
-            onCheckedChange = {
-                tpsOrER = it
-                prefs.tpsOrMapsToER = it
-                autoDismissIfNeeded()
-            },
-            labelColor = labelColor,
-            fontFamily = fontFamily,
-            switchColors = switchColors,
-        )
-
         SectionHeader(L10n.settingsTypingSectionTitle, labelColor)
         DropdownRow(
             label = L10n.settingsCandidateDisplayMode,
@@ -271,6 +218,59 @@ fun SettingsOverlayContent(
             onCheckedChange = {
                 isGlobeKeyEnabled = it
                 prefs.isGlobeKeyEnabled = it
+                autoDismissIfNeeded()
+            },
+            labelColor = labelColor,
+            fontFamily = fontFamily,
+            switchColors = switchColors,
+        )
+
+        SectionHeader(L10n.settingsPojMode, labelColor)
+        SwitchRow(
+            label = L10n.settingsDoubleTapOO,
+            checked = doubleOO,
+            onCheckedChange = {
+                doubleOO = it
+                prefs.enableDoubleTapOO = it
+                autoDismissIfNeeded()
+            },
+            labelColor = labelColor,
+            fontFamily = fontFamily,
+            switchColors = switchColors,
+        )
+        SwitchRow(
+            label = L10n.settingsDoubleTapNN,
+            checked = doubleNN,
+            onCheckedChange = {
+                doubleNN = it
+                prefs.enableDoubleTapNN = it
+                autoDismissIfNeeded()
+            },
+            labelColor = labelColor,
+            fontFamily = fontFamily,
+            switchColors = switchColors,
+        )
+        DropdownRow(
+            label = L10n.settingsNasalMarkerUppercase,
+            selected = nasalMarkerUppercase,
+            options = nasalMarkerStyleOptions,
+            onSelected = {
+                nasalMarkerUppercase = it
+                prefs.isNasalMarkerUppercaseEnabled = it
+                autoDismissIfNeeded()
+            },
+            labelColor = labelColor,
+            accent = appearance.accent,
+            fontFamily = fontFamily,
+        )
+
+        SectionHeader(L10n.settingsTpsMode, labelColor)
+        SwitchRow(
+            label = L10n.settingsTpsOrMapsToER,
+            checked = tpsOrER,
+            onCheckedChange = {
+                tpsOrER = it
+                prefs.tpsOrMapsToER = it
                 autoDismissIfNeeded()
             },
             labelColor = labelColor,

@@ -1,6 +1,6 @@
 package com.siansiansu.taigikeyboard.ui.tabs.settings
 
-// Main Settings tab screen — input mode, POJ / TPS, typing, keyboard, feedback, diagnostics, reset.
+// Main Settings tab screen — input mode, typing, keyboard, POJ / TPS, feedback, diagnostics, reset.
 
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -208,53 +208,6 @@ fun InputSettingsScreen(
 
                 Spacer(Modifier.height(24.dp))
 
-                // Mode-specific settings sit right under Input Mode: POJ, then TPS. Mirrors iOS SettingsTab.
-                SectionHeader(L10n.settingsPojMode)
-                SettingsCard {
-                    SwitchRow(
-                        label = L10n.settingsDoubleTapOO,
-                        checked = doubleOO,
-                        onCheckedChange = {
-                            doubleOO = it
-                            prefs.enableDoubleTapOO = it
-                        },
-                    )
-                    SettingsDivider()
-                    SwitchRow(
-                        label = L10n.settingsDoubleTapNN,
-                        checked = doubleNN,
-                        onCheckedChange = {
-                            doubleNN = it
-                            prefs.enableDoubleTapNN = it
-                        },
-                    )
-                    SettingsDivider()
-                    // Nasal mark in POJ capitals (§53) — the case rule of the marker the row above
-                    // composes: ᴺ or ⁿ on a sub-screen, the Candidate Display row's shape.
-                    SettingNavigationRow(
-                        label = L10n.settingsNasalMarkerUppercase,
-                        value = nasalMarkerStyleDisplayName(nasalMarkerUppercase),
-                        onClick = { showNasalMarkerStylePicker = true },
-                    )
-                }
-
-                Spacer(Modifier.height(24.dp))
-
-                SectionHeader(L10n.settingsTpsMode)
-                SettingsCard {
-                    SwitchRow(
-                        label = L10n.settingsTpsOrMapsToER,
-                        checked = tpsOrMapsToER,
-                        infoText = L10n.settingsTpsOrMapsToERInfo,
-                        onCheckedChange = {
-                            tpsOrMapsToER = it
-                            prefs.tpsOrMapsToER = it
-                        },
-                    )
-                }
-
-                Spacer(Modifier.height(24.dp))
-
                 // Typing options: candidates, then output format, then automatic behaviour.
                 SectionHeader(L10n.settingsTypingSectionTitle)
                 SettingsCard {
@@ -341,6 +294,53 @@ fun InputSettingsScreen(
                         onCheckedChange = {
                             isGlobeKeyEnabled = it
                             prefs.isGlobeKeyEnabled = it
+                        },
+                    )
+                }
+
+                Spacer(Modifier.height(24.dp))
+
+                // Mode-specific settings follow Typing / Keyboard (default mode is TL): POJ, then TPS. Feedback closes the settings. Mirrors iOS SettingsTab.
+                SectionHeader(L10n.settingsPojMode)
+                SettingsCard {
+                    SwitchRow(
+                        label = L10n.settingsDoubleTapOO,
+                        checked = doubleOO,
+                        onCheckedChange = {
+                            doubleOO = it
+                            prefs.enableDoubleTapOO = it
+                        },
+                    )
+                    SettingsDivider()
+                    SwitchRow(
+                        label = L10n.settingsDoubleTapNN,
+                        checked = doubleNN,
+                        onCheckedChange = {
+                            doubleNN = it
+                            prefs.enableDoubleTapNN = it
+                        },
+                    )
+                    SettingsDivider()
+                    // Nasal mark in POJ capitals (§53) — the case rule of the marker the row above
+                    // composes: ᴺ or ⁿ on a sub-screen, the Candidate Display row's shape.
+                    SettingNavigationRow(
+                        label = L10n.settingsNasalMarkerUppercase,
+                        value = nasalMarkerStyleDisplayName(nasalMarkerUppercase),
+                        onClick = { showNasalMarkerStylePicker = true },
+                    )
+                }
+
+                Spacer(Modifier.height(24.dp))
+
+                SectionHeader(L10n.settingsTpsMode)
+                SettingsCard {
+                    SwitchRow(
+                        label = L10n.settingsTpsOrMapsToER,
+                        checked = tpsOrMapsToER,
+                        infoText = L10n.settingsTpsOrMapsToERInfo,
+                        onCheckedChange = {
+                            tpsOrMapsToER = it
+                            prefs.tpsOrMapsToER = it
                         },
                     )
                 }
