@@ -1531,8 +1531,26 @@
         }
       }
     },
-    "i18n_dictionary_learningRecordsEditQuantity": {
-      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records), mobile. Title of the dialog that edits one row's count.",
+    "i18n_dictionary_learningRecordsCount": {
+      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). Column header / field label: the stored count the user can edit.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Count"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "回数"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_learningRecordsEditCount": {
+      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). Dialog title / button tooltip for editing one row's count.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -1671,24 +1689,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "フレーズ"
-          }
-        }
-      }
-    },
-    "i18n_dictionary_learningRecordsQuantity": {
-      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records), mobile. Row label and edit-dialog field label: the stored count the user can edit.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Count"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "回数"
           }
         }
       }

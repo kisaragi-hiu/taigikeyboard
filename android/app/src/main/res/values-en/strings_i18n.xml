@@ -113,13 +113,13 @@
     <string name="i18n_dictionary_learningRecords">Learning Records</string>
     <string name="i18n_dictionary_learningRecordsFrequency">Word Frequency</string>
     <string name="i18n_dictionary_learningRecordsPhrases">Phrases</string>
+    <string name="i18n_dictionary_learningRecordsCount">Count</string>
     <string name="i18n_dictionary_learningRecordsLastUsed">Last Used</string>
     <string name="i18n_dictionary_learningRecordsOrder">Sort By</string>
     <string name="i18n_dictionary_learningRecordsOrderMostUsed">Most Used</string>
     <string name="i18n_dictionary_learningRecordsOrderMostRecent">Most Recent</string>
     <string name="i18n_dictionary_learningRecordsEmpty">Nothing Learned Yet</string>
-    <string name="i18n_dictionary_learningRecordsQuantity">Count</string>
-    <string name="i18n_dictionary_learningRecordsEditQuantity">Edit Count</string>
+    <string name="i18n_dictionary_learningRecordsEditCount">Edit Count</string>
     <string name="i18n_dictionary_learningRecordGone">This Record Is No Longer Stored</string>
     <string name="i18n_dictionary_learningRecordsReadFailed">Could Not Read Learning Records</string>
     <string name="i18n_dictionary_learningRecordsWriteFailed">Could Not Change the Learning Record</string>
