@@ -38,13 +38,14 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
+import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.i18n.stringRes
-import com.siansiansu.taigikeyboard.ime.settings.CandidateDisplayMode
 import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
 import com.siansiansu.taigikeyboard.ime.theme.themeBackground
 import com.siansiansu.taigikeyboard.ui.components.SwitchRow
-import com.siansiansu.taigikeyboard.ui.tabs.settings.candidateDisplayModeDisplayName
 import com.siansiansu.taigikeyboard.ui.tabs.settings.candidateDisplayModeOptions
+import com.siansiansu.taigikeyboard.ui.tabs.settings.nasalMarkerStyleOptions
+import com.siansiansu.taigikeyboard.ui.tabs.settings.syllableSeparatorOptions
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -52,8 +53,8 @@ import kotlinx.coroutines.launch
 /**
  * Compose content for the keyboard settings overlay.
  *
- * Renders the same settings as InputSettingsScreen (Settings tab) but styled
- * for the keyboard overlay context. Uses shared SwitchRow.
+ * Renders the Settings tab's (InputSettingsScreen) keyboard settings in its section order —
+ * POJ / TPS / Typing / Keyboard / Feedback — styled for the keyboard overlay. Uses shared SwitchRow.
  */
 @Composable
 fun SettingsOverlayContent(
@@ -88,6 +89,8 @@ fun SettingsOverlayContent(
     var vibrationFeedback by remember(refreshTrigger) { mutableStateOf(prefs.isVibrationFeedbackEnabled) }
     var doubleOO by remember(refreshTrigger) { mutableStateOf(prefs.enableDoubleTapOO) }
     var doubleNN by remember(refreshTrigger) { mutableStateOf(prefs.enableDoubleTapNN) }
+    var nasalMarkerUppercase by remember(refreshTrigger) { mutableStateOf(prefs.isNasalMarkerUppercaseEnabled) }
+    var syllableSeparator by remember(refreshTrigger) { mutableStateOf(prefs.syllableSeparator) }
     var tpsOrER by remember(refreshTrigger) { mutableStateOf(prefs.tpsOrMapsToER) }
 
     fun autoDismissIfNeeded() {
@@ -116,22 +119,87 @@ fun SettingsOverlayContent(
                 .fillMaxSize()
                 .themeBackground(appearance.surface, appearance.solidBackground, topInsetPx)
                 .verticalScroll(rememberScrollState())
-                .padding(top = 4.dp, bottom = 8.dp),
+                .padding(bottom = 8.dp),
     ) {
-        // General settings
-        CandidateDisplayModeRow(
-            selected = candidateDisplayMode,
+        SectionHeader(L10n.settingsPojMode, labelColor)
+        SwitchRow(
+            label = L10n.settingsDoubleTapOO,
+            checked = doubleOO,
+            onCheckedChange = {
+                doubleOO = it
+                prefs.enableDoubleTapOO = it
+                autoDismissIfNeeded()
+            },
+            labelColor = labelColor,
+            fontFamily = fontFamily,
+            switchColors = switchColors,
+        )
+        SwitchRow(
+            label = L10n.settingsDoubleTapNN,
+            checked = doubleNN,
+            onCheckedChange = {
+                doubleNN = it
+                prefs.enableDoubleTapNN = it
+                autoDismissIfNeeded()
+            },
+            labelColor = labelColor,
+            fontFamily = fontFamily,
+            switchColors = switchColors,
+        )
+        DropdownRow(
+            label = L10n.settingsNasalMarkerUppercase,
+            selected = nasalMarkerUppercase,
+            options = nasalMarkerStyleOptions,
             onSelected = {
-                if (it != candidateDisplayMode) {
-                    candidateDisplayMode = it
-                    // The IME reacts through PrefHelper.observeCandidateDisplayMode.
-                    prefs.candidateDisplayMode = it
-                    autoDismissIfNeeded()
-                }
+                nasalMarkerUppercase = it
+                prefs.isNasalMarkerUppercaseEnabled = it
+                autoDismissIfNeeded()
             },
             labelColor = labelColor,
             accent = appearance.accent,
             fontFamily = fontFamily,
+        )
+
+        SectionHeader(L10n.settingsTpsMode, labelColor)
+        SwitchRow(
+            label = L10n.settingsTpsOrMapsToER,
+            checked = tpsOrER,
+            onCheckedChange = {
+                tpsOrER = it
+                prefs.tpsOrMapsToER = it
+                autoDismissIfNeeded()
+            },
+            labelColor = labelColor,
+            fontFamily = fontFamily,
+            switchColors = switchColors,
+        )
+
+        SectionHeader(L10n.settingsTypingSectionTitle, labelColor)
+        DropdownRow(
+            label = L10n.settingsCandidateDisplayMode,
+            selected = candidateDisplayMode,
+            options = candidateDisplayModeOptions,
+            onSelected = {
+                candidateDisplayMode = it
+                // The IME reacts through PrefHelper.observeCandidateDisplayMode.
+                prefs.candidateDisplayMode = it
+                autoDismissIfNeeded()
+            },
+            labelColor = labelColor,
+            accent = appearance.accent,
+            fontFamily = fontFamily,
+        )
+        SwitchRow(
+            label = L10n.settingsLiteralRomanCandidate,
+            checked = literalRomanCandidate,
+            onCheckedChange = {
+                literalRomanCandidate = it
+                prefs.literalRomanCandidateEnabled = it
+                autoDismissIfNeeded()
+            },
+            labelColor = labelColor,
+            fontFamily = fontFamily,
+            switchColors = switchColors,
         )
         SwitchRow(
             label = L10n.settingsOutputBothScripts,
@@ -146,17 +214,18 @@ fun SettingsOverlayContent(
             fontFamily = fontFamily,
             switchColors = switchColors,
         )
-        SwitchRow(
-            label = L10n.settingsLiteralRomanCandidate,
-            checked = literalRomanCandidate,
-            onCheckedChange = {
-                literalRomanCandidate = it
-                prefs.literalRomanCandidateEnabled = it
+        DropdownRow(
+            label = L10n.settingsSyllableSeparator,
+            selected = syllableSeparator,
+            options = syllableSeparatorOptions,
+            onSelected = {
+                syllableSeparator = it
+                prefs.syllableSeparator = it
                 autoDismissIfNeeded()
             },
             labelColor = labelColor,
+            accent = appearance.accent,
             fontFamily = fontFamily,
-            switchColors = switchColors,
         )
         SwitchRow(
             label = L10n.settingsAutoCapitalization,
@@ -182,6 +251,8 @@ fun SettingsOverlayContent(
             fontFamily = fontFamily,
             switchColors = switchColors,
         )
+
+        SectionHeader(L10n.settingsKeyboardSectionTitle, labelColor)
         SwitchRow(
             label = L10n.settingsToolbarAutoCollapse,
             checked = toolbarAutoCollapse,
@@ -207,7 +278,7 @@ fun SettingsOverlayContent(
             switchColors = switchColors,
         )
 
-        // Feedback settings
+        SectionHeader(L10n.settingsFeedbackSectionTitle, labelColor)
         SwitchRow(
             label = L10n.settingsSoundFeedback,
             checked = soundFeedback,
@@ -226,46 +297,6 @@ fun SettingsOverlayContent(
             onCheckedChange = {
                 vibrationFeedback = it
                 prefs.isVibrationFeedbackEnabled = it
-                autoDismissIfNeeded()
-            },
-            labelColor = labelColor,
-            fontFamily = fontFamily,
-            switchColors = switchColors,
-        )
-
-        // POJ settings
-        SwitchRow(
-            label = L10n.settingsDoubleTapOO,
-            checked = doubleOO,
-            onCheckedChange = {
-                doubleOO = it
-                prefs.enableDoubleTapOO = it
-                autoDismissIfNeeded()
-            },
-            labelColor = labelColor,
-            fontFamily = fontFamily,
-            switchColors = switchColors,
-        )
-        SwitchRow(
-            label = L10n.settingsDoubleTapNN,
-            checked = doubleNN,
-            onCheckedChange = {
-                doubleNN = it
-                prefs.enableDoubleTapNN = it
-                autoDismissIfNeeded()
-            },
-            labelColor = labelColor,
-            fontFamily = fontFamily,
-            switchColors = switchColors,
-        )
-
-        // TPS settings
-        SwitchRow(
-            label = L10n.settingsTpsOrMapsToER,
-            checked = tpsOrER,
-            onCheckedChange = {
-                tpsOrER = it
-                prefs.tpsOrMapsToER = it
                 autoDismissIfNeeded()
             },
             labelColor = labelColor,
@@ -292,13 +323,28 @@ fun SettingsOverlayContent(
     }
 }
 
-// Candidate Display dropdown row — same label / padding shape as the SwitchRow siblings; the trailing
-// slot shows the current value + a drop-down arrow and opens a DropdownMenu of the three modes
-// (three segments no longer fit beside the label at keyboard width with en / ja strings).
+// Section label with the row inset (SwitchRow's 20 dp), above each group of rows.
 @Composable
-private fun CandidateDisplayModeRow(
-    selected: CandidateDisplayMode,
-    onSelected: (CandidateDisplayMode) -> Unit,
+private fun SectionHeader(
+    text: String,
+    color: Color,
+) {
+    KeyboardOverlaySectionHeader(
+        text = text,
+        color = color,
+        modifier = Modifier.padding(start = 20.dp, top = 12.dp, bottom = 2.dp),
+    )
+}
+
+// Dropdown row — same label / padding shape as the SwitchRow siblings; the trailing slot shows the
+// current value + a drop-down arrow and opens a DropdownMenu of the options (the choices do not fit as
+// segments beside the label at keyboard width with en / ja strings).
+@Composable
+private fun <T> DropdownRow(
+    label: String,
+    selected: T,
+    options: List<Pair<T, StringKey>>,
+    onSelected: (T) -> Unit,
     labelColor: Color,
     accent: Color,
     fontFamily: FontFamily,
@@ -313,7 +359,7 @@ private fun CandidateDisplayModeRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = L10n.settingsCandidateDisplayMode,
+            text = label,
             modifier = Modifier.weight(1f),
             color = labelColor,
             fontFamily = fontFamily,
@@ -326,7 +372,7 @@ private fun CandidateDisplayModeRow(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = candidateDisplayModeDisplayName(selected),
+                    text = stringRes(options.first { it.first == selected }.second),
                     color = labelColor,
                     fontFamily = fontFamily,
                     style = MaterialTheme.typography.bodyLarge,
@@ -339,7 +385,7 @@ private fun CandidateDisplayModeRow(
             }
             // The menu is an M3 surface popup, not part of the gradient backdrop — default item colours apply.
             DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                candidateDisplayModeOptions.forEach { (mode, labelKey) ->
+                options.forEach { (value, labelKey) ->
                     DropdownMenuItem(
                         text = {
                             Text(
@@ -348,9 +394,9 @@ private fun CandidateDisplayModeRow(
                                 style = MaterialTheme.typography.bodyLarge,
                             )
                         },
-                        // Always-present slot keeps the three labels left-aligned; only the current mode draws the check.
+                        // Always-present slot keeps the labels left-aligned; only the current value draws the check.
                         trailingIcon = {
-                            if (mode == selected) {
+                            if (value == selected) {
                                 Icon(
                                     imageVector = Icons.Filled.Check,
                                     contentDescription = null,
@@ -361,7 +407,7 @@ private fun CandidateDisplayModeRow(
                         },
                         onClick = {
                             expanded = false
-                            onSelected(mode)
+                            if (value != selected) onSelected(value)
                         },
                     )
                 }

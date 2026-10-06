@@ -358,7 +358,8 @@
           "linux"
         ],
         "surfaces": [
-          "host"
+          "host",
+          "extension"
         ]
       },
       "values": {

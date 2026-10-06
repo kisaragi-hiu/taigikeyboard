@@ -66,11 +66,7 @@ struct LayoutSelectionOverlay: View {
         layouts: [(KeyboardLayoutType, String, String?)],
     ) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(header)
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundColor(theme.secondaryTextColor)
-                .textCase(.uppercase)
+            KeyboardOverlaySectionHeader(title: header)
                 .padding(.horizontal, 12)
 
             ScrollView(.horizontal, showsIndicators: false) {

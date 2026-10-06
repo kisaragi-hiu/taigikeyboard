@@ -80,7 +80,6 @@ private val CheckmarkSize = 36.dp
 private val CheckmarkIconSize = 16.dp
 private val SelectedBorderWidth = 2.5.dp
 private val SectionHorizontalPadding = 12.dp
-private const val SectionHeaderAlpha = 0.6f
 private const val SelectedScrimAlpha = 0.25f
 
 /**
@@ -137,11 +136,9 @@ private fun SectionHeader(
     color: Color,
     topPadding: Dp,
 ) {
-    Text(
+    KeyboardOverlaySectionHeader(
         text = text,
-        color = color.copy(alpha = SectionHeaderAlpha),
-        fontSize = 11.sp,
-        fontWeight = FontWeight.Bold,
+        color = color,
         modifier =
             Modifier.padding(
                 start = SectionHorizontalPadding,

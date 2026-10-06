@@ -3710,7 +3710,7 @@
       }
     },
     "i18n_settings_nasalMarkerUppercase": {
-      "comment": "Picker label: how the POJ nasal marker is written in capitals — the stored switch, true = ᴺ (nasalMarkerUppercaseCapital, the default), false = ⁿ (nasalMarkerUppercaseSmall). All five platforms, host settings only.",
+      "comment": "Picker label: how the POJ nasal marker is written in capitals — the stored switch, true = ᴺ (nasalMarkerUppercaseCapital, the default), false = ⁿ (nasalMarkerUppercaseSmall). All five platforms (host settings) plus the mobile keyboard settings overlay.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -3908,7 +3908,7 @@
       }
     },
     "i18n_settings_syllableSeparator": {
-      "comment": "Picker label: how candidate / committed romanization separates syllables — the dictionary hyphen, a space, or nothing (tâi-uân / tâi uân / tâiuân); the neutral-tone -- becomes · under Space and None. Options: desktop.telexGuideHyphen, settings.syllableSeparatorSpace, settings.syllableSeparatorNone. All five platforms, host settings only.",
+      "comment": "Picker label: how candidate / committed romanization separates syllables — the dictionary hyphen, a space, or nothing (tâi-uân / tâi uân / tâiuân); the neutral-tone -- becomes · under Space and None. Options: desktop.telexGuideHyphen, settings.syllableSeparatorSpace, settings.syllableSeparatorNone. All five platforms (host settings) plus the mobile keyboard settings overlay.",
       "extractionState": "manual",
       "localizations": {
         "en": {
