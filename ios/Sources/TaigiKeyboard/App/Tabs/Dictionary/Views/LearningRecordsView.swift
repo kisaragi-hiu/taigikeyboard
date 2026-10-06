@@ -16,6 +16,9 @@ struct LearningRecordsView: View {
     /// The row the edit-count alert is open for.
     @State private var editingRecord: Taigi_Engine_LearningRecord?
     @State private var countInput = ""
+    /// The notice up now. View state, not the view model's: the alert clears
+    /// it from inside a view update, where a `@Published` write is not allowed.
+    @State private var notice: LearningRecordsNotice?
 
     init(kind: Taigi_Engine_LearningRecordKind) {
         _viewModel = StateObject(wrappedValue: LearningRecordsViewModel(kind: kind))
@@ -39,7 +42,7 @@ struct LearningRecordsView: View {
                     Picker(
                         selection: Binding(
                             get: { viewModel.order },
-                            set: { viewModel.selectOrder($0) },
+                            set: { show(viewModel.selectOrder($0)) },
                         ),
                     ) {
                         Text(lang.string(.dictionaryLearningRecordsOrderMostUsed)).tag(Taigi_Engine_LearningRecordOrder.mostUsed)
@@ -81,7 +84,7 @@ struct LearningRecordsView: View {
             SearchBar(text: $filterText, placeholder: lang.string(.dictionarySearchPlaceholder))
         }
         .onChange(of: filterText) { _, text in
-            viewModel.filterChanged(text)
+            show(viewModel.filterChanged(text))
         }
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.large)
@@ -102,21 +105,21 @@ struct LearningRecordsView: View {
             Button(lang.string(.commonCancel), role: .cancel) {}
             Button(lang.string(.commonSave)) {
                 guard let count = LearningRecordsViewModel.count(from: countInput) else { return }
-                Task { await viewModel.setCount(record, to: count) }
+                Task { await show(viewModel.setCount(record, to: count)) }
             }
             .disabled(LearningRecordsViewModel.count(from: countInput) == nil)
         }
         .alert(
-            viewModel.notice.map { lang.string($0.titleKey) } ?? "",
+            notice.map { lang.string($0.titleKey) } ?? "",
             isPresented: Binding(
-                get: { viewModel.notice != nil },
+                get: { notice != nil },
                 set: {
                     if !$0 {
-                        viewModel.notice = nil
+                        notice = nil
                     }
                 },
             ),
-            presenting: viewModel.notice,
+            presenting: notice,
         ) { _ in
             Button(lang.string(.commonOk), role: .cancel) {}
         } message: { notice in
@@ -125,8 +128,25 @@ struct LearningRecordsView: View {
             }
         }
         .task {
-            await viewModel.load()
+            await show(viewModel.load())
         }
+    }
+
+    /// Puts up a load's or a write's notice (`LearningRecordsNotice.arriving(over:)`).
+    private func show(_ earned: LearningRecordsNotice?) {
+        guard let earned else { return }
+        notice = earned.arriving(over: notice)
+    }
+
+    /// Puts up the notice a reload earns once it lands.
+    private func show(_ reload: Task<LearningRecordsNotice?, Never>) {
+        Task { await show(reload.value) }
+    }
+
+    /// Puts up a write's outcome at once, then its reload's notice.
+    private func show(_ write: LearningRecordsWrite) {
+        show(write.outcome)
+        show(write.reload)
     }
 
     // MARK: - Rows
@@ -137,7 +157,7 @@ struct LearningRecordsView: View {
         ProgressView()
             .frame(maxWidth: .infinity)
             .task(id: viewModel.pagingKey) {
-                await viewModel.loadNextPage()
+                await show(viewModel.loadNextPage())
             }
     }
 
@@ -145,7 +165,7 @@ struct LearningRecordsView: View {
     /// tap repeats that read.
     private var retryRow: some View {
         Button {
-            Task { await viewModel.retry() }
+            Task { await show(viewModel.retry()) }
         } label: {
             HStack {
                 Image(latinSystemName: "arrow.clockwise")
@@ -186,7 +206,7 @@ struct LearningRecordsView: View {
         }
         .swipeActions(edge: .trailing) {
             Button(role: .destructive) {
-                Task { await viewModel.delete(record) }
+                Task { await show(viewModel.delete(record)) }
             } label: {
                 Image(latinSystemName: "trash")
             }
@@ -195,7 +215,7 @@ struct LearningRecordsView: View {
             // Rows the engine says can be added: a row with no Hanji is not.
             if record.canAddToCustomDictionary {
                 Button {
-                    Task { await viewModel.addToCustomDictionary(record) }
+                    Task { await show(viewModel.addToCustomDictionary(record)) }
                 } label: {
                     Image(latinSystemName: "text.badge.plus")
                 }

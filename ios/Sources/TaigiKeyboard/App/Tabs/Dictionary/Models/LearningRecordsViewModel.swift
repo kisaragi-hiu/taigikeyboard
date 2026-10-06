@@ -7,7 +7,10 @@ import Foundation
 /// The order and the filter go to the engine; the rows on screen are its
 /// answer. A change of either starts a load from the top and makes every answer still in
 /// flight stale — the newest request wins, as on the desktop's `Listing`. Form state (the edit alert's field) stays
-/// in the view.
+/// in the view, and so does the notice: every load and write returns the
+/// notice it earns rather than publishing it, because the notice alert
+/// clears it from inside a SwiftUI view update, where a `@Published` write
+/// is not allowed.
 @MainActor
 final class LearningRecordsViewModel: ObservableObject {
     /// Rows per engine page; the next page loads when the last row shows.
@@ -27,7 +30,6 @@ final class LearningRecordsViewModel: ObservableObject {
     /// The read that failed and waits for `retry()`. With no rows listed the
     /// page says "could not read", never "nothing learned yet".
     @Published private(set) var failedRead: LearningRecordsRead?
-    @Published var notice: LearningRecordsNotice?
     /// The rows the current filter matches — what paging runs up to.
     @Published private(set) var matchingTotal = 0
     /// The generation the rows on screen answer. The next page is asked
@@ -39,7 +41,7 @@ final class LearningRecordsViewModel: ObservableObject {
     /// older number is dropped.
     private var generation = 0
     private var isLoadingNextPage = false
-    private var settleTask: Task<Void, Never>?
+    private var settleTask: Task<LearningRecordsNotice?, Never>?
 
     /// Frequency or learned phrases; fixed for the page's life.
     let kind: Taigi_Engine_LearningRecordKind
@@ -59,26 +61,25 @@ final class LearningRecordsViewModel: ObservableObject {
     /// The first appearance lists the first page; a later one (back from
     /// another tab, where the keyboard may have learned more) reads the
     /// listed rows again, keeping the place in the list.
-    func load() async {
+    func load() async -> LearningRecordsNotice? {
         guard listedGeneration >= 0 else {
-            await reload().value
-            return
+            return await reload().value
         }
-        await reloadInPlace()
+        return await reloadInPlace().value
     }
 
     /// Repeats the read that failed: the next page, or the listed rows from
     /// the first (the first page when none is listed).
-    func retry() async {
+    func retry() async -> LearningRecordsNotice? {
         switch failedRead {
         case .nextPage: await loadNextPage()
-        case .list: await reloadInPlace()
-        case nil: return
+        case .list: await reloadInPlace().value
+        case nil: nil
         }
     }
 
     @discardableResult
-    func selectOrder(_ order: Taigi_Engine_LearningRecordOrder) -> Task<Void, Never> {
+    func selectOrder(_ order: Taigi_Engine_LearningRecordOrder) -> Task<LearningRecordsNotice?, Never> {
         self.order = order
         return reload()
     }
@@ -86,15 +87,15 @@ final class LearningRecordsViewModel: ObservableObject {
     /// The search box changed: answers for the old text are stale at once,
     /// and the reload waits for the box to settle.
     @discardableResult
-    func filterChanged(_ filter: String) -> Task<Void, Never> {
+    func filterChanged(_ filter: String) -> Task<LearningRecordsNotice?, Never> {
         self.filter = filter
         generation += 1
         settleTask?.cancel()
         let settle = filterSettle
         let task = Task {
             try? await Task.sleep(for: settle)
-            guard !Task.isCancelled else { return }
-            await reload().value
+            guard !Task.isCancelled else { return nil as LearningRecordsNotice? }
+            return await reload().value
         }
         settleTask = task
         return task
@@ -114,11 +115,11 @@ final class LearningRecordsViewModel: ObservableObject {
 
     /// Asks for the next page while the filter matches more and the rows
     /// listed answer what is asked now.
-    func loadNextPage() async {
+    func loadNextPage() async -> LearningRecordsNotice? {
         guard hasMoreRows,
               listedGeneration == generation,
               !isLoadingNextPage
-        else { return }
+        else { return nil }
         isLoadingNextPage = true
         let generation = generation
         let offset = UInt32(clamping: records.count)
@@ -130,39 +131,39 @@ final class LearningRecordsViewModel: ObservableObject {
                 limit: Self.pageSize,
                 offset: offset,
             )
-            guard generation == self.generation else { return }
+            guard generation == self.generation else { return nil }
             isLoadingNextPage = false
             // The matches shrank under the list (the engine pulled the
             // offset back): the rows listed no longer line up with the store.
             guard page.offset == offset else {
-                await reloadInPlace()
-                return
+                return await reloadInPlace().value
             }
             // A row the keyboard moved while the page was read is not listed twice.
             let listed = Set(records.map(\.id))
             records += page.records.filter { !listed.contains($0.id) }
             matchingTotal = Int(page.matchingTotal)
             failedRead = nil
+            return nil
         } catch {
-            guard generation == self.generation else { return }
+            guard generation == self.generation else { return nil }
             isLoadingNextPage = false
             failedRead = .nextPage
-            notice = .readFailed(detail: error.localizedDescription)
+            return .readFailed(detail: error.localizedDescription)
         }
     }
 
-    func setCount(_ record: Taigi_Engine_LearningRecord, to count: Int64) async {
+    func setCount(_ record: Taigi_Engine_LearningRecord, to count: Int64) async -> LearningRecordsWrite {
         await write { try await $0.setLearningRecordCount(record, count: count) ? nil : .gone }
     }
 
-    func delete(_ record: Taigi_Engine_LearningRecord) async {
+    func delete(_ record: Taigi_Engine_LearningRecord) async -> LearningRecordsWrite {
         await write { try await $0.deleteLearningRecord(record) ? nil : .gone }
     }
 
     /// Files the row's word as a custom word; the engine then forgets a
     /// learned phrase (the reload drops its row) and keeps a frequency row.
     /// A refusal keeps the row and says why.
-    func addToCustomDictionary(_ record: Taigi_Engine_LearningRecord) async {
+    func addToCustomDictionary(_ record: Taigi_Engine_LearningRecord) async -> LearningRecordsWrite {
         await write {
             try await $0.addLearningRecordToCustomDictionary(record)
             return .addedToCustomDictionary
@@ -182,28 +183,28 @@ final class LearningRecordsViewModel: ObservableObject {
 
     /// Every write reloads: the row moved, went, or was never there. `change`
     /// answers the notice its outcome earns (a row already gone is said, not
-    /// reported as a failure), or `nil` for none.
-    private func write(_ change: (any UserDataClient) async throws -> LearningRecordsNotice?) async {
+    /// reported as a failure), or `nil` for none. The outcome is answered as
+    /// soon as the write lands, with the reload it started.
+    private func write(_ change: (any UserDataClient) async throws -> LearningRecordsNotice?) async -> LearningRecordsWrite {
+        let outcome: LearningRecordsNotice?
         do {
-            if let outcome = try await change(userData) {
-                notice = outcome
-            }
+            outcome = try await change(userData)
         } catch {
-            notice = .writeFailed(detail: error.localizedDescription)
+            outcome = .writeFailed(detail: error.localizedDescription)
         }
-        await reloadInPlace()
+        return LearningRecordsWrite(outcome: outcome, reload: reloadInPlace())
     }
 
     /// Reloads as many rows as are listed, so the list keeps its place.
-    private func reloadInPlace() async {
-        await reload(rowCount: max(Int(Self.pageSize), records.count)).value
+    private func reloadInPlace() -> Task<LearningRecordsNotice?, Never> {
+        reload(rowCount: max(Int(Self.pageSize), records.count))
     }
 
     /// Lists `rowCount` rows from the top for what is asked now, in engine
     /// pages of at most `pageSize`, and shows them in one go; every answer
-    /// still in flight is stale from here.
+    /// still in flight is stale from here. A stale answer earns no notice.
     @discardableResult
-    private func reload(rowCount: Int = Int(pageSize)) -> Task<Void, Never> {
+    private func reload(rowCount: Int = Int(pageSize)) -> Task<LearningRecordsNotice?, Never> {
         generation += 1
         let generation = generation
         // An order change, a write or a retry overtakes a filter still settling.
@@ -211,6 +212,7 @@ final class LearningRecordsViewModel: ObservableObject {
         isLoadingNextPage = false
         let (order, filter) = (order, filter)
         return Task {
+            var notice: LearningRecordsNotice?
             do {
                 var rows: [Taigi_Engine_LearningRecord] = []
                 var matching = 0
@@ -223,7 +225,7 @@ final class LearningRecordsViewModel: ObservableObject {
                         limit: UInt32(clamping: min(Int(Self.pageSize), rowCount - offset)),
                         offset: UInt32(clamping: offset),
                     )
-                    guard generation == self.generation else { return }
+                    guard generation == self.generation else { return nil }
                     matching = Int(page.matchingTotal)
                     // Served from an earlier offset (the matches shrank under
                     // the re-read): it is the last page there is, and it
@@ -244,14 +246,12 @@ final class LearningRecordsViewModel: ObservableObject {
                 listedGeneration = generation
                 failedRead = nil
             } catch {
-                guard generation == self.generation else { return }
+                guard generation == self.generation else { return nil }
                 failedRead = .list
-                // A write's own notice, still up, says more than its reload's.
-                if notice == nil {
-                    notice = .readFailed(detail: error.localizedDescription)
-                }
+                notice = .readFailed(detail: error.localizedDescription)
             }
             isLoading = false
+            return notice
         }
     }
 }
@@ -274,6 +274,23 @@ enum LearningRecordsNotice: Equatable {
     /// A row's word was filed in the custom dictionary (a learned phrase is
     /// then forgotten here, a frequency row stays).
     case addedToCustomDictionary
+
+    /// The notice the page shows once `self` is earned while `shown` is up:
+    /// a read failure waits behind a notice still up (a write's own says
+    /// more than its reload's); every other notice replaces it.
+    func arriving(over shown: Self?) -> Self {
+        if case .readFailed = self, let shown {
+            return shown
+        }
+        return self
+    }
+}
+
+/// A write's outcome notice, answered when the write lands, and the reload
+/// of the listed rows it started.
+struct LearningRecordsWrite {
+    let outcome: LearningRecordsNotice?
+    let reload: Task<LearningRecordsNotice?, Never>
 }
 
 extension Taigi_Engine_LearningRecord {
