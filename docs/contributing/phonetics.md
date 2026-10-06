@@ -44,7 +44,6 @@ When auditing phonetic tables (`TL_INITIALS`, `TL_FINALS`, `TONE_NUM_TO_COMBININ
 - **If a final/initial/tone follows the established pattern but isn't in the doc**: ask the user. Don't infer.
 - **"No test covers" alone is not evidence.** Tests cover sample cases, not the full phonetic surface.
 - **"No dictionary word uses it" alone is not evidence.** Dictionaries grow; the parser must already accept the syllable when a future word lands.
-- For drift triage: default to "(a) canonical missing" before reversing iOS/Android.
 
 ## Anti-patterns
 

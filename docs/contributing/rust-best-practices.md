@@ -50,7 +50,7 @@ Current runtime crates — dependency edges flow **one way, top → bottom** (th
 **Dependency-direction invariant** — a crate may depend only on crates in its own layer or below:
 
 - **Forbidden upward edges**: no domain crate (`phonetics` / `ranking` / `lexicon` / `nextword` / `composing` / `userdata`) may depend on `dispatch` or an FFI crate; the leaf layer (`phonetics` / `protos` / `mmap-host`) may depend on nothing above itself.
-- **`dispatch` is the only orchestrator** — the single crate allowed to reference every domain. FFI crates (`swift-ffi` / `android-jni`) see only `dispatch` + `protos`. Outside this workspace, `taigi-desktop-core` sees only `dispatch` + `protos` too (its `userdata` edge went with the desktop settings windows' switch to the user-data ops, 2026-09-30).
+- **`dispatch` is the only orchestrator** — the single crate allowed to reference every domain. FFI crates (`swift-ffi` / `android-jni`) see only `dispatch` + `protos`. Outside this workspace, `taigi-desktop-core` sees only `dispatch` + `protos` too.
 - **Cargo enforces acyclicity at build time** (a cycle fails to compile) — that is the hard backstop. This layering rule is the *soft* guide that stops the graph degrading into flat all-depends-on-all while still technically acyclic.
 - **New crate / new edge**: place it so the arrow still points down. If a domain crate appears to need something currently in `dispatch`, that is an inversion — push the shared piece **down** into `phonetics` / `protos`, never add an upward edge (mirrors `AGENTS.md` § Design principles § No redundant fallback — keep data flow one-direction).
 
@@ -89,7 +89,7 @@ Type-shape preferences that cross FFI:
 
 - **Root `Makefile`** orchestrates (`make build` / `dict` / `fmt` / `lint`); the per-platform native builds are `engine/scripts/build-*.sh`. Contributor steps: `docs/BUILDING.md`.
 - **Android**: `cargo-ndk` for multi-ABI builds (ships `arm64-v8a` + `armeabi-v7a`; add another ABI to `engine/rust-toolchain.toml` only when it ships).
-- **iOS / macOS**: `cargo build --target aarch64-apple-ios` + simulator targets; packaged as xcframework via `swift-bridge` generator.
+- **iOS**: `engine/scripts/build-xcframework.sh` (`aarch64-apple-ios` + simulator targets, xcframework via the `swift-bridge` generator). **macOS**: `engine/scripts/build-macos-xcframework.sh` builds the `macos/` workspace archive (`taigi-macos-ffi`; targets in `macos/rust-toolchain.toml`).
 - **Rustup targets** pinned in `engine/rust-toolchain.toml` (shipped ABIs only; reasons in its comments).
 
 ## 5. Testing strategy `[R]` `[A]`
@@ -107,17 +107,17 @@ Type-shape preferences that cross FFI:
 - **Stable channel only.** No nightly features, no `#![feature(...)]`.
 - **MSRV per workspace** — engine 1.86, desktop + linux + macos 1.93, windows 1.95 (`rust-version` in each workspace `Cargo.toml`; why and which CI job checks each: `docs/architecture/build-artifacts.md` § Five Cargo workspaces). Bumping is a PR-level decision with CI verification.
 - **`rustfmt` default config**, no deviations. Apply with `make fmt`; check without writing via `cd engine && cargo fmt --all -- --check` (CI gates it per §7).
-- **`clippy` with `-D warnings`** — CI gates it (`engine.yml` engine workspace, `desktop.yml` desktop workspace); run locally with `make lint` (clippy + Kotlin spotlessCheck). Project-wide allow list lives in workspace `Cargo.toml` `[workspace.lints]`.
+- **`clippy` with `-D warnings`** — CI gates it (`engine.yml` engine workspace, `desktop.yml` desktop workspace); run locally with `make lint` (rustfmt check on all five workspaces, clippy on engine / desktop / macOS, SwiftFormat lint, Kotlin spotlessCheck). Project-wide allow list lives in workspace `Cargo.toml` `[workspace.lints]`.
 
 ## 7. CI gate + supply chain `[A]`
 
-CI (`.github/workflows/engine.yml`) runs `cargo test --workspace`, `cargo fmt --check` and `cargo clippy -D warnings` on every PR touching `engine/`; `.github/workflows/desktop.yml` runs the desktop-shared workspace's tests + clippy and the desktop + Windows fmt check on PRs touching `desktop/`, `windows/` or `engine/`; `.github/workflows/security.yml` runs `cargo-audit` over all four Cargo workspaces + `cargo-deny` over the engine on PRs touching Cargo manifests / lockfiles and weekly. Post-PR verification follows AGENTS.md § Build & Test.
+CI (`.github/workflows/engine.yml`) runs `cargo test --workspace`, `cargo fmt --check` and `cargo clippy -D warnings` on every PR touching `engine/`; `.github/workflows/desktop.yml` runs the desktop-shared workspace's tests + clippy and the desktop + Windows fmt check on PRs touching `desktop/`, `windows/` or `engine/`; `.github/workflows/security.yml` runs `cargo-audit` over all five Cargo workspaces + `cargo-deny` over the engine and macOS (`engine/deny.toml`) on PRs touching Cargo manifests / lockfiles and weekly. Post-PR verification follows AGENTS.md § Build & Test.
 
 - `make`-target shortcuts available for round-internal iteration (fast paths) AND canonical form (full paths). See root `Makefile help` for the current target list.
 - **`cargo-audit`** scans against the RustSec advisory DB (CI `security.yml`; locally, install via `cargo install cargo-audit --locked`).
 - **`cargo-deny check`** enforces dependency policy via `engine/deny.toml`: license allow-list (MIT / Apache-2.0 / BSD / ISC / Unicode-DFS-2016 / Unicode-3.0 / Zlib), `multiple-versions = warn`, `unknown-git = deny`, `unknown-registry = deny`. Runs in CI `security.yml`; locally, install via `cargo install cargo-deny --locked`.
-- **FFI integration tests** are run on representative Android emulator + iOS simulator targets when relevant to the round (D9 gate onward) — user-gated, no CI matrix, no fixed schedule.
-- **Supply chain**: no git dependencies in `Cargo.toml`. Patches go through explicit `[patch.crates-io]` with version pins and written justification.
+- **FFI integration tests** are run on representative Android emulator + iOS simulator targets when relevant to the round — user-gated, no CI matrix, no fixed schedule.
+- **Supply chain**: no git dependencies in the engine workspace (`engine/deny.toml` `unknown-git = deny`); the one pinned git dependency elsewhere is `windows-reactor` (`windows-guidelines.md`). Patches go through explicit `[patch.crates-io]` with version pins and written justification.
 
 ## 8. Explicit non-goals
 
@@ -134,7 +134,7 @@ Codifying `docs/contributing/cross-platform-alignment.md` §4.1 in Rust terms:
 
 - `docs/contributing/rust-ffi-safety.md` — companion: FFI boundary discipline, domain↔proto boundary, `unsafe`, opaque-handle pattern, enforcement
 - `docs/contributing/rust-migration-policy.md` — when to start a slice migration, design goals, no toggles, mirror deletion
-- khiin-rs reference study (2026-04-22): lessons to adopt + avoid, captured in `references/khiin-rs/`.
+- khiin-rs reference study: `docs/references/khiin-reference.md` (clone under `references/khiin-rs/`).
 - `docs/contributing/cross-platform-alignment.md` §4.1 — Rust shared-core non-goals.
 - `docs/contributing/android-guidelines.md` §1 Kotlin→Rust shape preferences — mirror of the type-shape rules here.
 - `docs/contributing/ios-architecture.md` §5 — the iOS-side equivalent of what counts as a candidate for Rust extraction.

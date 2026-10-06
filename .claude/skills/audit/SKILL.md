@@ -1,6 +1,6 @@
 ---
 name: audit
-description: Whole-repo maintainability audit — dead engine ops / bridges / fields, logic duplicated across platform twins (iOS↔Android, macOS↔iOS, Windows↔Linux), redundant fallbacks, layering violations, over-design, doc drift. Produces a ranked, file:line-cited report with estimated LOC and a draft round order. Use when asked to "audit", find dead code, assess architecture / maintenance cost, or before a large feature. Read-only — never edits, branches, builds or opens a round. Args: scope `engine` | `mobile` | `desktop` | `all` (default all). Diff-level quality is /simplify; bugs are /code-review; refactor behaviour-freeze is the refactor-reviewer agent.
+description: Whole-repo maintainability audit — dead engine ops / bridges / fields, logic duplicated across platform twins (iOS↔Android, macOS↔iOS, Windows↔Linux), redundant fallbacks, layering violations, over-design, doc drift. Produces a ranked, file:line-cited report with estimated LOC and a draft round order. Use when asked to "audit", find dead code, assess architecture / maintenance cost, or before a large feature. Read-only on code — writes only its dated report under `docs/reports/`; never edits source, branches, builds or opens a round. Args: scope `engine` | `mobile` | `desktop` | `all` (default all). Diff-level quality is /simplify; bugs are /code-review; refactor behaviour-freeze is the refactor-reviewer agent.
 disable-model-invocation: false
 ---
 
@@ -21,7 +21,7 @@ Worked example of the finished product: `docs/reports/2026-09-24-mobile-smart-su
 | `desktop` | `macos/Sources`, `macos/crates`, `desktop/crates`, `windows/`, `linux/` |
 | `all` | all of the above + `docs/architecture/*` for drift |
 
-Always exclude generated code from every count and every "caller" match: `*.pb.swift`, `android/.../engine/proto/*.java`, `Strings/Generated/`, `target/`, `build/`.
+Always exclude generated code from every count and every "caller" match: `*.pb.swift`, `android/.../engine/proto/*.java`, `Strings/Generated/`, `android/.../i18n/generated/`, `desktop/crates/taigi-desktop-core/src/strings/generated.rs`, `target/`, `build/`.
 
 ## 2. Recipes — one read-only agent per recipe, launched in one message
 
@@ -29,7 +29,7 @@ Give each agent the scope, its recipe and the § 3 verification rules; ask for `
 
 **R-dead · dead surface.** For every `oneof method` entry in `engine/protos/proto/*.proto`: engine dispatch arm → platform bridge function → **production** callers (outside tests, outside the bridge file, outside generated code). No production caller on any platform = dead. Same walk for proto fields (set by nobody or read by nobody), bridge functions, public Swift/Kotlin types, settings keys still plumbed after their UI was removed, unused parameters.
 
-**R-twin · platform twins.** Diff the same responsibility across twins: iOS↔Android by file name (`ComposingManager`, `NextWordController`, `*Bridge`), iOS user-data stores ↔ the engine's (`engine/userdata`), the three desktops over `desktop/crates`, and the areas macOS keeps in Swift beside desktop-core (candidate-window geometry, settings storage, global shortcuts, update flow) ↔ their Windows / Linux twins. Flag (a) logic both sides implement that could live once in the engine, (b) twins that already drifted. For every drift, record **whether a user can observe it** (§ 3.2).
+**R-twin · platform twins.** Diff the same responsibility across twins: iOS↔Android by file name (`ComposingManager`, `NextWordController`, `*Bridge`), the `UserDataClient` twins (iOS / macOS / Android) over `engine/userdata`, the three desktops over `desktop/crates`, and the areas macOS keeps in Swift beside desktop-core (candidate-window geometry, settings storage, global shortcuts, update flow) ↔ their Windows / Linux twins. Flag (a) logic both sides implement that could live once in the engine, (b) twins that already drifted. For every drift, record **whether a user can observe it** (§ 3.2).
 
 **R-fallback · redundant paths.** `AGENTS.md` § Design principles (no redundant fallback): a second path that re-implements the primary (e.g. a platform mirror of engine bit math), "A fails → B" in data flow, legacy code kept for a caller that no longer exists.
 

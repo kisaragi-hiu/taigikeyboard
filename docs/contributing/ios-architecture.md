@@ -132,12 +132,12 @@ If an Engine-layer file appears to need KeyboardKit, the file is in the **wrong 
 ### Folders
 
 - Group by feature / layer, not by type kind.
-  - **Good**: `NextWord/Services/`, `NextWord/Repository/`, `Engine/Generated/`
+  - **Good**: `Lexicon/Services/`, `Candidates/Views/`, `Engine/Generated/`
   - **Bad**: `Models/` at the root mixing unrelated value types, `Utils/` as a dumping ground
 - No ordering hacks (no leading `_`, no numeric prefixes like `Tab1-4`).
 - Folder names describe what is inside, not when it was added or its position in the UI.
 
-- App tab folders (`Home/`, `Theme/`, `Layout/`, `Dictionary/`, `Settings/`) align with `TabType` enum cases and UI-visible titles; tab structs follow the folder name (`HomeTab`, `ThemeTab`). Tab titles come from `i18n/nav.json`, not per-tab `*Texts` enums.
+- App tab folders (`App/Tabs/Home/`, `App/Tabs/Theme/`, `App/Tabs/Layout/`, `App/Tabs/Dictionary/`, `App/Tabs/Settings/`) align with `TabType` enum cases and UI-visible titles; tab structs follow the folder name (`HomeTab`, `ThemeTab`). Tab titles come from `i18n/nav.json`, not per-tab `*Texts` enums.
 - Do **not** introduce a type named `Keyboard` or `KeyboardExtension` — KeyboardKit already owns the `Keyboard` namespace.
 
 ---
@@ -193,4 +193,4 @@ Apply to any non-trivial structural change:
 - `docs/contributing/android-guidelines.md` — Android counterpart with shared-core / Kotlin best-practice rules
 - `docs/contributing/cross-platform-alignment.md` — refactor-freeze contract both platforms follow
 - `docs/architecture/ios-exemplar.md` — alignment target for Android
-- `docs/engine/migration-inventory.csv` — authoritative Rust slice inventory + native pending / keep / wont-migrate roster
+- `docs/engine/migration-inventory.csv` — authoritative Rust slice inventory + `native_keep` / `wont_migrate` roster

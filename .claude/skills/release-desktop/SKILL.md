@@ -132,8 +132,9 @@ Two desktop-specific upgrade checks on top of it:
 - **Installed-file set.** A dictionary, font, or Windows App Runtime file that
   moved or was removed changes what the installer stages. `windows/scripts/release-app.sh`
   stages `Dictionaries\` and `Fonts\` from the repository root, and its
-  preflight fails on an empty one. The `.deb` takes its file set from
-  `make -C linux install` (`docs/architecture/linux-release.md` § The artifact),
+  preflight fails on an empty one. The Linux packages (`.deb`, `.rpm`,
+  Arch) take their file set from `make -C linux install`
+  (`docs/architecture/linux-release.md` § The artifacts),
   and `linux-build.yml` fails when an expected path is missing from it.
 
 ## 3. Rebuild release artifacts
@@ -251,8 +252,8 @@ make desktop-release
 notarize, package, put the `.pkg` and its `.sha256` on the **draft**
 `desktop-<target>` — then dispatches `.github/workflows/windows-build.yml` and
 `.github/workflows/linux-build.yml` (with the staged commit as `source_sha`)
-together and waits for both: GitHub-hosted runners build the installer and the `.deb` from
-the same commit and attach them, each with its `.sha256`, to the same draft.
+together and waits for both: GitHub-hosted runners build the Windows installer and the Linux
+`.deb` / `.rpm` / Arch packages from the same commit and attach them, each with its `.sha256`, to the same draft.
 The maintainer's Windows box is not in the release path.
 
 A draft has no tag and no public asset URL: nothing here reaches a user, and
@@ -298,7 +299,7 @@ anonymously reachable, writes every `_data/*_release.json` to the website in one
 commit and waits for the live macOS and Windows appcasts (Linux has none);
 `.github/workflows/windows-build.yml`, a GitHub-hosted rebuild for SignPath
 provenance; and `.github/workflows/linux-build.yml`, the same rebuild for the
-`.deb`. The two rebuilds publish nothing.
+Linux packages. The two rebuilds publish nothing.
 
 The website's Linux button stays hidden until `enable_linux_download` is `true`
 in the website's `_config.yml` — that switch is the maintainer's, like the

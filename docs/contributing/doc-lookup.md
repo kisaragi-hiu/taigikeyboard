@@ -4,7 +4,7 @@ Mandatory rule. Read **before** adding or changing a call to (or a contract with
 
 ## The rule
 
-**Never code a platform IME / framework API from memory. Verify the current API against authoritative docs first.** Pre-trained knowledge of KeyboardKit / Android IME APIs drifts between versions (confirmed: live KeyboardKit docs already expose a newer setup API — `viewWillSetupKeyboardKit()` / `setupKeyboardKit(for:)` — than parts of this repo use).
+**Never code a platform IME / framework API from memory. Verify the current API against authoritative docs first.** Pre-trained knowledge of KeyboardKit / Android IME APIs drifts between versions (confirmed: KeyboardKit's setup API moved to `setupKeyboardKit(for:)` across versions; this repo deliberately keeps the legacy `KeyboardSettings.setupStore(for:)` path — read `KeyboardExtension/KeyboardViewController+Setup.swift` before touching it).
 
 ## How (in priority order)
 

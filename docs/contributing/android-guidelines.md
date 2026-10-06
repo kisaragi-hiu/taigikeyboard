@@ -4,7 +4,7 @@ Mandatory rules for Android development. Core architecture + Kotlin idioms + DI 
 
 **Three goals** every rule below serves at least one of:
 
-- **R — Rust-friendly**: reduce future friction if a `native_keep` file (`docs/engine/migration-inventory.csv`; the CSV has no `native_pending` rows left) later moves to a Rust crate
+- **R — Rust-friendly**: reduce future friction if a `native_keep` file (`docs/engine/migration-inventory.csv`) later moves to a Rust crate
 - **B — Best practice**: Kotlin / Android idiomatic code
 - **A — Anti-regression**: reduce "fix A, break B" outcomes during refactor rounds
 
@@ -113,7 +113,7 @@ When a receiver class already exposes a member function `fun X(...)`, a top-leve
 
 ## 8a. User-data SQLite is the engine's `[A]`
 
-The four user-data stores (`user_frequency.db`, `user_association.db`, `custom_dictionary.db`, `learned_phrases.db`) are opened, migrated and written by the engine's bundled SQLite (`engine/userdata`, `docs/architecture/user-data-engine-roadmap.md` P8b); Android reaches them only through `engine/UserDataBridge.kt` / `ime/dictionary/UserDataClient.kt`, and `TaigiKeyboardApplication.onCreate` opens them. So the app runs no SQL of its own and the OS SQLite's `minSdk` dialect ceiling (3.22 at `minSdk` 28) no longer applies to them.
+The four user-data stores (`user_frequency.db`, `user_association.db`, `custom_dictionary.db`, `learned_phrases.db`) are opened, migrated and written by the engine's bundled SQLite (`engine/userdata`, `docs/architecture/user-data-engine-roadmap.md` P8b); Android reaches them only through `engine/UserDataBridge.kt` / `ime/dictionary/UserDataClient.kt`, and `TaigiKeyboardApplication.onCreate` opens them. The app runs no SQL of its own, so the OS SQLite's `minSdk` dialect (3.22 at `minSdk` 28) does not constrain these stores.
 
 Never open these files with `android.database.sqlite` (or any other SQLite): two SQLite copies in one process lock independently and can corrupt a file both hold (roadmap U2 / U6). A new store or query belongs in the engine.
 
@@ -122,7 +122,7 @@ Never open these files with `android.database.sqlite` (or any other SQLite): two
 `android/build.gradle`, `android/app/build.gradle.kts`, `android/settings.gradle`, and other Android Gradle scripts are **editable by agents directly** — gradle edits are routine (plugin wiring, dep bumps, lint config).
 
 - ✅ Edit gradle files directly.
-- ❌ Still off-limits: `*.xcodeproj/`, `*.pbxproj/`, iOS xcconfig (see `docs/contributing/ios-guidelines.md`).
+- ❌ Still off-limits: `*.xcodeproj`, `*.pbxproj`, `*.xcworkspace` (`docs/contributing/ios-guidelines.md`).
 - After gradle edits, surface what changed in plain text and remind the user that an Android Studio Gradle sync is needed.
 
 ## 10. References

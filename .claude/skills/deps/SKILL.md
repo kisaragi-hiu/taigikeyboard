@@ -79,7 +79,7 @@ Each tracked `Cargo.lock` is its own workspace: `git ls-files '*Cargo.lock'` (en
 ### tools
 
 1. Per tool in `mise.toml`: `mise latest <tool>` (`mise outdated` reports an exact pin as its own latest). Every pinned row is BLOCKED by its `mise.toml` comment unless the coupled file moves too. `[MISSING]` = not installed on this host (`mise install`), not an upgrade finding.
-2. GitHub Actions: covered by Dependabot — step 3 only.
+2. GitHub Actions: covered by Dependabot — see § Dependabot.
 
 ### Dependabot (always, any scope)
 

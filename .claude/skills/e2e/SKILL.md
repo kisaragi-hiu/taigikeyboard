@@ -19,7 +19,7 @@ make e2e PLATFORM=linux E2E_RUN=e2e/runs/<name>           # named run dir (defau
 |---|---|---|
 | `linux` | the macOS UTM guest (`TAIGI_E2E_LINUX_HOST`, default the `utm-linux` alias in `~/.ssh/config`): test-mode build into `~/taigi-e2e/prefix`, never the VM's own install. CI twin: `.github/workflows/linux-e2e.yml` | available |
 | `linux-desktop` | the REAL logged-in session of both dogfood VMs — UTM GNOME Wayland + IBus (`linux-gnome-ibus`) and the `win` box's VirtualBox KDE X11 + Fcitx5 (`linux-kde-fcitx5`). The session's own framework is pointed at the test build and restored afterwards (`e2e/drivers/linux/desktop.py --restore` undoes an interrupted run); keys from a uinput keyboard; `shot-<step>.png` per step in each scenario dir — evidence, never asserted. Powered-off VM → started; unreachable / locked → `skipped` | available |
-| macOS / Windows / Android / iOS | no driver — tested by hand (`e2e-testing-roadmap.md` § PRs) | not planned |
+| macOS / Windows / Android / iOS | no driver — tested by hand (`e2e-testing-roadmap.md` § PR table) | not planned |
 
 The Linux VM is unreachable → every scenario is `skipped` with the reason (not a failure). The first run compiles the release engine inside the VM (slow); later runs are incremental. One scenario only: `make e2e PLATFORM=linux E2E_ONLY=<scenario-id>`.
 
@@ -43,4 +43,4 @@ Open `<run>/report.md`. Order of attention:
 
 ## 4. Add a scenario
 
-`e2e/scenarios/<id>.json` — `id` = file name, a `source`, intent-level `settings`, `steps` (`text` / `key` with neutral names `enter` `space` `backspace` `escape` `0`–`9` / `pick` by `tl` [+ `hanji`]), `expect` (`committed`, `first_hanji_candidate` `{tl[, hanji]}` — name a hanji only when the source does). Take sentences from `corpus/README.md` (the `/dogfood` skill greps it). `python3 -m unittest analyze_test` in `e2e/analyzer/` validates every scenario file.
+`e2e/scenarios/<id>.json` — `id` = file name, a `source`, intent-level `settings`, `steps` (`text` / `key` with neutral names `enter` `space` `backspace` `escape` `capslock` `0`–`9` / `pick` by `tl` [+ `hanji`]), `expect` (`committed`, `first_hanji_candidate` `{tl[, hanji]}` — name a hanji only when the source does). Take sentences from `corpus/README.md` (the `/dogfood` skill greps it). `python3 -m unittest analyze_test` in `e2e/analyzer/` validates every scenario file.

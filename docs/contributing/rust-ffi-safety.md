@@ -1,6 +1,6 @@
 # Rust FFI Safety
 
-Mandatory rules for the Rust ↔ platform boundary: the seam as built, panic / thread / error / logging discipline, domain↔proto layering, `unsafe` discipline, the opaque-handle pattern, enforcement hooks and the test contract. Single copy — the former `docs/engine/ffi-safety.md` spec is folded in here. General Rust hygiene (workspace, errors, crates, tests, versions) stays in `docs/contributing/rust-best-practices.md`.
+Mandatory rules for the Rust ↔ platform boundary: the seam as built, panic / thread / error / logging discipline, domain↔proto layering, `unsafe` discipline, the opaque-handle pattern, enforcement hooks and the test contract. General Rust hygiene (workspace, errors, crates, tests, versions) stays in `docs/contributing/rust-best-practices.md`.
 
 **Active window**: every Rust PR touching `engine/swift-ffi/`, `engine/android-jni/`, `engine/dispatch`, `engine/protos/`, any domain crate's RPC façade, `linux/crates/taigi-linux-ffi/`, `macos/crates/taigi-macos-ffi/` or a `windows/crates/taigi-windows-tsf/` COM entry.
 
@@ -92,7 +92,7 @@ mod syllable;
 - **Every `unsafe` block carries a `// SAFETY:` comment** explaining the invariant that makes the operation sound. The khiin-rs unsafe deref at `references/khiin-rs/swift/bridge/src/lib.rs:52` has no SAFETY note — this pattern is rejected at review.
 - **`unsafe` blocks are confined to FFI marshaling.** No domain logic inside `unsafe`. Target: `unsafe` block contents ≤ 3 lines.
 - **No `transmute` unless absolutely required** — prefer `as` casts, `From`/`Into`, or `#[repr(C)]` layout-compatible structs.
-- **No raw pointer dereferences outside FFI crates.** Domain crates inherit the workspace `unsafe_code = "forbid"` lint. Only `android-jni`, `swift-ffi`, the documented `mmap-host` carve-out and the desktop boundary crates (`taigi-linux-ffi`, `taigi-windows-tsf`) may contain `unsafe`.
+- **No raw pointer dereferences outside FFI crates.** Domain crates inherit the workspace `unsafe_code = "forbid"` lint. Only `android-jni`, `swift-ffi`, the documented `mmap-host` carve-out and the desktop crates whose `[lints.rust]` allows it under a `# JUSTIFICATION:` comment (`taigi-linux-ffi`, `taigi-windows-tsf`, `taigi-windows-platform`, `taigi-windows-update`) may contain `unsafe`.
 
 ## 4. Opaque handle pattern `[S]` `[R]`
 
