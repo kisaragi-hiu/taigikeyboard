@@ -29,7 +29,7 @@ final class LearningRecordsViewModelTests: XCTestCase {
         private let lock = NSLock()
         private var storedRows: [Taigi_Engine_LearningRecord]
         private var storedCalls: [ListCall] = []
-        private var parked: [(call: ListCall, answer: CheckedContinuation<Taigi_Engine_LearningRecords, Never>)] = []
+        private var parked: [(call: ListCall, answer: CheckedContinuation<Taigi_Engine_LearningRecords, any Error>)] = []
         private var storedIsHolding = false
         private var storedFailure: Unreadable?
         private var storedListsFail = false
@@ -88,6 +88,12 @@ final class LearningRecordsViewModelTests: XCTestCase {
             answer.resume(returning: page(for: call))
         }
 
+        /// Fails the parked request at `index` as an unreadable store.
+        func fail(_ index: Int) {
+            let (_, answer) = lock.withLock { parked.remove(at: index) }
+            answer.resume(throwing: Unreadable())
+        }
+
         override func listLearningRecords(
             kind: Taigi_Engine_LearningRecordKind,
             order: Taigi_Engine_LearningRecordOrder,
@@ -104,7 +110,7 @@ final class LearningRecordsViewModelTests: XCTestCase {
                 throw failure
             }
             guard isHolding else { return page(for: call) }
-            return await withCheckedContinuation { answer in
+            return try await withCheckedThrowingContinuation { answer in
                 lock.withLock { parked.append((call, answer)) }
             }
         }
@@ -280,11 +286,16 @@ final class LearningRecordsViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.failedRead, .nextPage)
         XCTAssertEqual(viewModel.records.count, 100)
 
+        let failedRetry = await viewModel.retry()
+        XCTAssertEqual(failedRetry, .readFailed(detail: "disk I/O error"))
+        XCTAssertEqual(viewModel.failedRead, .nextPage)
+
         fake.failure = nil
-        _ = await viewModel.retry()
+        let retry = await viewModel.retry()
+        XCTAssertNil(retry)
         XCTAssertNil(viewModel.failedRead)
         XCTAssertEqual(viewModel.records.map(\.id), Array(1 ... 150))
-        XCTAssertEqual(fake.calls.map(\.offset), [0, 100, 100])
+        XCTAssertEqual(fake.calls.map(\.offset), [0, 100, 100, 100])
     }
 
     func testAFailedReReadAfterAWrite_retriesTheListedRowsNotTheNextPage() async {
@@ -300,9 +311,14 @@ final class LearningRecordsViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.failedRead, .list)
         XCTAssertEqual(viewModel.records.count, 200, "the rows stay on screen")
 
+        let failedRetry = await viewModel.retry()
+        XCTAssertEqual(failedRetry, .readFailed(detail: "disk I/O error"))
+        XCTAssertEqual(viewModel.failedRead, .list)
+
         fake.listsFail = false
         let before = fake.calls.count
-        _ = await viewModel.retry()
+        let retry = await viewModel.retry()
+        XCTAssertNil(retry)
 
         let retried = fake.calls.dropFirst(before)
         XCTAssertEqual(retried.map(\.limit), [100, 100])
@@ -411,6 +427,40 @@ final class LearningRecordsViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.records.map(\.text), ["食飯"], "the 台 answer is stale")
     }
 
+    func testAStaleAnswer_earnsNoNotice() async {
+        let fake = FakeLearningRecords(rows: [record(1, "台灣"), record(2, "食飯")])
+        let viewModel = makeViewModel(fake)
+        _ = await viewModel.load()
+        fake.isHolding = true
+
+        let older = viewModel.filterChanged("台")
+        await waitForParked(1, in: fake)
+        let newer = viewModel.filterChanged("食")
+        await waitForParked(2, in: fake)
+
+        fake.fail(0)
+        let olderNotice = await older.value
+        XCTAssertNil(olderNotice, "the 台 failure is stale")
+        XCTAssertNil(viewModel.failedRead)
+        fake.resolve(0)
+        let newerNotice = await newer.value
+        XCTAssertNil(newerNotice)
+        XCTAssertEqual(viewModel.records.map(\.text), ["食飯"])
+    }
+
+    func testAFilterOvertakenWhileSettling_earnsNoNotice() async {
+        let fake = FakeLearningRecords(rows: [record(1, "台灣"), record(2, "食飯")])
+        let viewModel = makeViewModel(fake)
+        _ = await viewModel.load()
+
+        let first = viewModel.filterChanged("台")
+        let second = viewModel.filterChanged("食")
+        let firstNotice = await first.value
+        XCTAssertNil(firstNotice)
+        _ = await second.value
+        XCTAssertEqual(fake.calls.map(\.filter), ["", "食"], "the 台 filter never reached the engine")
+    }
+
     func testAFilterChange_dropsTheAnswerAlreadyInFlight() async {
         let fake = FakeLearningRecords(rows: [record(1, "台灣"), record(2, "食飯")])
         let viewModel = makeViewModel(fake)
@@ -494,6 +544,7 @@ final class LearningRecordsViewModelTests: XCTestCase {
         let delete = await landed(viewModel.delete(listed))
 
         XCTAssertEqual(delete.outcome, .gone)
+        XCTAssertNil(delete.reloadNotice)
         XCTAssertEqual(viewModel.records.map(\.id), [2])
     }
 
@@ -518,7 +569,8 @@ final class LearningRecordsViewModelTests: XCTestCase {
         fake.failure = FakeLearningRecords.Unreadable()
         let viewModel = makeViewModel(fake)
 
-        _ = await viewModel.load()
+        let notice = await viewModel.load()
+        XCTAssertEqual(notice, .readFailed(detail: "disk I/O error"))
         XCTAssertTrue(viewModel.records.isEmpty)
         XCTAssertEqual(viewModel.failedRead, .list, "could not read ≠ nothing learned yet")
 
@@ -570,6 +622,7 @@ final class LearningRecordsViewModelTests: XCTestCase {
         let add = await landed(viewModel.addToCustomDictionary(viewModel.records[0]))
 
         XCTAssertEqual(add.outcome, .writeFailed(detail: "custom dictionary is full"))
+        XCTAssertNil(add.reloadNotice)
         XCTAssertTrue(fake.added.isEmpty)
         XCTAssertEqual(viewModel.records.map(\.id), [1])
         XCTAssertEqual(fake.calls.count, 2, "a refused add still reloads")
