@@ -23,7 +23,7 @@ Tab order is fixed by iOS `App/Tabs/TabType.swift` (`home = 0 … settings = 4`)
 | Home | `Home/HomeTab.swift` | `home/HomeScreen.kt` |
 | Theme | `Theme/ThemeTab.swift` (+ `ThemePickerView`, `ThemeEditorView`) | `theme/ThemePickerScreen.kt` + `ThemeEditorScreen.kt` |
 | Layout | `Layout/LayoutTab.swift` | `layout/LayoutScreen.kt` |
-| Dictionary | `Dictionary/DictionaryTab.swift` | `dictionary/DictionarySettingsScreen.kt` |
+| Dictionary | `Dictionary/DictionaryTab.swift`, `Dictionary/Views/DictionarySourcesView.swift` | `dictionary/DictionarySettingsScreen.kt`, `dictionary/DictionarySourcesScreen.kt` |
 | Settings | `Settings/SettingsTab.swift` | `settings/InputSettingsScreen.kt` |
 
 iOS tab container: `App/ContentView.swift` (`TabView`). Android uses Jetpack Compose screens (not Fragments); tab container: `ui/tabs/MainSettingsScreen.kt` (Material3 `NavigationBar`) mounted by `settings/SettingsMainActivity.kt`. The Theme tab is documented in [theme.md](theme.md).

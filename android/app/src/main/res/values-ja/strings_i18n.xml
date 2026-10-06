@@ -31,11 +31,11 @@
     <string name="i18n_common_fontIansui">Iansui</string>
     <string name="i18n_common_fontGenYoMin">GenYoMin</string>
     <string name="i18n_common_fontGenYoGothic">GenYoGothic</string>
+    <string name="i18n_desktop_dictionarySourcesLink">辞書の管理</string>
     <string name="i18n_dictionary_clear">クリア</string>
     <string name="i18n_dictionary_customDictionary">カスタム辞書</string>
     <string name="i18n_dictionary_customDictEnabled">カスタム辞書を有効にする</string>
     <string name="i18n_dictionary_customDictEnabledInfo">オンにすると、追加した単語が候補に表示されます。</string>
-    <string name="i18n_dictionary_dataManagement">キーボードデータ</string>
     <string name="i18n_dictionary_variantDictionary">異体字</string>
     <string name="i18n_dictionary_khiin">在来字</string>
     <string name="i18n_dictionary_customDictDescription">カスタム辞書はプレーンテキストの CSV ファイルを使用します。1 列目に入力するローマ字、2 列目に漢字を記入します。ヘッダー行は不要です。</string>

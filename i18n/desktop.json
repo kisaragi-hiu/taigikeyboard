@@ -494,9 +494,11 @@
       }
     },
     "dictionarySourcesLink": {
-      "comment": "Settings sidebar row + pane title: the dictionary-source toggles page. iOS lists the toggles inline instead.",
+      "comment": "Manage Dictionaries — the dictionary-source toggles page. Desktop: settings sidebar row + pane title. Mobile: Dictionary tab entry row + subpage title.",
       "scope": {
         "platforms": [
+          "android",
+          "ios",
           "macos",
           "windows",
           "linux"

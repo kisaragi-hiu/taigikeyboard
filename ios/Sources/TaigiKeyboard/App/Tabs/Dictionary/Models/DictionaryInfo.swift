@@ -1,4 +1,4 @@
-/// Dictionary metadata for info buttons in DictionaryTab.
+/// Dictionary metadata for info buttons in DictionarySourcesView.
 /// Carries the i18n key for the source's description; the call site resolves it
 /// via the active display language (`lang.string(info.descriptionKey)`).
 struct DictionaryInfo {

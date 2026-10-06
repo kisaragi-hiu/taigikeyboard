@@ -39,7 +39,7 @@ import com.siansiansu.taigikeyboard.ime.dictionary.DictionarySource
 import com.siansiansu.taigikeyboard.ui.components.SettingInfoButton
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 
-// Helper composables and data for DictionarySettingsScreen
+// Helper composables and data for DictionarySourcesScreen
 
 // Carries the i18n key for a source's description; the call site resolves it
 // via the active display language (`stringRes(info.descriptionKey)`).
@@ -225,7 +225,7 @@ internal fun DictionaryInfoSwitch(
 // Title-only switch row for nested subcollection toggles (no info button).
 // Used for the kautian accent / Surname Appendix rows nested under the MOE master toggle;
 // `enabled = false` greys the label + switch (DD7), `modifier` carries the
-// nested indent. Mirrors iOS DictionaryTab.kautianSubcollToggle.
+// nested indent. Mirrors iOS DictionarySourcesView.kautianSubcollToggle.
 @Composable
 internal fun DictionarySubToggleRow(
     label: String,

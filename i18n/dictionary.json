@@ -83,25 +83,6 @@
         "ja": "オンにすると、追加した単語が候補に表示されます。"
       }
     },
-    "dataManagement": {
-      "comment": "Section title for keyboard-data management (custom words, frequency/association records, backup/import/export).",
-      "scope": {
-        "platforms": [
-          "android",
-          "ios"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "使用資料",
-        "tailo": "Sú-iōng tsu-liāu",
-        "poj": "Sú-iōng chu-liāu",
-        "en": "Keyboard Data",
-        "ja": "キーボードデータ"
-      }
-    },
     "variantDictionary": {
       "comment": "Toggle/section label for the variant-character (異用字) dictionary source.",
       "scope": {
