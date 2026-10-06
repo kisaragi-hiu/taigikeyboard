@@ -246,6 +246,10 @@ object L10n {
         @Composable get() = stringRes(StringKey.DICTIONARY_LEARNING_RECORDS_READ_FAILED)
     val dictionaryLearningRecordsWriteFailed: String
         @Composable get() = stringRes(StringKey.DICTIONARY_LEARNING_RECORDS_WRITE_FAILED)
+    val dictionaryLearningRecordsMoveToCustomDictionary: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_LEARNING_RECORDS_MOVE_TO_CUSTOM_DICTIONARY)
+    val dictionaryLearningRecordsMovedToCustomDictionary: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_LEARNING_RECORDS_MOVED_TO_CUSTOM_DICTIONARY)
     val homeAppHeaderTitle: String
         @Composable get() = stringRes(StringKey.HOME_APP_HEADER_TITLE)
     val homeSetupKeyboard: String

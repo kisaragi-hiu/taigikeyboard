@@ -49,4 +49,6 @@ open class StubUserDataClient : UserDataClient {
     ): LearningRecord? = error("unused")
 
     override suspend fun deleteLearningRecord(record: LearningRecord): Boolean = error("unused")
+
+    override suspend fun moveLearningRecordToCustomDictionary(record: LearningRecord): Unit = error("unused")
 }

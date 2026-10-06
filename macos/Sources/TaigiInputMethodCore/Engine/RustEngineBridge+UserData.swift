@@ -129,6 +129,21 @@ extension RustEngineBridge {
         return deleted.removed
     }
 
+    /// Files a learned phrase in the custom dictionary and forgets it; the
+    /// answer's `refusal` says why it stayed. `nil` for any other kind too —
+    /// the engine refuses the request.
+    static func learningRecordMoveToCustomDictionary(
+        _ record: Taigi_Engine_LearningRecord,
+    ) -> Taigi_Engine_LearningRecordMoved? {
+        var move = Taigi_Engine_MoveLearningRecordToCustomDictionary()
+        move.record = record
+        guard case let .learningRecordMoved(moved)? = userDataResult(
+            .moveLearningRecordToCustomDictionary(move),
+            op: "learningRecordMoveToCustomDictionary",
+        ) else { return nil }
+        return moved
+    }
+
     /// `nil` for a failed round-trip, a refusal (a request before the open),
     /// or an answer of the wrong kind — the caller's `case let` rejects the
     /// last, and every one is logged.

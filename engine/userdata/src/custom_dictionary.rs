@@ -7,7 +7,7 @@ use crate::database::{
     StoreSchema, UserDataDatabase, UserDataDatabaseError,
 };
 use crate::timestamp::utc_timestamp_now;
-use phonetics::api::CustomSearchKey;
+use phonetics::api::{CustomSearchKey, InputMode};
 use rusqlite::{params, Connection, OptionalExtension};
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
@@ -301,6 +301,32 @@ impl CustomDictionaryStore {
             })
     }
 
+    /// Adds `row` unless the dictionary already holds its word: the same
+    /// Hanji with the same canonical TL, whichever spelling the stored roman
+    /// was typed in (Core Principle #6 — a stored `góa / 我` is `guá / 我`).
+    /// The check, the cap and the write share one transaction, and a word
+    /// already stored is no refusal even when the dictionary is full.
+    pub fn add_unless_stored(
+        &self,
+        row: &CustomDictionaryRow,
+    ) -> Result<(), CustomDictionaryError> {
+        let search_keys = self.derived_keys(&row.roman)?;
+        let limit = self.entry_limit;
+        let row = row.clone();
+        self.database
+            .perform::<_, CustomDictionaryError>(move |connection| {
+                immediate_transaction(connection, |connection| {
+                    if word_stored(connection, &row)? {
+                        return Ok(());
+                    }
+                    if entry_count(connection)? >= limit {
+                        return Err(CustomDictionaryError::CapacityReached { limit });
+                    }
+                    write_row(connection, &row, &search_keys)
+                })
+            })
+    }
+
     /// Removes one entry. `false` means there was nothing with that id.
     pub fn delete(&self, id: &str) -> Result<bool, CustomDictionaryError> {
         let id = id.to_owned();
@@ -533,6 +559,22 @@ fn row_exists(
         )
         .optional()
         .map(|found| found.is_some())
+}
+
+/// Whether an entry with `row`'s Hanji reads as `row`'s roman once both
+/// romans are folded to canonical TL. Only that Hanji's entries are read.
+fn word_stored(connection: &Connection, row: &CustomDictionaryRow) -> rusqlite::Result<bool> {
+    let canonical = |roman: &str| phonetics::api::canonical_tl_form(roman, InputMode::Tl);
+    let wanted = canonical(&row.roman);
+    let mut statement =
+        connection.prepare(&format!("SELECT roman FROM {TABLE_NAME} WHERE hanzi = ?;"))?;
+    let romans = statement.query_map(params![row.hanji], |stored| stored.get::<_, String>(0))?;
+    for roman in romans {
+        if canonical(&roman?) == wanted {
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }
 
 /// The entry and its search keys, written together. Must be called inside

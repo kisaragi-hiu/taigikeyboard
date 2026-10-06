@@ -164,5 +164,16 @@ public interface UserDataResponseOrBuilder extends
    */
   com.siansiansu.taigikeyboard.engine.proto.LearningRecordDeleted getLearningRecordDeleted();
 
+  /**
+   * <code>.taigi.engine.LearningRecordMoved learning_record_moved = 15;</code>
+   * @return Whether the learningRecordMoved field is set.
+   */
+  boolean hasLearningRecordMoved();
+  /**
+   * <code>.taigi.engine.LearningRecordMoved learning_record_moved = 15;</code>
+   * @return The learningRecordMoved.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.LearningRecordMoved getLearningRecordMoved();
+
   public com.siansiansu.taigikeyboard.engine.proto.UserDataResponse.ResultCase getResultCase();
 }

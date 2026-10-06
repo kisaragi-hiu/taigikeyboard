@@ -130,6 +130,8 @@ enum class StringKey(
     DICTIONARY_LEARNING_RECORD_GONE(R.string.i18n_dictionary_learningRecordGone),
     DICTIONARY_LEARNING_RECORDS_READ_FAILED(R.string.i18n_dictionary_learningRecordsReadFailed),
     DICTIONARY_LEARNING_RECORDS_WRITE_FAILED(R.string.i18n_dictionary_learningRecordsWriteFailed),
+    DICTIONARY_LEARNING_RECORDS_MOVE_TO_CUSTOM_DICTIONARY(R.string.i18n_dictionary_learningRecordsMoveToCustomDictionary),
+    DICTIONARY_LEARNING_RECORDS_MOVED_TO_CUSTOM_DICTIONARY(R.string.i18n_dictionary_learningRecordsMovedToCustomDictionary),
     HOME_APP_HEADER_TITLE(R.string.i18n_home_appHeaderTitle),
     HOME_SETUP_KEYBOARD(R.string.i18n_home_setupKeyboard),
     HOME_TYPING_GUIDE(R.string.i18n_home_typingGuide),

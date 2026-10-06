@@ -2,10 +2,10 @@
 //! Custom Dictionary page's shape (`custom_dictionary.rs`) over the engine's
 //! learning stores: a kind picker (word frequency, phrases) and an order
 //! picker over a filter, rows fetched one PAGE at a time (10), a list whose
-//! selection drives the edit-count / delete pair, and the pager under it.
-//! No add — a word the user wants is a custom word — and no wipe here: the
-//! one destructive verb for every learning record stays on Custom
-//! Dictionary.
+//! selection drives the edit-count / delete pair — plus, for phrases, the
+//! move into the custom dictionary — and the pager under it. No add — a word
+//! the user wants is a custom word — and no wipe here: the one destructive
+//! verb for every learning record stays on Custom Dictionary.
 //!
 //! The listing rules and every job body are
 //! `taigi_desktop_core::settings::learning_records`'s, shared with the
@@ -16,8 +16,8 @@
 
 use crate::winui::cards;
 use crate::winui::list_pager::{
-    self, icon_button, CONTROL_GAP, EDIT_GLYPH, REMOVE_GLYPH, SECONDARY_OPACITY, TABLE_COLUMN_GAP,
-    TABLE_HEADER_GAP, TABLE_HEADER_INSET, TABLE_HEIGHT,
+    self, icon_button, ADD_GLYPH, CONTROL_GAP, EDIT_GLYPH, REMOVE_GLYPH, SECONDARY_OPACITY,
+    TABLE_COLUMN_GAP, TABLE_HEADER_GAP, TABLE_HEADER_INSET, TABLE_HEIGHT,
 };
 use crate::winui::list_selection::{selectable_list, SettledRows};
 use crate::winui::pages::choice_row;
@@ -26,8 +26,8 @@ use taigi_desktop_core::engine::user_data::{
     LearningRecord, LearningRecordKind, LearningRecordOrder, LearningRecordPage,
 };
 use taigi_desktop_core::settings::learning_records::{
-    count_note, delete_job, fetch, last_used_label, order_label, set_count_job, whole_count,
-    Listing, KINDS, MAX_COUNT, ORDERS,
+    count_note, delete_job, fetch, last_used_label, move_to_custom_dictionary_job, order_label,
+    set_count_job, whole_count, Listing, KINDS, MAX_COUNT, ORDERS,
 };
 use taigi_desktop_core::settings::listing::{JobOutcome, JobState, LoadLanded, FILTER_SETTLE};
 use taigi_desktop_core::settings::presentation::PageMessage;
@@ -61,6 +61,8 @@ pub enum Message {
     Select(Option<usize>),
     Edit,
     Delete,
+    /// The selected phrase becomes a custom word and leaves this list.
+    MoveToCustomDictionary,
     /// The count field's value; `None` while it is cleared.
     CountChanged(Option<f64>),
     CountDialogClosed(ContentDialogResult),
@@ -197,6 +199,12 @@ pub fn update(
                 return;
             };
             begin_job(model, context, move || delete_job(row));
+        }
+        Message::MoveToCustomDictionary => {
+            let Some(row) = model.listing.selected_row().cloned() else {
+                return;
+            };
+            begin_job(model, context, move || move_to_custom_dictionary_job(row));
         }
         Message::CountChanged(count) => {
             if let Some(editing) = model.editing.as_mut() {
@@ -377,7 +385,8 @@ fn table_line(cells: [View; 4]) -> View {
 }
 
 /// The records in one card: the column names, the list, then the edit /
-/// delete pair and the pager under it (Custom Dictionary's `entry_table`).
+/// delete pair — with the move between them on phrases — and the pager
+/// under it (Custom Dictionary's `entry_table`).
 fn record_table(
     model: &LearningRecordsModel,
     strings: &StringResolver,
@@ -409,6 +418,17 @@ fn record_table(
         })
         .collect::<Vec<_>>();
     let has_selection = model.listing.selected_row().is_some();
+    // Only a phrase moves: word frequency has no button to grey out.
+    let move_button = if model.kind == LearningRecordKind::LearnedPhrase {
+        icon_button(
+            ADD_GLYPH,
+            strings.resolve(StringKey::DictionaryLearningRecordsMoveToCustomDictionary),
+            is_enabled && has_selection,
+            context.callback(|()| WindowMessage::LearningRecords(Message::MoveToCustomDictionary)),
+        )
+    } else {
+        View::empty()
+    };
     // The list stays live while a job runs; the verbs are what a job turns
     // off (Custom Dictionary's reasoning, `list_selection`).
     let list = selectable_list(
@@ -463,6 +483,7 @@ fn record_table(
                     is_enabled && has_selection,
                     context.callback(|()| WindowMessage::LearningRecords(Message::Edit)),
                 ),
+                move_button,
                 icon_button(
                     REMOVE_GLYPH,
                     strings.resolve(StringKey::CommonDelete),

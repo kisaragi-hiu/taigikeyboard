@@ -1,6 +1,6 @@
 # Learning Records page — roadmap
 
-> **Status**: complete — P0 merged `5bab5b9b`; P1 merged #366 `1716751a`; P2 merged #369 `21f1270a`; P3 + P4 merged #370 `7aacb3e2`; P5 + P6 merged #371 `102c6aa8` (2026-10-03). Device dogfood pending. Requested by the maintainer 2026-10-03: "a page where users can view and edit learning records and ranking scores, for mobile and desktop".
+> **Status**: P0–P6 complete — P0 merged `5bab5b9b`; P1 merged #366 `1716751a`; P2 merged #369 `21f1270a`; P3 + P4 merged #370 `7aacb3e2`; P5 + P6 merged #371 `102c6aa8` (2026-10-03). P7 (Add to Custom Dictionary) in progress. Device dogfood pending. Requested by the maintainer 2026-10-03: "a page where users can view and edit learning records and ranking scores, for mobile and desktop".
 
 A settings page, on all five platforms, that lists what the keyboard has learned from the user, lets them correct one row's count and delete one row. Today the only control is "Delete Learning Records", which empties every learning store at once.
 
@@ -27,13 +27,14 @@ One page, **Learning Records**, with a kind switch:
 | Kind | Row shows | Editable | Platforms |
 |---|---|---|---|
 | Word frequency (the ranking score) | Hanji / word, TL reading, count, last used | count; delete row | all five |
-| Learned phrases | Hanji, TL reading, count | count; delete row | all five |
+| Learned phrases | Hanji, TL reading, count | count; delete row; Add to Custom Dictionary (moves it, P7) | all five |
 
 - **The count is what the user edits.** The engine's boost / decay maths stays where it is. For word frequency only, the edit dialog says that counts above 40 rank the same; learned phrases make no such promise.
 - **Search** filters by Hanji or romanization substring, in SQL, like the Custom Dictionary filter.
 - **Order**: most used first (default) or most recent first — "the word I just picked by mistake" is the row a user comes to delete.
 - **No next-word association.** Planned for mobile, dropped at dogfood (maintainer 2026-10-03: "word-association records are not needed"); the engine kind stays, no page lists it.
-- **No add.** A word the user wants is a custom word; this page corrects what was learned.
+- **No add by hand.** A word the user wants is a custom word; this page corrects what was learned.
+- **Add to Custom Dictionary (P7)** moves one learned phrase into the custom dictionary (Discord discussion "add a learned phrase to the custom dictionary", 2026-10-05; maintainer 2026-10-06: "word frequency does not move, learned phrases move"). Word-frequency rows never move: the row keeps weighting its word (`user_weight` leads the candidate sort, `engine/ranking/src/sort_key.rs:64`), so deleting it would demote the word it counts.
 - **"Delete Learning Records" stays where it is** on the Custom Dictionary page. Moving it is a separate decision.
 
 ### Engine (one implementation, every platform)
@@ -68,6 +69,7 @@ message DeleteLearningRecord { record }                              → Learnin
 - Word identity stays the `(Hanji, canonical TL)` pair (Core Principle #6): the row id only addresses a row the page already listed; no lookup, dedup or merge keys on it.
 - Unknown `kind` / `order` values are refused (`FAIL_INVARIANT`, as every refused user-data request).
 - Backup format unchanged.
+- **Move (P7, tag 15)** — `MoveLearningRecordToCustomDictionary { record }` → `LearningRecordMoved { refusal, detail }`. Learned phrases only (any other kind `FAIL_INVARIANT`). `CustomDictionaryStore::add_unless_stored` adds `(roman = record.tl, hanji = record.text)` unless an entry with that Hanji already reads the same once both romans fold to canonical TL (`canonical_tl_form(_, Tl)` — a stored POJ `góa / 我` is `guá / 我`; Core Principle #6); check, cap and write share one transaction, and a stored word is no refusal even at the cap. Then the phrase is deleted as `DeleteLearningRecord` deletes it; a row already gone is not a failure. Two files, no shared transaction: a refused or failed add keeps the phrase; a delete that fails after the add is a store error, and the retry finds the word stored and deletes the phrase. After the move the custom word offers the whole phrase, as the learned phrase did (`lexicon/src/continuous/candidate.rs:275`).
 
 ### Platforms
 
@@ -106,6 +108,7 @@ That track completed 2026-10-03 (P15 merged #365); P1 was rebased onto it. This 
 | P4 | macOS page | Merged #370 `7aacb3e2` |
 | P5 | iOS page | Merged #371 `102c6aa8` |
 | P6 | Android page | Merged #371 `102c6aa8` |
+| P7 | Add to Custom Dictionary for learned phrases: engine op + store method, protos, two i18n keys, desktop-core job, a verb on the Phrases list of all five pages (macOS context menu + button beside `−`, iOS leading swipe, Android row icon, Windows / Linux third verb) | In progress |
 
 ## Best practices alignment
 
@@ -122,4 +125,5 @@ Per phase: P1 — `docs/contributing/rust-migration-policy.md` §6 (user data is
 - A suppression / blocklist dictionary (mozc `user_dictionary.cc`, `mainstream-ime-comparison.md:364`): deleting the learned row is enough to undo a mistaken pick; a "never show" list is a different feature.
 - Showing the computed boost: it changes with the clock (30-day decay); a number that drifts while the page is open reads as a bug. Count + last used are the stable inputs.
 - Adding rows by hand: that is the custom dictionary.
+- Moving word-frequency rows to the custom dictionary: see What the user gets — the frequency row is the word's ranking weight.
 - A generic "user-data table browser" abstraction over all four stores: three row shapes, one flat message — no trait.

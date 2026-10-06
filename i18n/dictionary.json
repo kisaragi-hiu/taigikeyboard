@@ -1937,6 +1937,50 @@
         "en": "Could Not Change the Learning Record",
         "ja": "学習記録を変更できませんでした"
       }
+    },
+    "learningRecordsMoveToCustomDictionary": {
+      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). Action on one learned phrase (Phrases only): adds it to the custom dictionary and removes it from the list (row menu / swipe / button tooltip).",
+      "scope": {
+        "platforms": [
+          "android",
+          "ios",
+          "macos",
+          "windows",
+          "linux"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "加入自訂詞庫",
+        "tailo": "Ka-ji̍p tsū-tīng-sû-khòo",
+        "poj": "Ka-ji̍p chū-tēng-sû-khò͘",
+        "en": "Add to Custom Dictionary",
+        "ja": "カスタム辞書に追加"
+      }
+    },
+    "learningRecordsMovedToCustomDictionary": {
+      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). Notice after a learned phrase was added to the custom dictionary (or found there already) and left the list.",
+      "scope": {
+        "platforms": [
+          "android",
+          "ios",
+          "macos",
+          "windows",
+          "linux"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "加入自訂詞庫矣",
+        "tailo": "Ka-ji̍p tsū-tīng-sû-khòo ah",
+        "poj": "Ka-ji̍p chū-tēng-sû-khò͘ ah",
+        "en": "Added to Custom Dictionary",
+        "ja": "カスタム辞書に追加しました"
+      }
     }
   }
 }

@@ -123,6 +123,8 @@
     <string name="i18n_dictionary_learningRecordGone">This Record Is No Longer Stored</string>
     <string name="i18n_dictionary_learningRecordsReadFailed">Could Not Read Learning Records</string>
     <string name="i18n_dictionary_learningRecordsWriteFailed">Could Not Change the Learning Record</string>
+    <string name="i18n_dictionary_learningRecordsMoveToCustomDictionary">Add to Custom Dictionary</string>
+    <string name="i18n_dictionary_learningRecordsMovedToCustomDictionary">Added to Custom Dictionary</string>
     <string name="i18n_home_appHeaderTitle">TaigiKeyboard</string>
     <string name="i18n_home_setupKeyboard">Enable the keyboard to start using it</string>
     <string name="i18n_home_typingGuide">Typing Guide</string>

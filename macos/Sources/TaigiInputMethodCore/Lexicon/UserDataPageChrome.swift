@@ -341,10 +341,13 @@ struct UserDataListControls<Trailing: View>: View {
     /// The `+`: what it announces to an assistive reader — the list's own
     /// verb, since "add" alone does not say what is being added — and what
     /// it does. Nil for a list nothing is added to by hand (Learning
-    /// Records): it draws `−` alone.
+    /// Records): no `+` before the `−`.
     var add: (labelKey: StringKey, action: () -> Void)?
     let isRemoveEnabled: Bool
     let onRemove: () -> Void
+    /// One more verb on the selected row, a worded button beside `−` (Learning
+    /// Records' Add to Custom Dictionary), enabled as `−` is. Nil draws none.
+    var rowAction: (labelKey: StringKey, action: () -> Void)?
     @ViewBuilder let trailing: () -> Trailing
 
     var body: some View {
@@ -361,6 +364,11 @@ struct UserDataListControls<Trailing: View>: View {
             }
             .disabled(!isRemoveEnabled)
             .accessibilityLabel(language.string(.commonDelete))
+
+            if let rowAction {
+                Button(language.string(rowAction.labelKey), action: rowAction.action)
+                    .disabled(!isRemoveEnabled)
+            }
 
             Spacer()
 

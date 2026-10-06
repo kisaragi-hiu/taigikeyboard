@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
@@ -68,7 +69,8 @@ private val ORDERS =
 /** Load the next page once the last visible item is this close to the end of the list. */
 private const val LOAD_MORE_THRESHOLD = 10
 
-// Learning Records — what the keyboard learned: correct one row's count, delete one row
+// Learning Records — what the keyboard learned: correct one row's count, delete one row, move a
+// learned phrase into the custom dictionary
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LearningRecordsScreen(
@@ -180,6 +182,12 @@ fun LearningRecordsScreen(
                             record = record,
                             onEdit = { editingRecord = record },
                             onDelete = { viewModel.delete(record) },
+                            onMoveToCustomDictionary =
+                                if (viewModel.kind == LearningRecordKind.LEARNING_RECORD_KIND_LEARNED_PHRASE) {
+                                    { viewModel.moveToCustomDictionary(record) }
+                                } else {
+                                    null
+                                },
                         )
                         if (index < state.records.lastIndex) {
                             HorizontalDivider(
@@ -238,6 +246,7 @@ internal fun kindLabel(kind: LearningRecordKind): String =
 private fun messageText(message: LearningRecordsMessage): String =
     when (message) {
         LearningRecordsMessage.Gone -> L10n.dictionaryLearningRecordGone
+        LearningRecordsMessage.Moved -> L10n.dictionaryLearningRecordsMovedToCustomDictionary
         is LearningRecordsMessage.ReadFailed -> resultMessage(L10n.dictionaryLearningRecordsReadFailed, message.detail)
         is LearningRecordsMessage.WriteFailed -> resultMessage(L10n.dictionaryLearningRecordsWriteFailed, message.detail)
     }
@@ -247,6 +256,8 @@ private fun RecordRow(
     record: LearningRecord,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
+    /** Shown only when non-null: the row may go to the custom dictionary. */
+    onMoveToCustomDictionary: (() -> Unit)? = null,
 ) {
     val lastUsed = learningRecordLastUsedLabel(record.lastUsedMs)
     val usage =
@@ -287,6 +298,15 @@ private fun RecordRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodySmall,
             )
+        }
+        onMoveToCustomDictionary?.let { onMove ->
+            IconButton(onClick = onMove) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = L10n.dictionaryLearningRecordsMoveToCustomDictionary,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
         IconButton(onClick = onDelete) {
             Icon(

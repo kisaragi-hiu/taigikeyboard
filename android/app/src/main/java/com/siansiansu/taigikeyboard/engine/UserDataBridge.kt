@@ -21,11 +21,13 @@ import com.siansiansu.taigikeyboard.engine.proto.ImportCustomCsv
 import com.siansiansu.taigikeyboard.engine.proto.LearningRecord
 import com.siansiansu.taigikeyboard.engine.proto.LearningRecordDeleted
 import com.siansiansu.taigikeyboard.engine.proto.LearningRecordKind
+import com.siansiansu.taigikeyboard.engine.proto.LearningRecordMoved
 import com.siansiansu.taigikeyboard.engine.proto.LearningRecordOrder
 import com.siansiansu.taigikeyboard.engine.proto.LearningRecordSaved
 import com.siansiansu.taigikeyboard.engine.proto.LearningRecords
 import com.siansiansu.taigikeyboard.engine.proto.ListCustomEntries
 import com.siansiansu.taigikeyboard.engine.proto.ListLearningRecords
+import com.siansiansu.taigikeyboard.engine.proto.MoveLearningRecordToCustomDictionary
 import com.siansiansu.taigikeyboard.engine.proto.OpenUserData
 import com.siansiansu.taigikeyboard.engine.proto.RecordUsage
 import com.siansiansu.taigikeyboard.engine.proto.ResetUserData
@@ -224,6 +226,14 @@ fun RustEngineBridge.learningRecordDelete(record: LearningRecord): LearningRecor
     return userData("learningRecordDelete") { setDeleteLearningRecord(delete) }
         ?.takeIf { it.hasLearningRecordDeleted() }
         ?.learningRecordDeleted
+}
+
+/** Adds the listed learned phrase to the custom dictionary and forgets the row; a refusal keeps the row. */
+fun RustEngineBridge.learningRecordMoveToCustomDictionary(record: LearningRecord): LearningRecordMoved? {
+    val move = MoveLearningRecordToCustomDictionary.newBuilder().setRecord(record).build()
+    return userData("learningRecordMoveToCustomDictionary") { setMoveLearningRecordToCustomDictionary(move) }
+        ?.takeIf { it.hasLearningRecordMoved() }
+        ?.learningRecordMoved
 }
 
 /**
