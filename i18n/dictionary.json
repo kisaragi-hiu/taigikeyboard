@@ -1582,9 +1582,9 @@
         ]
       },
       "values": {
-        "hanji": "學習紀錄刪掉矣",
-        "tailo": "Ha̍k-si̍p kì-lio̍k thâi-tiāu ah",
-        "poj": "Ha̍k-si̍p kì-lio̍k thâi-tiāu ah",
+        "hanji": "學習紀錄已經刪掉",
+        "tailo": "Ha̍k-si̍p kì-lio̍k í-king thâi-tiāu",
+        "poj": "Ha̍k-si̍p kì-lio̍k í-keng thâi-tiāu",
         "en": "Learning Records Cleared",
         "ja": "学習記録を消去しました"
       }
@@ -1900,9 +1900,9 @@
         ]
       },
       "values": {
-        "hanji": "這筆紀錄已經無去矣",
-        "tailo": "Tsit pit kì-lio̍k í-king bô--khì ah",
-        "poj": "Chit pit kì-lio̍k í-keng bô--khì ah",
+        "hanji": "這筆紀錄已經無去",
+        "tailo": "Tsit pit kì-lio̍k í-king bô--khì",
+        "poj": "Chit pit kì-lio̍k í-keng bô--khì",
         "en": "This Record Is No Longer Stored",
         "ja": "この記録はもうありません"
       }
@@ -1988,9 +1988,9 @@
         ]
       },
       "values": {
-        "hanji": "加入自訂詞庫矣",
-        "tailo": "Ka-ji̍p tsū-tīng-sû-khòo ah",
-        "poj": "Ka-ji̍p chū-tēng-sû-khò͘ ah",
+        "hanji": "已經加入自訂詞庫",
+        "tailo": "Í-king ka-ji̍p tsū-tīng-sû-khòo",
+        "poj": "Í-keng ka-ji̍p chū-tēng-sû-khò͘",
         "en": "Added to Custom Dictionary",
         "ja": "カスタム辞書に追加しました"
       }
