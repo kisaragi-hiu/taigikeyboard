@@ -75,7 +75,7 @@ struct GradientDirectionOverlay: View {
         .sensoryFeedback(.selection, trigger: angle) { _, new in GradientDirectionDrag.isPreset(new) }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(label)
-        .accessibilityValue("\(Int(angle))°")
+        .accessibilityValue(Text(verbatim: "\(Int(angle))°"))
         .accessibilityAdjustableAction { direction in
             angle = GradientDirectionDrag.steppedPreset(from: angle, clockwise: direction == .increment)
         }

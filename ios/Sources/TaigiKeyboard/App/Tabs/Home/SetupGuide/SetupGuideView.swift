@@ -117,7 +117,7 @@ private struct SetupGuideStepRow: View {
         VStack(alignment: .leading, spacing: 12) {
             // Step title
             HStack(spacing: 12) {
-                Text("\(stepNumber)")
+                Text(verbatim: "\(stepNumber)")
                     .font(AppStyle.captionFont.bold())
                     .foregroundColor(.white)
                     .frame(width: 24, height: 24)

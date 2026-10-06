@@ -188,7 +188,7 @@ private struct PhotoPositionAccessibility: ViewModifier {
     func body(content: Content) -> some View {
         if let axis {
             content
-                .accessibilityValue("\(Int(((axis == .horizontal ? photo.focusX : photo.focusY) * 100).rounded()))%")
+                .accessibilityValue(Text(verbatim: "\(Int(((axis == .horizontal ? photo.focusX : photo.focusY) * 100).rounded()))%"))
                 .accessibilityAdjustableAction { direction in
                     photo = PhotoPositionDrag.stepped(photo, along: axis, increment: direction == .increment)
                 }
