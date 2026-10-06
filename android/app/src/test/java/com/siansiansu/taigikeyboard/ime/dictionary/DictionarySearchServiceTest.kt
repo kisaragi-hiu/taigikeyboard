@@ -12,7 +12,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * JVM tests for the Dictionary-tab search orchestration. The lexicon is faked
+ * JVM tests for the dictionary search orchestration. The lexicon is faked
  * (no `.so` on the JVM); what is pinned is the platform-side policy that must
  * match iOS `DictionarySearchServiceTests`.
  */

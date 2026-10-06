@@ -1,4 +1,4 @@
-// The lexicon ops the Dictionary tab reads; `LexiconService` is the engine-backed one, JVM tests fake it.
+// The lexicon ops dictionary search reads; `LexiconService` is the engine-backed one, JVM tests fake it.
 
 package com.siansiansu.taigikeyboard.ime.dictionary
 

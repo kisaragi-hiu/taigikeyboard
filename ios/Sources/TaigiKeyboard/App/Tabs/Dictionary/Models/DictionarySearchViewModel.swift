@@ -1,6 +1,6 @@
 import Foundation
 
-/// ViewModel for the Dictionary tab search bar.
+/// ViewModel for the Manage Dictionaries page search bar.
 ///
 /// Owns published state + debounce; delegates the search pipeline to
 /// `DictionarySearchService`.

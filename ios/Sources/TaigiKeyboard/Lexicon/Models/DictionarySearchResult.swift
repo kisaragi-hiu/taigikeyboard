@@ -1,6 +1,6 @@
 import Foundation
 
-/// Search result with source information for dictionary exploration (Tab 3).
+/// Search result with source information for dictionary search (Manage Dictionaries page).
 struct DictionarySearchResult {
     /// Sentinel id for results synthesised from the user's custom dictionary.
     static let customDictMarkerId = -2

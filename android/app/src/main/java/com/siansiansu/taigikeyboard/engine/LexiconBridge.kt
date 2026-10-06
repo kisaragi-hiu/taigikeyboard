@@ -63,7 +63,7 @@ fun RustEngineBridge.lexiconInstall(
 }
 
 /**
- * Dictionary tab multi-source lookup. Engine classifies `input` as romanization or Hanji.
+ * Dictionary-search multi-source lookup. Engine classifies `input` as romanization or Hanji.
  */
 fun RustEngineBridge.searchWithSources(
     input: String,
@@ -85,7 +85,7 @@ fun RustEngineBridge.searchWithSources(
 }
 
 /**
- * Dictionary tab hanji-prefix lookup; `query` must be Hanji.
+ * Dictionary-search hanji-prefix lookup; `query` must be Hanji.
  */
 fun RustEngineBridge.searchByHanji(
     query: String,
@@ -115,7 +115,7 @@ fun RustEngineBridge.searchByHanji(
  * pre-v3.5.8 verbatim-mirrored `EnabledDictionaries` bit math.
  *
  * Call ONCE per query and pass the result down the search pipeline;
- * resolving again inside the Dictionary tab's badge filter would split the snapshot.
+ * resolving again inside the dictionary search's badge filter would split the snapshot.
  */
 fun RustEngineBridge.dictionaryFilters(toggles: RustEngineBridge.DictionaryToggles): RustEngineBridge.DictionaryFilters {
     val payload = DictionaryFiltersRequest
@@ -177,7 +177,7 @@ internal fun dictionaryTogglesProto(toggles: RustEngineBridge.DictionaryToggles)
         ).build()
 
 /**
- * Dictionary tab short-circuit predicate. True iff `text` contains any CJK
+ * Dictionary-search short-circuit predicate. True iff `text` contains any CJK
  * ideograph in the engine's `CJK_RANGES` (the `dictionary/common/cjk.py`
  * table). See
  * `INVARIANT_LEX_INPUT_CLASSIFICATION_HANJI_RANGE`.

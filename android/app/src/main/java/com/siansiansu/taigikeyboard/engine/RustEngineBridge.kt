@@ -195,7 +195,7 @@ object RustEngineBridge {
 
     /**
      * Output of `dictionaryFilters` — ready-to-send bitmask plus the
-     * decoded enabled-source set for Dictionary tab retag. Replaces verbatim
+     * decoded enabled-source set for dictionary-search retag. Replaces verbatim
      * platform `EnabledDictionaries` bit math (deleted in v3.5.8 slice).
      */
     data class DictionaryFilters(
