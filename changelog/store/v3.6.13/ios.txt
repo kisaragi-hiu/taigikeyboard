@@ -1,0 +1,7 @@
+New: Learning Records: edit learned words or add them to Custom Dictionary.
+New: Syllable Separator (Hyphen, Space, None) and Nasal mark in POJ capitals (ᴺ or ⁿ).
+Changed: Settings regrouped; new Manage Dictionaries page.
+Changed: Reset Settings keeps learning records; Show Typed Text First is off by default.
+Fixed: Picking a candidate in some apps leaves no typed letters.
+Fixed: Emoji top rows: no blur, popups fully shown.
+Fixed: The form you pick, such as gín-á, stays first.

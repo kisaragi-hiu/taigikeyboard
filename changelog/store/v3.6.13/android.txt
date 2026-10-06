@@ -1,0 +1,7 @@
+New: Learning Records: edit learned words or add them to Custom Dictionary.
+New: Syllable Separator (Hyphen, Space, None) and Nasal mark in POJ capitals (ᴺ or ⁿ).
+New: Long-press - for · on every layout.
+Changed: Settings regrouped; new Manage Dictionaries page.
+Changed: Reset Settings keeps learning records; Show Typed Text First is off by default.
+Fixed: Fast typing at sentence start no longer capitalizes the whole word.
+Fixed: The form you pick, such as gín-á, stays first.
