@@ -47,7 +47,7 @@ final class StringResolverTests: XCTestCase {
         // call site concatenates, so each language punctuates around it.
         XCTAssertEqual(
             StringResolver(.hanji).desktopUpdateAvailableMessage(latest: "3.7.0"),
-            "台語齒盤 3.7.0 會使下載。",
+            "台語齒盤 3.7.0 會使 táng-lóo。",
         )
         XCTAssertEqual(
             StringResolver(.english).desktopUpdateAvailableMessage(latest: "3.7.0"),
