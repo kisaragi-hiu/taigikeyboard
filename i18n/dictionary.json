@@ -1667,9 +1667,9 @@
         ]
       },
       "values": {
-        "hanji": "詞頻",
-        "tailo": "Sû pîn",
-        "poj": "Sû pîn",
+        "hanji": "詞頻統計",
+        "tailo": "Sû-pîn thóng-kè",
+        "poj": "Sû-pîn thóng-kè",
         "en": "Word Frequency",
         "ja": "単語頻度"
       }
