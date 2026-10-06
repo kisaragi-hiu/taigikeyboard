@@ -206,8 +206,12 @@ TPS uses QWERTY positions regardless of the stored romanization layout. Its
 Keyboard Layout picker shows QWERTY and is disabled, and leaving TPS restores the user's
 choice. General reset removes the stored layout and restores QWERTY. Layout
 changes affect subsequent keys and do not rewrite existing composing text.
-Physical key-code shortcuts keep their positions; character-based composing
-bindings follow the characters supplied by the selected layout.
+Number-row and keypad shortcuts keep their positions; character-based composing
+bindings and the semicolon candidate key follow the selected layout. The macOS
+key adapter identifies shifted semicolon from `:` rather than its QWERTY position,
+so Dvorak Shift+S and Colemak Shift+O remain letters while Shift+semicolon selects
+candidate nine in the other script. Candidate selection and shortcut recording
+share that key translation, covered by the macOS Rust layout regression tests.
 
 API verified against Xcode 16.4's macOS 15.5 SDK, `HIToolbox/IMKInputSession.h`
 (2026-10-06): the override accepts a system keyboard's unique name and must be
