@@ -1,6 +1,6 @@
 # Learning Records page — roadmap
 
-> **Status**: P0–P6 complete — P0 merged `5bab5b9b`; P1 merged #366 `1716751a`; P2 merged #369 `21f1270a`; P3 + P4 merged #370 `7aacb3e2`; P5 + P6 merged #371 `102c6aa8` (2026-10-03). P7 merged #415 `2988236a` (2026-10-06); P8 (Add to Custom Dictionary for word-frequency rows) in progress. Device dogfood pending. Requested by the maintainer 2026-10-03: "a page where users can view and edit learning records and ranking scores, for mobile and desktop".
+> **Status**: P0–P6 complete — P0 merged `5bab5b9b`; P1 merged #366 `1716751a`; P2 merged #369 `21f1270a`; P3 + P4 merged #370 `7aacb3e2`; P5 + P6 merged #371 `102c6aa8` (2026-10-03). P7 merged #415 `2988236a` (2026-10-06); P8 (Add to Custom Dictionary for word-frequency rows) merged #422 `88d5d157` (2026-10-06). Device dogfood pending. Requested by the maintainer 2026-10-03: "a page where users can view and edit learning records and ranking scores, for mobile and desktop".
 
 A settings page, on all five platforms, that lists what the keyboard has learned from the user, lets them correct one row's count and delete one row. Today the only control is "Delete Learning Records", which empties every learning store at once.
 
@@ -110,7 +110,7 @@ That track completed 2026-10-03 (P15 merged #365); P1 was rebased onto it. This 
 | P5 | iOS page | Merged #371 `102c6aa8` |
 | P6 | Android page | Merged #371 `102c6aa8` |
 | P7 | Add to Custom Dictionary for learned phrases: engine op + store method, protos, two i18n keys, desktop-core job, a verb on the Phrases list of all five pages (macOS context menu + button beside `−`, iOS leading swipe, Android row icon, Windows / Linux third verb) | Merged #415 `2988236a` |
-| P8 | Add to Custom Dictionary for word-frequency rows (copy): tag 15 renamed `Move…` → `AddLearningRecordToCustomDictionary` / `LearningRecordAddedToCustomDictionary` (wire unchanged), `LearningRecord.can_add_to_custom_dictionary` (field 9), `is_hanji` moved `lexicon` → `phonetics` so `userdata` reads it, i18n keys `learningRecordsMove…` / `…Moved…` → `…Add…` / `…Added…` (values unchanged); every page shows the verb on both kinds from the row flag (desktop: the verb is greyed out for a row that cannot be added) | In progress |
+| P8 | Add to Custom Dictionary for word-frequency rows (copy): tag 15 renamed `Move…` → `AddLearningRecordToCustomDictionary` / `LearningRecordAddedToCustomDictionary` (wire unchanged), `LearningRecord.can_add_to_custom_dictionary` (field 9), `is_hanji` moved `lexicon` → `phonetics` so `userdata` reads it, i18n keys `learningRecordsMove…` / `…Moved…` → `…Add…` / `…Added…` (values unchanged); every page shows the verb on both kinds from the row flag (desktop: the verb is greyed out for a row that cannot be added) | Merged #422 `88d5d157` |
 
 ## Best practices alignment
 
