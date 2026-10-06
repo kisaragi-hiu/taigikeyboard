@@ -224,7 +224,6 @@ enum StringKey: String {
     case settingsTpsOrMapsToERInfo = "i18n_settings_tpsOrMapsToERInfo"
     case settingsResetSettings = "i18n_settings_resetSettings"
     case settingsResetSettingsMessage = "i18n_settings_resetSettingsMessage"
-    case settingsResetFailed = "i18n_settings_resetFailed"
     case settingsDiagnosticSectionTitle = "i18n_settings_diagnosticSectionTitle"
     case settingsDiagnosticCopy = "i18n_settings_diagnosticCopy"
     case settingsDiagnosticCopied = "i18n_settings_diagnosticCopied"

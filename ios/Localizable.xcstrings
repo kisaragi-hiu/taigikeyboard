@@ -3835,56 +3835,38 @@
         }
       }
     },
-    "i18n_settings_resetFailed": {
-      "comment": "Toast shown when resetting settings fails.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Failed to reset settings. Please try again."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "設定のリセットに失敗しました。もう一度お試しください。"
-          }
-        }
-      }
-    },
     "i18n_settings_resetSettings": {
-      "comment": "Destructive action row + dialog title: reset all settings and delete the learning records (frequency, association, learned phrases); custom words are preserved.",
+      "comment": "Destructive action row + dialog title: reset all settings to their defaults. Settings only — learning records and custom words are untouched.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Reset Settings and Learning Records"
+            "value": "Reset Settings"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "設定と学習記録をリセット"
+            "value": "設定をリセット"
           }
         }
       }
     },
     "i18n_settings_resetSettingsMessage": {
-      "comment": "Confirmation-dialog body for resetting settings and deleting the learning records; explicitly states that custom words are preserved.",
+      "comment": "Confirmation-dialog body for resetting settings; explicitly states that learning records and custom words are kept.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This resets all settings and deletes the learning records. Custom words are kept. Continue?"
+            "value": "This resets all settings. Learning records and custom words are kept. Continue?"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "すべての設定をリセットし、学習記録を削除します。カスタム単語は保持されます。続けますか？"
+            "value": "すべての設定をリセットします。学習記録とカスタム単語は保持されます。続けますか？"
           }
         }
       }

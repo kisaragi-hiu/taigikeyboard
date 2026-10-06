@@ -1,9 +1,7 @@
 package com.siansiansu.taigikeyboard.ui.tabs.settings
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
 import com.siansiansu.taigikeyboard.settings.SettingsResetCoordinator
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,11 +15,8 @@ import kotlinx.coroutines.launch
 //
 // Activity supplies its warmed PrefHelper via the method param (matches
 // DataManagementViewModel.exportBackup shape) and an onResult callback so the
-// Toast stays at Activity scope. All-or-nothing semantics preserved verbatim
-// from pre-VM SettingsMainActivity.resetAllSettings.
-class SettingsResetViewModel(
-    application: Application,
-) : AndroidViewModel(application) {
+// Toast stays at Activity scope. Settings only — learning records are cleared from their own page.
+class SettingsResetViewModel : ViewModel() {
     private val _resetCounter = MutableStateFlow(0)
     val resetCounter: StateFlow<Int> = _resetCounter.asStateFlow()
 
@@ -33,8 +28,6 @@ class SettingsResetViewModel(
             val success =
                 try {
                     SettingsResetCoordinator.resetAll(prefs)
-                    val root = CompositionRoot.shared(getApplication())
-                    SettingsResetCoordinator.resetAllUserData(root)
                     _resetCounter.value++
                     true
                 } catch (_: Exception) {
