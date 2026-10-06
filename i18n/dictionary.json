@@ -1678,11 +1678,9 @@
       }
     },
     "learningRecordsCount": {
-      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). Column header / field label: the stored count the user can edit.",
+      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). Column header / field label: the stored count the user can edit. Mobile uses learningRecordsQuantity.",
       "scope": {
         "platforms": [
-          "android",
-          "ios",
           "macos",
           "windows",
           "linux"
@@ -1810,11 +1808,9 @@
       }
     },
     "learningRecordsEditCount": {
-      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). Dialog title / button tooltip for editing one row's count.",
+      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). Dialog title / button tooltip for editing one row's count. Mobile uses learningRecordsEditQuantity.",
       "scope": {
         "platforms": [
-          "android",
-          "ios",
           "macos",
           "windows",
           "linux"
@@ -1835,8 +1831,6 @@
       "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). Note in the edit dialog, word frequency only: the ranking boost saturates at count 40 (engine/ranking/src/score.rs).",
       "scope": {
         "platforms": [
-          "android",
-          "ios",
           "macos",
           "windows",
           "linux"
@@ -1851,6 +1845,44 @@
         "poj": "Pái-sò͘ chhiau-kòe 40, pâi-sū tō lóng kāng-khoán.",
         "en": "Counts above 40 rank the same.",
         "ja": "40 回を超えると順位は変わりません。"
+      }
+    },
+    "learningRecordsQuantity": {
+      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records), mobile. Row label and edit-dialog field label: the stored count the user can edit.",
+      "scope": {
+        "platforms": [
+          "android",
+          "ios"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "數量",
+        "tailo": "Sòo-liōng",
+        "poj": "Sò͘-liōng",
+        "en": "Count",
+        "ja": "回数"
+      }
+    },
+    "learningRecordsEditQuantity": {
+      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records), mobile. Title of the dialog that edits one row's count.",
+      "scope": {
+        "platforms": [
+          "android",
+          "ios"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "改數量",
+        "tailo": "Kái sòo-liōng",
+        "poj": "Kái sò͘-liōng",
+        "en": "Edit Count",
+        "ja": "回数を編集"
       }
     },
     "learningRecordGone": {

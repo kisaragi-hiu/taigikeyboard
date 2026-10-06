@@ -29,7 +29,7 @@ One page, **Learning Records**, with a kind switch:
 | Word frequency (the ranking score) | Hanji / word, TL reading, count, last used | count; delete row | all five |
 | Learned phrases | Hanji, TL reading, count | count; delete row; Add to Custom Dictionary (moves it, P7) | all five |
 
-- **The count is what the user edits.** The engine's boost / decay maths stays where it is. For word frequency only, the edit dialog says that counts above 40 rank the same; learned phrases make no such promise.
+- **The count is what the user edits.** The engine's boost / decay maths stays where it is. For word frequency only, the desktop edit dialog says that counts above 40 rank the same; learned phrases make no such promise, and mobile shows no such note.
 - **Search** filters by Hanji or romanization substring, in SQL, like the Custom Dictionary filter.
 - **Order**: most used first (default) or most recent first — "the word I just picked by mistake" is the row a user comes to delete.
 - **No next-word association.** Planned for mobile, dropped at dogfood (maintainer 2026-10-03: "word-association records are not needed"); the engine kind stays, no page lists it.
