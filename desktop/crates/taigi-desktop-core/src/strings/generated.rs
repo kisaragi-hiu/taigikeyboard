@@ -523,7 +523,7 @@ fn hanji(key: StringKey) -> Option<&'static str> {
         StringKey::DesktopUpdateCheckFailedTitle => "更新出現問題",
         StringKey::DesktopUpdateCheckFailedMessage => "請檢查網路了後才閣試。",
         StringKey::DesktopUpdatePendingVersionLabel => "有新版本 {0}",
-        StringKey::DesktopUpdateDownloadAndInstallAction => "táng-lóo 安裝",
+        StringKey::DesktopUpdateDownloadAndInstallAction => "Táng-lóo 安裝",
         StringKey::DesktopUpdateInstallAction => "安裝",
         StringKey::DesktopUpdateRetryAction => "閣試一擺",
         StringKey::DesktopUpdateInstallFailedNote => "安裝失敗",

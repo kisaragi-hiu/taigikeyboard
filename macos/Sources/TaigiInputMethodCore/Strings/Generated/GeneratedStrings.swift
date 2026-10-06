@@ -101,7 +101,7 @@ enum GeneratedStrings {
         .desktopUpdatePendingVersionLabel: "有新版本 %1$@",
         .desktopUpdateNotificationsOffNote: "系統通知拍開，才會收著更新通知",
         .desktopUpdateOpenNotificationSettings: "去系統設定",
-        .desktopUpdateDownloadAndInstallAction: "táng-lóo 安裝",
+        .desktopUpdateDownloadAndInstallAction: "Táng-lóo 安裝",
         .desktopUpdateInstallAction: "安裝",
         .desktopUpdateRetryAction: "閣試一擺",
         .desktopUpdateInstallFailedNote: "安裝失敗",
