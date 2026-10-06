@@ -262,7 +262,7 @@ private fun RecordRow(
     val lastUsed = learningRecordLastUsedLabel(record.lastUsedMs)
     val usage =
         buildString {
-            append("${L10n.dictionaryLearningRecordsCount} ${record.count}")
+            append("${L10n.dictionaryLearningRecordsQuantity} ${record.count}")
             if (lastUsed.isNotEmpty()) append(" · ${L10n.dictionaryLearningRecordsLastUsed} $lastUsed")
         }
     Row(
@@ -345,8 +345,7 @@ private fun RetryCard(onRetry: () -> Unit) {
     }
 }
 
-// Edit one row's count: a whole number from 1; for word frequency, the note that counts above 40
-// rank the same (the other kinds make no such promise).
+// Edit one row's count: a whole number from 1.
 @Composable
 private fun EditCountDialog(
     record: LearningRecord,
@@ -358,7 +357,7 @@ private fun EditCountDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(L10n.dictionaryLearningRecordsEditCount) },
+        title = { Text(L10n.dictionaryLearningRecordsEditQuantity) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Column {
@@ -374,18 +373,11 @@ private fun EditCountDialog(
                 OutlinedTextField(
                     value = countText,
                     onValueChange = { typed -> countText = typed.filter(Char::isDigit).take(MAX_LEARNING_RECORD_COUNT.toString().length) },
-                    label = { Text(L10n.dictionaryLearningRecordsCount) },
+                    label = { Text(L10n.dictionaryLearningRecordsQuantity) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                if (record.kind == LearningRecordKind.LEARNING_RECORD_KIND_FREQUENCY) {
-                    Text(
-                        text = L10n.dictionaryLearningRecordsCountCapInfo,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
             }
         },
         confirmButton = {

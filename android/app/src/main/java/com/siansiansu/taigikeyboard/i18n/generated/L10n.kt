@@ -224,8 +224,6 @@ object L10n {
         @Composable get() = stringRes(StringKey.DICTIONARY_LEARNING_RECORDS_FREQUENCY)
     val dictionaryLearningRecordsPhrases: String
         @Composable get() = stringRes(StringKey.DICTIONARY_LEARNING_RECORDS_PHRASES)
-    val dictionaryLearningRecordsCount: String
-        @Composable get() = stringRes(StringKey.DICTIONARY_LEARNING_RECORDS_COUNT)
     val dictionaryLearningRecordsLastUsed: String
         @Composable get() = stringRes(StringKey.DICTIONARY_LEARNING_RECORDS_LAST_USED)
     val dictionaryLearningRecordsOrder: String
@@ -236,10 +234,10 @@ object L10n {
         @Composable get() = stringRes(StringKey.DICTIONARY_LEARNING_RECORDS_ORDER_MOST_RECENT)
     val dictionaryLearningRecordsEmpty: String
         @Composable get() = stringRes(StringKey.DICTIONARY_LEARNING_RECORDS_EMPTY)
-    val dictionaryLearningRecordsEditCount: String
-        @Composable get() = stringRes(StringKey.DICTIONARY_LEARNING_RECORDS_EDIT_COUNT)
-    val dictionaryLearningRecordsCountCapInfo: String
-        @Composable get() = stringRes(StringKey.DICTIONARY_LEARNING_RECORDS_COUNT_CAP_INFO)
+    val dictionaryLearningRecordsQuantity: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_LEARNING_RECORDS_QUANTITY)
+    val dictionaryLearningRecordsEditQuantity: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_LEARNING_RECORDS_EDIT_QUANTITY)
     val dictionaryLearningRecordGone: String
         @Composable get() = stringRes(StringKey.DICTIONARY_LEARNING_RECORD_GONE)
     val dictionaryLearningRecordsReadFailed: String

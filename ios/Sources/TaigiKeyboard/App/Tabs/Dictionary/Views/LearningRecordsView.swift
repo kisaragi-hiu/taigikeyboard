@@ -85,7 +85,7 @@ struct LearningRecordsView: View {
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.large)
         .alert(
-            lang.string(.dictionaryLearningRecordsEditCount),
+            lang.string(.dictionaryLearningRecordsEditQuantity),
             isPresented: Binding(
                 get: { editingRecord != nil },
                 set: {
@@ -96,7 +96,7 @@ struct LearningRecordsView: View {
             ),
             presenting: editingRecord,
         ) { record in
-            TextField(lang.string(.dictionaryLearningRecordsCount), text: $countInput)
+            TextField(lang.string(.dictionaryLearningRecordsQuantity), text: $countInput)
                 .keyboardType(.numberPad)
             Button(lang.string(.commonCancel), role: .cancel) {}
             Button(lang.string(.commonSave)) {
@@ -104,11 +104,6 @@ struct LearningRecordsView: View {
                 Task { await viewModel.setCount(record, to: count) }
             }
             .disabled(LearningRecordsViewModel.count(from: countInput) == nil)
-        } message: { record in
-            // Only word frequency's boost stops growing (at count 40).
-            if record.kind == .frequency {
-                Text(lang.string(.dictionaryLearningRecordsCountCapInfo))
-            }
         }
         .alert(
             viewModel.notice.map { lang.string($0.titleKey) } ?? "",

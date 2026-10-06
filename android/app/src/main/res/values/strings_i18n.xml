@@ -112,14 +112,13 @@
     <string name="i18n_dictionary_learningRecords">學習紀錄</string>
     <string name="i18n_dictionary_learningRecordsFrequency">詞頻統計</string>
     <string name="i18n_dictionary_learningRecordsPhrases">拍字記持</string>
-    <string name="i18n_dictionary_learningRecordsCount">擺數</string>
     <string name="i18n_dictionary_learningRecordsLastUsed">最後使用</string>
     <string name="i18n_dictionary_learningRecordsOrder">排序</string>
     <string name="i18n_dictionary_learningRecordsOrderMostUsed">上捷用</string>
     <string name="i18n_dictionary_learningRecordsOrderMostRecent">最近用</string>
     <string name="i18n_dictionary_learningRecordsEmpty">猶無學習紀錄</string>
-    <string name="i18n_dictionary_learningRecordsEditCount">改擺數</string>
-    <string name="i18n_dictionary_learningRecordsCountCapInfo">擺數超過 40，排序就攏仝款。</string>
+    <string name="i18n_dictionary_learningRecordsQuantity">數量</string>
+    <string name="i18n_dictionary_learningRecordsEditQuantity">改數量</string>
     <string name="i18n_dictionary_learningRecordGone">這筆紀錄已經無去矣</string>
     <string name="i18n_dictionary_learningRecordsReadFailed">學習紀錄讀袂出來</string>
     <string name="i18n_dictionary_learningRecordsWriteFailed">學習紀錄改袂好</string>
