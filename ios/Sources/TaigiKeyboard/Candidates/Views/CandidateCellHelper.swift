@@ -285,7 +285,7 @@ struct SubtitleSpacer: View {
     let fontSize: CGFloat
 
     var body: some View {
-        Text(" ")
+        Text(verbatim: " ")
             .font(KeyboardFonts.globalFont(size: fontSize))
             .opacity(0)
     }

@@ -23,8 +23,9 @@ def _xcstrings_is_stale(expected: str, actual_bytes: bytes) -> bool:
     # its auto-extracted literals (`"%@"`, `"•"`, …) are tolerated as additive noise — `make i18n`
     # drops them on the next canonical regen.
     #
-    # Set `SWIFT_EMIT_LOC_STRINGS = NO` in the Xcode project to stop the extraction at the source;
-    # this check stays tolerant either way.
+    # `SWIFT_EMIT_LOC_STRINGS = NO` only stops compiler extraction; the IDE's lightweight source scan
+    # needs `LOCALIZATION_EXPORT_SUPPORTED = NO` (set at project level), and SwiftUI literals that are
+    # not localization keys use `Text(verbatim:)`. This check stays tolerant either way.
     try:
         actual = json.loads(actual_bytes)
         wanted = json.loads(expected)

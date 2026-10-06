@@ -109,7 +109,7 @@ struct ExpandedCandidateGridCell: View {
                 isPressed = pressing
             }
         }, perform: {})
-        .accessibilityLabel("\(displayTitle)\(displaySubtitle.map { ", " + $0 } ?? "")")
+        .accessibilityLabel(Text(verbatim: "\(displayTitle)\(displaySubtitle.map { ", " + $0 } ?? "")"))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

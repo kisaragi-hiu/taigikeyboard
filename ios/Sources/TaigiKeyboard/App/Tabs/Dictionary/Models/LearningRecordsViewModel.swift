@@ -14,7 +14,8 @@ final class LearningRecordsViewModel: ObservableObject {
     static let pageSize: UInt32 = 100
     /// The filter reloads once typing pauses this long — the desktop's
     /// `FILTER_SETTLE`, so a word typed letter by letter is one query.
-    static let filterSettle: Duration = .milliseconds(200)
+    /// `nonisolated`: `init`'s default argument reads it outside the main actor.
+    nonisolated static let filterSettle: Duration = .milliseconds(200)
     /// The highest count the engine stores (`engine/userdata` `MAX_COUNT`).
     static let maxCount: Int64 = 1_000_000
 

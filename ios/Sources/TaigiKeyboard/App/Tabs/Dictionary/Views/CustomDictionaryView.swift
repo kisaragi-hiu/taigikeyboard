@@ -128,7 +128,7 @@ struct CustomDictionaryView: View {
                                 showEntryAlert = true
                             } label: {
                                 HStack {
-                                    Text("\(entry.roman) → \(entry.hanji)")
+                                    Text(verbatim: "\(entry.roman) → \(entry.hanji)")
                                         .font(AppStyle.bodyFont)
                                         .foregroundColor(.primary)
                                     Spacer()

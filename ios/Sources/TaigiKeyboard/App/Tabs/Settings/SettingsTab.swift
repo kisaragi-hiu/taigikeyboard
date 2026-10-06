@@ -307,7 +307,7 @@ struct SettingsTab: View {
 
                     ShareLink(
                         item: diagnosticText,
-                        subject: Text("TaigiKeyboard Bug Report"),
+                        subject: Text(verbatim: "TaigiKeyboard Bug Report"),
                         message: Text(diagnosticText),
                     ) {
                         Label(lang.string(.settingsDiagnosticShare), systemImage: "arrow.up.forward.square")
