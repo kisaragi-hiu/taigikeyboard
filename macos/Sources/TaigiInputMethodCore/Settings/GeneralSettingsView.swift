@@ -33,6 +33,9 @@ struct GeneralSettingsView: View {
     @AppStorage(SettingsStore.Keys.inputMode.name)
     private var inputMode = SettingsStore.Keys.inputMode.defaultValue
 
+    @AppStorage(SettingsStore.Keys.keyboardLayout.name)
+    private var keyboardLayout = SettingsStore.Keys.keyboardLayout.defaultValue
+
     @AppStorage(SettingsStore.Keys.toneInputScheme.name)
     private var toneInputScheme = SettingsStore.Keys.toneInputScheme.defaultValue
 
@@ -94,6 +97,14 @@ struct GeneralSettingsView: View {
                         Text(language.string(mode.displayNameKey)).tag(mode)
                     }
                 }
+
+                // TPS uses a fixed layout, so keep this choice beside Input Script.
+                Picker(language.string(.settingsKeyboardLayout), selection: keyboardLayoutSelection) {
+                    ForEach(KeyboardLayout.allCases, id: \.self) { layout in
+                        Text(layout.displayName).tag(layout)
+                    }
+                }
+                .disabled(inputMode == .tps)
 
                 // Which keys type a tone is a fact about how the syllable is
                 // spelled, not a shortcut (USER 2026-09-08), and the slot
@@ -270,6 +281,14 @@ struct GeneralSettingsView: View {
         Binding(
             get: { inputMode },
             set: { SettingsStore().switchInputMode(.pick($0)) },
+        )
+    }
+
+    /// TPS shows its fixed layout without replacing the saved TL/POJ choice.
+    private var keyboardLayoutSelection: Binding<KeyboardLayout> {
+        Binding(
+            get: { inputMode == .tps ? .qwerty : keyboardLayout },
+            set: { keyboardLayout = $0 },
         )
     }
 

@@ -18,6 +18,8 @@ final class RecordingTextInputClient: NSObject, IMKTextInput {
 
     private(set) var writes: [Write] = []
     private(set) var readCalls: [String] = []
+    private(set) var keyboardLayoutOverrides: [String] = []
+    var afterKeyboardLayoutOverride: ((String) -> Void)?
 
     /// The selection this client reports. Defaults to "cannot answer", which is
     /// what a client without `TSMDocumentAccess` does — the state every case
@@ -149,7 +151,10 @@ final class RecordingTextInputClient: NSObject, IMKTextInput {
             .flatMap { $0.length > 0 ? $0.attributes(at: 0, effectiveRange: nil) : [:] } ?? [:]
     }
 
-    func overrideKeyboard(withKeyboardNamed _: String!) {}
+    func overrideKeyboard(withKeyboardNamed name: String!) {
+        keyboardLayoutOverrides.append(name)
+        afterKeyboardLayoutOverride?(name)
+    }
 
     func selectMode(_: String!) {}
 

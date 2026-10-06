@@ -190,6 +190,34 @@ Engine search ownership on the fetch step: `phonetics::KeyFamily::search_key` (c
 
 State machine on every platform: the engine's `composing::api::Phase` is `Idle` / `Composing` / `Continuous` (`engine/composing/src/api.rs`; `Continuous` also holds the nailed segments). Input leaves `Idle`; candidate select / Space / Enter / delete-to-empty return to it; semantics pinned in `behavioral-invariants.md` §13.
 
+### macOS keyboard layouts
+
+General settings exposes **Keyboard Layout**: QWERTY (default), Dvorak, or
+Colemak for TL/POJ. The macOS shell stores `keyboardLayout` in `UserDefaults`
+and calls `IMKTextInput.overrideKeyboard(withKeyboardNamed:)` on activation
+and on a live layout change. macOS translates the events before the shared
+Rust key classifier sees them, including punctuation passed through while
+idle; no character substitution or layout setting crosses the engine seam.
+This is intentional macOS OS integration; the other platforms do not expose
+this setting yet. Choosing a separate Dvorak/Colemak input source in System
+Settings does not configure TaigiKeyboard.
+
+TPS uses QWERTY positions regardless of the stored romanization layout. Its
+Keyboard Layout picker shows QWERTY and is disabled, and leaving TPS restores the user's
+choice. General reset removes the stored layout and restores QWERTY. Layout
+changes affect subsequent keys and do not rewrite existing composing text.
+Physical key-code shortcuts keep their positions; character-based composing
+bindings follow the characters supplied by the selected layout.
+
+API verified against Xcode 16.4's macOS 15.5 SDK, `HIToolbox/IMKInputSession.h`
+(2026-10-06): the override accepts a system keyboard's unique name and must be
+called on every activation. `TaigiInputControllerKeyboardLayoutTests` covers
+the client calls, live settings, TPS switches, reset, and ownership. Installed
+IME acceptance still needs checking in TextEdit and a Chromium host: choose
+each layout inside TaigiKeyboard, type letters and shifted punctuation both
+idle and composing, check Caps Lock and Command shortcuts, switch input
+sources and applications, and confirm TPS positions remain fixed.
+
 ---
 
 ## 5. Where to read next

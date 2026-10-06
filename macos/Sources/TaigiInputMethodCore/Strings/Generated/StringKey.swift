@@ -186,6 +186,7 @@ enum StringKey: String {
     case homeEmailLink = "i18n_home_emailLink"
     case homeCopyrightLine = "i18n_home_copyrightLine"
     case settingsInputMode = "i18n_settings_inputMode"
+    case settingsKeyboardLayout = "i18n_settings_keyboardLayout"
     case settingsDisplayLanguage = "i18n_settings_displayLanguage"
     case settingsDisplayLanguageAutomatic = "i18n_settings_displayLanguageAutomatic"
     case settingsPojMode = "i18n_settings_pojMode"
