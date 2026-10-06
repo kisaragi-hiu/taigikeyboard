@@ -45,7 +45,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .shortcuts: .desktopShortcutsTab
         case .customDictionary: .dictionaryCustomDictionary
         case .learningRecords: .dictionaryLearningRecords
-        case .dictionarySources: .dictionaryManageDictionaries
+        case .dictionarySources: .desktopDictionarySourcesLink
         case .fontManagement: .desktopFontManagementTab
         case .about: .homeAboutKeyboard
         }

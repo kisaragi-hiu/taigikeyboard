@@ -97,7 +97,7 @@ fun DictionarySettingsScreen(
             ) {
                 SettingsCard {
                     ActionRow(
-                        label = L10n.dictionaryManageDictionaries,
+                        label = L10n.desktopDictionarySourcesLink,
                         onClick = onManageDictionaries,
                         trailingIcon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     )

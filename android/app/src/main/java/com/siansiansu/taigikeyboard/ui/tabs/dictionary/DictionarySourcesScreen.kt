@@ -77,7 +77,7 @@ fun DictionarySourcesScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = L10n.dictionaryManageDictionaries,
+                        text = L10n.desktopDictionarySourcesLink,
                         fontWeight = FontWeight.Bold,
                     )
                 },

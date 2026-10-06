@@ -493,6 +493,28 @@
         "ja": "すべてを選択"
       }
     },
+    "dictionarySourcesLink": {
+      "comment": "Manage Dictionaries — the dictionary-source toggles page. Desktop: settings sidebar row + pane title. Mobile: Dictionary tab entry row + subpage title.",
+      "scope": {
+        "platforms": [
+          "android",
+          "ios",
+          "macos",
+          "windows",
+          "linux"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "辭典管理",
+        "tailo": "Sû-tián kuán-lí",
+        "poj": "Sû-tián koán-lí",
+        "en": "Manage Dictionaries",
+        "ja": "辞書の管理"
+      }
+    },
     "openURLFailed": {
       "comment": "Alert title when NSWorkspace could not open a dictionary's web page. macOS-only: the iOS opener is fire-and-forget.",
       "scope": {

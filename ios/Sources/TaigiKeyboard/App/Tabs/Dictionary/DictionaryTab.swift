@@ -20,7 +20,7 @@ struct DictionaryTab: View {
             Form {
                 Section {
                     NavigationLink(destination: DictionarySourcesView()) {
-                        Text(lang.string(.dictionaryManageDictionaries))
+                        Text(lang.string(.desktopDictionarySourcesLink))
                     }
                 }
 

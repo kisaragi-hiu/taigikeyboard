@@ -505,6 +505,24 @@
         }
       }
     },
+    "i18n_desktop_dictionarySourcesLink": {
+      "comment": "Manage Dictionaries — the dictionary-source toggles page. Desktop: settings sidebar row + pane title. Mobile: Dictionary tab entry row + subpage title.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manage Dictionaries"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "辞書の管理"
+          }
+        }
+      }
+    },
     "i18n_dictionary_addEntry": {
       "comment": "Title of the add-custom-entry dialog.",
       "extractionState": "manual",
@@ -1815,24 +1833,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "教育部辞典"
-          }
-        }
-      }
-    },
-    "i18n_dictionary_manageDictionaries": {
-      "comment": "Manage Dictionaries — the dictionary-source toggles page. Desktop: settings sidebar row + pane title. Mobile: Dictionary tab entry row + subpage title.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Manage Dictionaries"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "辞書の管理"
           }
         }
       }

@@ -191,7 +191,7 @@ struct DictionarySourcesView: View {
                     .font(AppStyle.sectionHeaderFont)
             }
         }
-        .navigationTitle(lang.string(.dictionaryManageDictionaries))
+        .navigationTitle(lang.string(.desktopDictionarySourcesLink))
         .navigationBarTitleDisplayMode(.large)
         .onAppear { toggles = Toggles(settings) }
     }
