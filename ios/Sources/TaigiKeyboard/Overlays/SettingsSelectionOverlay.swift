@@ -1,4 +1,4 @@
-// Covers POJ / TPS / Typing / Keyboard / Feedback (the Settings tab's sections and order) / Open main app.
+// Covers Typing / Keyboard / Feedback / POJ / TPS (the Settings tab's sections and order) / Open main app.
 
 import KeyboardKit
 import SwiftUI
@@ -88,27 +88,6 @@ struct SettingsSelectionOverlay: View {
         VStack(spacing: 0) {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 2) {
-                    sectionHeader(lang.string(.settingsPojMode))
-                    settingsToggle(lang.string(.settingsDoubleTapOO), isOn: $isDoubleTapOOEnabled) {
-                        SharedSettings.shared.isDoubleTapOOEnabled = $0
-                    }
-                    settingsToggle(lang.string(.settingsDoubleTapNN), isOn: $isDoubleTapNNEnabled) {
-                        SharedSettings.shared.isDoubleTapNNEnabled = $0
-                    }
-                    menuPickerRow(
-                        lang.string(.settingsNasalMarkerUppercase),
-                        selection: $isNasalMarkerUppercaseEnabled,
-                        options: [
-                            (true, lang.string(.settingsNasalMarkerUppercaseCapital)),
-                            (false, lang.string(.settingsNasalMarkerUppercaseSmall)),
-                        ],
-                    ) { SharedSettings.shared.isNasalMarkerUppercaseEnabled = $0 }
-
-                    sectionHeader(lang.string(.settingsTpsMode))
-                    settingsToggle(lang.string(.settingsTpsOrMapsToER), isOn: $isTpsOrMappedToER) {
-                        SharedSettings.shared.isTpsOrMappedToER = $0
-                    }
-
                     sectionHeader(lang.string(.settingsTypingSectionTitle))
                     menuPickerRow(
                         lang.string(.settingsCandidateDisplayMode),
@@ -150,6 +129,27 @@ struct SettingsSelectionOverlay: View {
                     }
                     settingsToggle(lang.string(.settingsVibrationFeedback), isOn: $isHapticFeedbackEnabled) {
                         KeyboardSettings.store.set($0, forKey: Self.hapticFeedbackKey)
+                    }
+
+                    sectionHeader(lang.string(.settingsPojMode))
+                    settingsToggle(lang.string(.settingsDoubleTapOO), isOn: $isDoubleTapOOEnabled) {
+                        SharedSettings.shared.isDoubleTapOOEnabled = $0
+                    }
+                    settingsToggle(lang.string(.settingsDoubleTapNN), isOn: $isDoubleTapNNEnabled) {
+                        SharedSettings.shared.isDoubleTapNNEnabled = $0
+                    }
+                    menuPickerRow(
+                        lang.string(.settingsNasalMarkerUppercase),
+                        selection: $isNasalMarkerUppercaseEnabled,
+                        options: [
+                            (true, lang.string(.settingsNasalMarkerUppercaseCapital)),
+                            (false, lang.string(.settingsNasalMarkerUppercaseSmall)),
+                        ],
+                    ) { SharedSettings.shared.isNasalMarkerUppercaseEnabled = $0 }
+
+                    sectionHeader(lang.string(.settingsTpsMode))
+                    settingsToggle(lang.string(.settingsTpsOrMapsToER), isOn: $isTpsOrMappedToER) {
+                        SharedSettings.shared.isTpsOrMappedToER = $0
                     }
 
                     openAppButton

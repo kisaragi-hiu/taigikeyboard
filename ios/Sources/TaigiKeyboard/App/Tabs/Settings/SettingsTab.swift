@@ -104,52 +104,6 @@ struct SettingsTab: View {
                     }
                 }
 
-                // Mode-specific settings sit right under Input Mode: POJ, then TPS.
-                Section {
-                    Toggle(lang.string(.settingsDoubleTapOO), isOn: $isDoubleTapOOEnabled)
-                        .onChange(of: isDoubleTapOOEnabled) { _, newValue in
-                            settings.isDoubleTapOOEnabled = newValue
-                        }
-
-                    Toggle(lang.string(.settingsDoubleTapNN), isOn: $isDoubleTapNNEnabled)
-                        .onChange(of: isDoubleTapNNEnabled) { _, newValue in
-                            settings.isDoubleTapNNEnabled = newValue
-                        }
-
-                    // Nasal mark in POJ capitals (§53) — the case rule of the marker the row above
-                    // composes: a picker over the stored switch, ᴺ or ⁿ, on a selection sub-page.
-                    Picker(selection: $isNasalMarkerUppercaseEnabled) {
-                        Text(lang.string(.settingsNasalMarkerUppercaseCapital)).tag(true)
-                        Text(lang.string(.settingsNasalMarkerUppercaseSmall)).tag(false)
-                    } label: {
-                        Text(lang.string(.settingsNasalMarkerUppercase))
-                    }
-                    // Explicit: a Form's automatic picker style is context-dependent (Apple
-                    // `PickerStyle`), and this row is a selection sub-page on purpose.
-                    .pickerStyle(.navigationLink)
-                    .onChange(of: isNasalMarkerUppercaseEnabled) { _, newValue in
-                        settings.isNasalMarkerUppercaseEnabled = newValue
-                    }
-                } header: {
-                    Text(lang.string(.settingsPojMode))
-                        .font(AppStyle.sectionHeaderFont)
-                }
-
-                Section {
-                    Toggle(isOn: $isTpsOrMappedToER) {
-                        HStack {
-                            Text(lang.string(.settingsTpsOrMapsToER))
-                            SettingInfoButton(description: lang.string(.settingsTpsOrMapsToERInfo))
-                        }
-                    }
-                    .onChange(of: isTpsOrMappedToER) { _, newValue in
-                        settings.isTpsOrMappedToER = newValue
-                    }
-                } header: {
-                    Text(lang.string(.settingsTpsMode))
-                        .font(AppStyle.sectionHeaderFont)
-                }
-
                 // Typing options: candidates, then output format, then automatic behaviour.
                 Section {
                     // Navigation-link picker = gray value + selection subpage, the same shape as the
@@ -272,6 +226,52 @@ struct SettingsTab: View {
                     Toggle(lang.string(.settingsVibrationFeedback), isOn: $isHapticFeedbackEnabled)
                 } header: {
                     Text(lang.string(.settingsFeedbackSectionTitle))
+                        .font(AppStyle.sectionHeaderFont)
+                }
+
+                // Mode-specific settings follow the shared sections (default mode is TL): POJ, then TPS.
+                Section {
+                    Toggle(lang.string(.settingsDoubleTapOO), isOn: $isDoubleTapOOEnabled)
+                        .onChange(of: isDoubleTapOOEnabled) { _, newValue in
+                            settings.isDoubleTapOOEnabled = newValue
+                        }
+
+                    Toggle(lang.string(.settingsDoubleTapNN), isOn: $isDoubleTapNNEnabled)
+                        .onChange(of: isDoubleTapNNEnabled) { _, newValue in
+                            settings.isDoubleTapNNEnabled = newValue
+                        }
+
+                    // Nasal mark in POJ capitals (§53) — the case rule of the marker the row above
+                    // composes: a picker over the stored switch, ᴺ or ⁿ, on a selection sub-page.
+                    Picker(selection: $isNasalMarkerUppercaseEnabled) {
+                        Text(lang.string(.settingsNasalMarkerUppercaseCapital)).tag(true)
+                        Text(lang.string(.settingsNasalMarkerUppercaseSmall)).tag(false)
+                    } label: {
+                        Text(lang.string(.settingsNasalMarkerUppercase))
+                    }
+                    // Explicit: a Form's automatic picker style is context-dependent (Apple
+                    // `PickerStyle`), and this row is a selection sub-page on purpose.
+                    .pickerStyle(.navigationLink)
+                    .onChange(of: isNasalMarkerUppercaseEnabled) { _, newValue in
+                        settings.isNasalMarkerUppercaseEnabled = newValue
+                    }
+                } header: {
+                    Text(lang.string(.settingsPojMode))
+                        .font(AppStyle.sectionHeaderFont)
+                }
+
+                Section {
+                    Toggle(isOn: $isTpsOrMappedToER) {
+                        HStack {
+                            Text(lang.string(.settingsTpsOrMapsToER))
+                            SettingInfoButton(description: lang.string(.settingsTpsOrMapsToERInfo))
+                        }
+                    }
+                    .onChange(of: isTpsOrMappedToER) { _, newValue in
+                        settings.isTpsOrMappedToER = newValue
+                    }
+                } header: {
+                    Text(lang.string(.settingsTpsMode))
                         .font(AppStyle.sectionHeaderFont)
                 }
 
