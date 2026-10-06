@@ -1,6 +1,6 @@
 import Foundation
 
-/// Search service backing the Dictionary tab.
+/// Search service backing dictionary search on the Manage Dictionaries page.
 ///
 /// Orchestrates dictionary browsing (distinct from keyboard-candidate generation
 /// in `LexiconService`): CJK vs roman path selection, custom-dict prefix search,
@@ -36,7 +36,7 @@ final class DictionarySearchService: @unchecked Sendable {
     /// a Zhuyin query finds its rows; `.english` never reaches the lexicon from
     /// the keyboard, so it reads the TL family.
     /// CROSS-PLATFORM INVARIANT — mirrors android/…/ime/dictionary/DictionarySearchService.kt
-    /// `lexiconMode`. Drift changes which index a Dictionary-tab query searches.
+    /// `lexiconMode`. Drift changes which index a dictionary-search query searches.
     static func lexiconMode(_ inputMode: InputMode) -> RustEngineBridge.LexiconInputMode {
         switch inputMode {
         case .tl, .english: .tl

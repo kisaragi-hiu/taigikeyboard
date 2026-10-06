@@ -15,8 +15,8 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
-// ViewModel for dictionary search in Tab 3 (Dictionary): debounces the query and publishes the
-// results; the search itself is `DictionarySearchService`.
+// ViewModel for dictionary search on the Manage Dictionaries page: debounces the query and
+// publishes the results; the search itself is `DictionarySearchService`.
 class DictionarySearchViewModel(
     application: Application,
 ) : AndroidViewModel(application) {

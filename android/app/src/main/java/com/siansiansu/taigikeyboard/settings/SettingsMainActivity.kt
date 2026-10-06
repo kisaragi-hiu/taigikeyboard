@@ -22,7 +22,6 @@ import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
 import com.siansiansu.taigikeyboard.ui.setupEdgeToEdge
 import com.siansiansu.taigikeyboard.ui.tabs.MainSettingsScreen
 import com.siansiansu.taigikeyboard.ui.tabs.TabItem
-import com.siansiansu.taigikeyboard.ui.tabs.dictionary.DictionarySearchViewModel
 import com.siansiansu.taigikeyboard.ui.tabs.dictionary.DictionarySettingsScreen
 import com.siansiansu.taigikeyboard.ui.tabs.home.HomeScreen
 import com.siansiansu.taigikeyboard.ui.tabs.layout.LayoutScreen
@@ -48,7 +47,6 @@ class SettingsMainActivity : AppCompatActivity() {
 
     lateinit var prefs: PrefHelper
 
-    private val searchViewModel: DictionarySearchViewModel by viewModels()
     private val diagnosticViewModel: DiagnosticViewModel by viewModels()
     private val resetViewModel: SettingsResetViewModel by viewModels()
 
@@ -147,7 +145,6 @@ class SettingsMainActivity : AppCompatActivity() {
                                     onBackupRestore = {
                                         startActivity(DataManagementActivity.createIntent(this))
                                     },
-                                    searchViewModel = searchViewModel,
                                 )
                             }
 

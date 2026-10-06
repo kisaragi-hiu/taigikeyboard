@@ -18,7 +18,7 @@ import kotlinx.coroutines.withContext
 
 /**
  * The engine-backed [LexiconClient]: the system-dictionary lookups behind
- * `DictionarySearchService` (Dictionary tab). The keyboard candidate path does
+ * `DictionarySearchService` (dictionary search). The keyboard candidate path does
  * not route through here — v3.5.8 Item 13 retired the platform lexicon
  * fallback and the Continuous-input engine is the single candidate source
  * (`docs/engine/continuous-candidate-display.md` §15.4).
@@ -66,7 +66,7 @@ class LexiconService(
         }
     }
 
-    /** Search by hanji prefix (Dictionary tab exploration). */
+    /** Search by hanji prefix (dictionary search exploration). */
     override suspend fun searchByHanji(
         input: String,
         inputMode: RustEngineBridge.LexiconInputMode,

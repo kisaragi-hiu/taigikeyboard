@@ -1,10 +1,10 @@
 @testable import TaigiKeyboard
 import XCTest
 
-/// Dictionary-tab search policy pins, mirrored by Android
+/// Dictionary search policy pins, mirrored by Android
 /// `DictionarySearchServiceTest`. The lexicon and the custom dictionary are
 /// fakes, so only the platform-side policy is observed: the custom-dictionary
-/// toggle gates the tab as it gates the keyboard, and the TPS layout searches
+/// toggle gates search as it gates the keyboard, and the TPS layout searches
 /// the `tps:` family.
 final class DictionarySearchServiceTests: XCTestCase {
     private final class FakeLexicon: LexiconClient, @unchecked Sendable {

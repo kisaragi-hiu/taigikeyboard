@@ -1,4 +1,4 @@
-// Dictionary-tab search: CJK vs roman path, the custom-dictionary gate, kautian-first order, badge retag.
+// Dictionary search (Manage Dictionaries page): CJK vs roman path, the custom-dictionary gate, kautian-first order, badge retag.
 
 package com.siansiansu.taigikeyboard.ime.dictionary
 
@@ -9,7 +9,7 @@ import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.settings.EngineSettingsProvider
 
 /**
- * Search service backing the Dictionary tab. Mirrors iOS
+ * Search service backing dictionary search on the Manage Dictionaries page. Mirrors iOS
  * `Lexicon/Services/DictionarySearchService.swift` step for step: a Hanji query
  * takes the CJK path, a romanization query also consults the user's custom
  * dictionary, results come kautian (MOE) first then by frequency with custom
@@ -30,7 +30,7 @@ class DictionarySearchService(
          * from the keyboard, so it reads the TL family; an unknown value falls back
          * to POJ like `InputMode.fromPrefString`.
          * CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Lexicon/Services/DictionarySearchService.swift
-         * `lexiconMode(_:)`. Drift changes which index a Dictionary-tab query searches.
+         * `lexiconMode(_:)`. Drift changes which index a dictionary-search query searches.
          */
         fun lexiconMode(inputMode: String): RustEngineBridge.LexiconInputMode =
             when (inputMode) {
@@ -82,7 +82,7 @@ class DictionarySearchService(
      * The user's own words for [query], found the way the keyboard finds them —
      * by the key the query derives, prefix-matched (`SearchCustomEntries`).
      * CROSS-PLATFORM INVARIANT — mirrors iOS `lookupCustomDictionary`: Enable Custom
-     * Dictionary gates the Dictionary tab as it gates the keyboard.
+     * Dictionary gates dictionary search as it gates the keyboard.
      */
     private suspend fun lookupCustomDictionary(
         query: String,
