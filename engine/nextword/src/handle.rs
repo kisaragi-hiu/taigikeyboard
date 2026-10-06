@@ -118,7 +118,7 @@ mod tests {
             platform_id: Platform::Ios as i32,
             output_both_scripts: false,
             candidate_display_mode: 0,
-            hyphenless_roman: false,
+            syllable_separator: 0,
             force_lowercase_nasal_marker: false,
             tps_or_maps_to_er: false,
             hanji_conversion: None,

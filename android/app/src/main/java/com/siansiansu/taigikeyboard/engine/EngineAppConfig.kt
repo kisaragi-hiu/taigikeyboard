@@ -9,7 +9,9 @@ import com.siansiansu.taigikeyboard.ime.settings.CandidateDisplayMode
 import com.siansiansu.taigikeyboard.ime.settings.EngineSettings
 import com.siansiansu.taigikeyboard.ime.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.settings.PojMarkerOptions
+import com.siansiansu.taigikeyboard.ime.settings.SyllableSeparator
 import com.siansiansu.taigikeyboard.engine.proto.CandidateDisplayMode as ProtoCandidateDisplayMode
+import com.siansiansu.taigikeyboard.engine.proto.SyllableSeparator as ProtoSyllableSeparator
 
 /**
  * The one [AppConfig] builder: every request the Android bridges send carries
@@ -21,9 +23,9 @@ import com.siansiansu.taigikeyboard.engine.proto.CandidateDisplayMode as ProtoCa
  * the case).
  *
  * [inputMode] is the engine's `input_mode` string ([engineInputMode]). TPS goes
- * out as `"tps"` with the swap and No Hyphens exactly as the settings hold
+ * out as `"tps"` with the swap and Syllable Separator exactly as the settings hold
  * them: the engine applies the TPS fold itself (`AppConfig::renders_hanji_first`
- * / `renders_hyphenless`, `engine/protos/src/lib.rs`).
+ * / `rendered_syllable_joiner`, `engine/protos/src/lib.rs`).
  *
  * CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Engine/RustEngineBridge.swift appConfig.
  * Drift causes silent divergence (one platform renders TPS or the swap differently).
@@ -34,7 +36,7 @@ internal fun appConfig(
     isHanjiFirst: Boolean = false,
     isOutputBothScripts: Boolean = false,
     candidateDisplayMode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
-    isHyphenlessRomanEnabled: Boolean = false,
+    syllableSeparator: SyllableSeparator = SyllableSeparator.HYPHEN,
     isTpsOrMappedToER: Boolean = false,
 ): AppConfig =
     AppConfig
@@ -51,7 +53,7 @@ internal fun appConfig(
         }.setIsHanjiFirst(isHanjiFirst)
         .setOutputBothScripts(isOutputBothScripts)
         .setCandidateDisplayMode(candidateDisplayMode.toProto())
-        .setHyphenlessRoman(isHyphenlessRomanEnabled)
+        .setSyllableSeparator(syllableSeparator.toProto())
         .setTpsOrMapsToEr(isTpsOrMappedToER)
         .build()
 
@@ -87,7 +89,7 @@ internal fun continuousAppConfig(settings: EngineSettings): AppConfig =
         isHanjiFirst = settings.isHanjiFirst,
         isOutputBothScripts = settings.isOutputBothScripts,
         candidateDisplayMode = settings.candidateDisplayMode,
-        isHyphenlessRomanEnabled = settings.isHyphenlessRomanEnabled,
+        syllableSeparator = settings.syllableSeparator,
         isTpsOrMappedToER = settings.isTpsOrMappedToER,
     )
 
@@ -126,4 +128,12 @@ internal fun CandidateDisplayMode.toProto(): ProtoCandidateDisplayMode =
         CandidateDisplayMode.SIDE_BY_SIDE -> ProtoCandidateDisplayMode.CANDIDATE_DISPLAY_MODE_SIDE_BY_SIDE
         CandidateDisplayMode.ROMAN_ONLY -> ProtoCandidateDisplayMode.CANDIDATE_DISPLAY_MODE_ROMAN_ONLY
         CandidateDisplayMode.COMBINED -> ProtoCandidateDisplayMode.CANDIDATE_DISPLAY_MODE_COMBINED
+    }
+
+/** `AppConfig.syllable_separator` (field 14); explicit, never UNSPECIFIED, like [toProto] above. */
+internal fun SyllableSeparator.toProto(): ProtoSyllableSeparator =
+    when (this) {
+        SyllableSeparator.HYPHEN -> ProtoSyllableSeparator.SYLLABLE_SEPARATOR_HYPHEN
+        SyllableSeparator.SPACE -> ProtoSyllableSeparator.SYLLABLE_SEPARATOR_SPACE
+        SyllableSeparator.NONE -> ProtoSyllableSeparator.SYLLABLE_SEPARATOR_NONE
     }

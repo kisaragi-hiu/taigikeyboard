@@ -27,6 +27,14 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * applies it only off the TPS layout (`AppConfig::renders_hyphenless`): the
  * platform re-splits `roman` on `-` for bopomofo.
  *
+ * 2026-10-06 replaced it with `syllable_separator` (field 14; tag 10
+ * reserved, USER: "No Hyphens becomes two options: space-separated and
+ * no-space-separated"): Hyphen keeps the dictionary form, None is the old
+ * No Hyphens, Space writes each syllable boundary as a space and the marker
+ * as ` ·` (`tâi uân`, `hōo ·guá`). Same readers, same identity / TPS rules,
+ * through `AppConfig::rendered_syllable_joiner` and
+ * `phonetics::api::syllable_joiner_display`.
+ *
  * 2026-09-22 added `force_lowercase_nasal_marker` (ⁿ becomes ᴺ in capitals OFF, USER): the
  * POJ nasal marker is always `ⁿ` U+207F, never `ᴺ` U+1D3A (Caps Lock
  * `SIANN5` → `SIÂⁿ`). Inverted so the proto default keeps PR #102 (the
@@ -38,11 +46,11 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * `tps_or_maps_to_er` carries the TPS or→er dialect choice (the same flag
  * `TlNumericToTps` / `TlDisplayToTps` take as `or_maps_to_er`). Under
  * `"tps"` the engine composes with the TL tables and applies the TPS fold
- * itself (`AppConfig::renders_hanji_first` / `renders_hyphenless` in
+ * itself (`AppConfig::renders_hanji_first` / `rendered_syllable_joiner` in
  * `engine/protos/src/lib.rs`), so `is_hanji_first` and
- * `hyphenless_roman` are the Candidate-Display-projected stored values
+ * `syllable_separator` are the Candidate-Display-projected stored values
  * WITHOUT the TPS fold. A platform may still send the pre-R6 wire (`"tl"`
- * plus the TPS-folded swap / hyphenless) — composing renders both
+ * plus the TPS-folded swap / separator) — composing renders both
  * identically. Nextword's empty-romanization drop and Enter skip read the
  * swap as sent, not folded; today every platform sends nextword the stored
  * swap, so moving to `"tps"` changes nothing there.
@@ -329,44 +337,6 @@ public  final class AppConfig extends
     candidateDisplayMode_ = 0;
   }
 
-  public static final int HYPHENLESS_ROMAN_FIELD_NUMBER = 10;
-  private boolean hyphenlessRoman_;
-  /**
-   * <pre>
-   * No Hyphens as stored, without the TPS fold.
-   * </pre>
-   *
-   * <code>bool hyphenless_roman = 10;</code>
-   * @return The hyphenlessRoman.
-   */
-  @java.lang.Override
-  public boolean getHyphenlessRoman() {
-    return hyphenlessRoman_;
-  }
-  /**
-   * <pre>
-   * No Hyphens as stored, without the TPS fold.
-   * </pre>
-   *
-   * <code>bool hyphenless_roman = 10;</code>
-   * @param value The hyphenlessRoman to set.
-   */
-  private void setHyphenlessRoman(boolean value) {
-
-    hyphenlessRoman_ = value;
-  }
-  /**
-   * <pre>
-   * No Hyphens as stored, without the TPS fold.
-   * </pre>
-   *
-   * <code>bool hyphenless_roman = 10;</code>
-   */
-  private void clearHyphenlessRoman() {
-
-    hyphenlessRoman_ = false;
-  }
-
   public static final int FORCE_LOWERCASE_NASAL_MARKER_FIELD_NUMBER = 11;
   private boolean forceLowercaseNasalMarker_;
   /**
@@ -503,6 +473,69 @@ public  final class AppConfig extends
     bitField0_ = (bitField0_ & ~0x00000001);
   }
 
+  public static final int SYLLABLE_SEPARATOR_FIELD_NUMBER = 14;
+  private int syllableSeparator_;
+  /**
+   * <pre>
+   * Syllable Separator as stored, without the TPS fold.
+   * </pre>
+   *
+   * <code>.taigi.engine.SyllableSeparator syllable_separator = 14;</code>
+   * @return The enum numeric value on the wire for syllableSeparator.
+   */
+  @java.lang.Override
+  public int getSyllableSeparatorValue() {
+    return syllableSeparator_;
+  }
+  /**
+   * <pre>
+   * Syllable Separator as stored, without the TPS fold.
+   * </pre>
+   *
+   * <code>.taigi.engine.SyllableSeparator syllable_separator = 14;</code>
+   * @return The syllableSeparator.
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.SyllableSeparator getSyllableSeparator() {
+    com.siansiansu.taigikeyboard.engine.proto.SyllableSeparator result = com.siansiansu.taigikeyboard.engine.proto.SyllableSeparator.forNumber(syllableSeparator_);
+    return result == null ? com.siansiansu.taigikeyboard.engine.proto.SyllableSeparator.UNRECOGNIZED : result;
+  }
+  /**
+   * <pre>
+   * Syllable Separator as stored, without the TPS fold.
+   * </pre>
+   *
+   * <code>.taigi.engine.SyllableSeparator syllable_separator = 14;</code>
+   * @param value The enum numeric value on the wire for syllableSeparator to set.
+   */
+  private void setSyllableSeparatorValue(int value) {
+      syllableSeparator_ = value;
+  }
+  /**
+   * <pre>
+   * Syllable Separator as stored, without the TPS fold.
+   * </pre>
+   *
+   * <code>.taigi.engine.SyllableSeparator syllable_separator = 14;</code>
+   * @param value The syllableSeparator to set.
+   * @throws IllegalArgumentException if UNRECOGNIZED is provided.
+   */
+  private void setSyllableSeparator(com.siansiansu.taigikeyboard.engine.proto.SyllableSeparator value) {
+    syllableSeparator_ = value.getNumber();
+
+  }
+  /**
+   * <pre>
+   * Syllable Separator as stored, without the TPS fold.
+   * </pre>
+   *
+   * <code>.taigi.engine.SyllableSeparator syllable_separator = 14;</code>
+   */
+  private void clearSyllableSeparator() {
+
+    syllableSeparator_ = 0;
+  }
+
   public static com.siansiansu.taigikeyboard.engine.proto.AppConfig parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -608,6 +641,14 @@ public  final class AppConfig extends
    * applies it only off the TPS layout (`AppConfig::renders_hyphenless`): the
    * platform re-splits `roman` on `-` for bopomofo.
    *
+   * 2026-10-06 replaced it with `syllable_separator` (field 14; tag 10
+   * reserved, USER: "No Hyphens becomes two options: space-separated and
+   * no-space-separated"): Hyphen keeps the dictionary form, None is the old
+   * No Hyphens, Space writes each syllable boundary as a space and the marker
+   * as ` ·` (`tâi uân`, `hōo ·guá`). Same readers, same identity / TPS rules,
+   * through `AppConfig::rendered_syllable_joiner` and
+   * `phonetics::api::syllable_joiner_display`.
+   *
    * 2026-09-22 added `force_lowercase_nasal_marker` (ⁿ becomes ᴺ in capitals OFF, USER): the
    * POJ nasal marker is always `ⁿ` U+207F, never `ᴺ` U+1D3A (Caps Lock
    * `SIANN5` → `SIÂⁿ`). Inverted so the proto default keeps PR #102 (the
@@ -619,11 +660,11 @@ public  final class AppConfig extends
    * `tps_or_maps_to_er` carries the TPS or→er dialect choice (the same flag
    * `TlNumericToTps` / `TlDisplayToTps` take as `or_maps_to_er`). Under
    * `"tps"` the engine composes with the TL tables and applies the TPS fold
-   * itself (`AppConfig::renders_hanji_first` / `renders_hyphenless` in
+   * itself (`AppConfig::renders_hanji_first` / `rendered_syllable_joiner` in
    * `engine/protos/src/lib.rs`), so `is_hanji_first` and
-   * `hyphenless_roman` are the Candidate-Display-projected stored values
+   * `syllable_separator` are the Candidate-Display-projected stored values
    * WITHOUT the TPS fold. A platform may still send the pre-R6 wire (`"tl"`
-   * plus the TPS-folded swap / hyphenless) — composing renders both
+   * plus the TPS-folded swap / separator) — composing renders both
    * identically. Nextword's empty-romanization drop and Enter skip read the
    * swap as sent, not folded; today every platform sends nextword the stored
    * swap, so moving to `"tps"` changes nothing there.
@@ -930,46 +971,6 @@ public  final class AppConfig extends
     }
 
     /**
-     * <pre>
-     * No Hyphens as stored, without the TPS fold.
-     * </pre>
-     *
-     * <code>bool hyphenless_roman = 10;</code>
-     * @return The hyphenlessRoman.
-     */
-    @java.lang.Override
-    public boolean getHyphenlessRoman() {
-      return instance.getHyphenlessRoman();
-    }
-    /**
-     * <pre>
-     * No Hyphens as stored, without the TPS fold.
-     * </pre>
-     *
-     * <code>bool hyphenless_roman = 10;</code>
-     * @param value The hyphenlessRoman to set.
-     * @return This builder for chaining.
-     */
-    public Builder setHyphenlessRoman(boolean value) {
-      copyOnWrite();
-      instance.setHyphenlessRoman(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * No Hyphens as stored, without the TPS fold.
-     * </pre>
-     *
-     * <code>bool hyphenless_roman = 10;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearHyphenlessRoman() {
-      copyOnWrite();
-      instance.clearHyphenlessRoman();
-      return this;
-    }
-
-    /**
      * <code>bool force_lowercase_nasal_marker = 11;</code>
      * @return The forceLowercaseNasalMarker.
      */
@@ -1114,6 +1115,73 @@ public  final class AppConfig extends
       return this;
     }
 
+    /**
+     * <pre>
+     * Syllable Separator as stored, without the TPS fold.
+     * </pre>
+     *
+     * <code>.taigi.engine.SyllableSeparator syllable_separator = 14;</code>
+     * @return The enum numeric value on the wire for syllableSeparator.
+     */
+    @java.lang.Override
+    public int getSyllableSeparatorValue() {
+      return instance.getSyllableSeparatorValue();
+    }
+    /**
+     * <pre>
+     * Syllable Separator as stored, without the TPS fold.
+     * </pre>
+     *
+     * <code>.taigi.engine.SyllableSeparator syllable_separator = 14;</code>
+     * @param value The syllableSeparator to set.
+     * @throws IllegalArgumentException if UNRECOGNIZED is provided.
+     * @return This builder for chaining.
+     */
+    public Builder setSyllableSeparatorValue(int value) {
+      copyOnWrite();
+      instance.setSyllableSeparatorValue(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Syllable Separator as stored, without the TPS fold.
+     * </pre>
+     *
+     * <code>.taigi.engine.SyllableSeparator syllable_separator = 14;</code>
+     * @return The syllableSeparator.
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.SyllableSeparator getSyllableSeparator() {
+      return instance.getSyllableSeparator();
+    }
+    /**
+     * <pre>
+     * Syllable Separator as stored, without the TPS fold.
+     * </pre>
+     *
+     * <code>.taigi.engine.SyllableSeparator syllable_separator = 14;</code>
+     * @param value The enum numeric value on the wire for syllableSeparator to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSyllableSeparator(com.siansiansu.taigikeyboard.engine.proto.SyllableSeparator value) {
+      copyOnWrite();
+      instance.setSyllableSeparator(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Syllable Separator as stored, without the TPS fold.
+     * </pre>
+     *
+     * <code>.taigi.engine.SyllableSeparator syllable_separator = 14;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearSyllableSeparator() {
+      copyOnWrite();
+      instance.clearSyllableSeparator();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.AppConfig)
   }
   @java.lang.Override
@@ -1138,15 +1206,15 @@ public  final class AppConfig extends
             "platformId_",
             "outputBothScripts_",
             "candidateDisplayMode_",
-            "hyphenlessRoman_",
             "forceLowercaseNasalMarker_",
             "tpsOrMapsToEr_",
             "hanjiConversion_",
+            "syllableSeparator_",
           };
           java.lang.String info =
-              "\u0000\u000b\u0000\u0001\u0002\r\u000b\u0000\u0000\u0000\u0002\u0208\u0003\u0007" +
-              "\u0004\u0007\u0005\u0007\u0007\f\b\u0007\t\f\n\u0007\u000b\u0007\f\u0007\r\u1009" +
-              "\u0000";
+              "\u0000\u000b\u0000\u0001\u0002\u000e\u000b\u0000\u0000\u0000\u0002\u0208\u0003\u0007" +
+              "\u0004\u0007\u0005\u0007\u0007\f\b\u0007\t\f\u000b\u0007\f\u0007\r\u1009\u0000\u000e" +
+              "\f";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

@@ -251,7 +251,7 @@ message CommitContinuous {
   // written renders as Bopomofo.
   CommitScript script = 7;
   // The pick's `CandidateMessage.roman`, as the candidate carried it (POJ-
-  // rendered / recased / No Hyphens — the display romanization, never the
+  // rendered / recased / syllable-separated — the display romanization, never the
   // canonical TL).
   string roman = 8;
 }

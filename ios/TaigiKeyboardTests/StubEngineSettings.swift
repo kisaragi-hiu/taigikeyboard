@@ -8,7 +8,7 @@ struct StubEngineSettings: EngineSettings {
     var isOutputBothScripts = false
     var candidateDisplayMode: CandidateDisplayMode = .sideBySide
     var isLiteralRomanCandidateEnabled = true
-    var isHyphenlessRomanEnabled = false
+    var syllableSeparator: SyllableSeparator = .hyphen
     var pojMarkerOptions = PojMarkerOptions(
         isDoubleTapOOEnabled: false,
         isDoubleTapNNEnabled: false,

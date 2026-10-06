@@ -51,7 +51,7 @@ final class SettingsStoreTests: XCTestCase {
         userDefaults.set(true, forKey: SettingsStore.Keys.isAutoSpaceEnabled.name)
         userDefaults.set(false, forKey: SettingsStore.Keys.isCandidateWindowEnabled.name)
         userDefaults.set(true, forKey: SettingsStore.Keys.isLiteralRomanCandidateEnabled.name)
-        userDefaults.set(true, forKey: SettingsStore.Keys.isHyphenlessRomanEnabled.name)
+        userDefaults.set(SyllableSeparator.space.rawValue, forKey: SettingsStore.Keys.syllableSeparator.name)
         userDefaults.set(false, forKey: SettingsStore.Keys.isNasalMarkerUppercaseEnabled.name)
         userDefaults.set(CandidateLayout.horizontal.rawValue, forKey: SettingsStore.Keys.candidateLayout.name)
         userDefaults.set("1.0.0", forKey: SettingsStore.Keys.updateLastNotifiedVersion.name)
@@ -67,11 +67,11 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(store.isCandidateWindowEnabled, SettingsStore.Keys.isCandidateWindowEnabled.defaultValue)
         for key in [
             SettingsStore.Keys.isLiteralRomanCandidateEnabled,
-            SettingsStore.Keys.isHyphenlessRomanEnabled,
             SettingsStore.Keys.isNasalMarkerUppercaseEnabled,
         ] {
             XCTAssertNil(userDefaults.object(forKey: key.name), "\(key.name) removed, not written")
         }
+        XCTAssertNil(userDefaults.object(forKey: SettingsStore.Keys.syllableSeparator.name), "removed, not written")
         XCTAssertEqual(store.candidateLayout, .horizontal, "外觀's key")
         XCTAssertEqual(store.updateLastNotifiedVersion, "1.0.0", "bookkeeping")
     }

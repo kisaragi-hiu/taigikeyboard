@@ -179,7 +179,7 @@ public interface CommitContinuousOrBuilder extends
   /**
    * <pre>
    * The pick's `CandidateMessage.roman`, as the candidate carried it (POJ-
-   * rendered / recased / No Hyphens — the display romanization, never the
+   * rendered / recased / syllable-separated — the display romanization, never the
    * canonical TL).
    * </pre>
    *
@@ -190,7 +190,7 @@ public interface CommitContinuousOrBuilder extends
   /**
    * <pre>
    * The pick's `CandidateMessage.roman`, as the candidate carried it (POJ-
-   * rendered / recased / No Hyphens — the display romanization, never the
+   * rendered / recased / syllable-separated — the display romanization, never the
    * canonical TL).
    * </pre>
    *

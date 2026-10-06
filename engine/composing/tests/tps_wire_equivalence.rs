@@ -1,7 +1,7 @@
 //! R6 — the TPS layout as a real `input_mode = "tps"` renders byte-identically
 //! to the pre-R6 wire, where every platform sent TPS as `"tl"` with the TPS
-//! fold already applied (`is_hanji_first = true`, `hyphenless_roman =
-//! false`: pre-R6 iOS `RustEngineBridge+Composing.swift` / Android
+//! fold already applied (`is_hanji_first = true`, the No Hyphens flag
+//! `false`: pre-R6 iOS `RustEngineBridge+Composing.swift` / Android
 //! `RustEngineBridge.kt` `continuousAppConfig`). Under `"tps"` the flags are
 //! the stored ones, so every stored combination must match the one legacy
 //! wire. Whole responses (preedit, candidates, effects, commit resolution)
@@ -12,7 +12,7 @@ use composing::requests;
 use protos::engine::composing_request::Method;
 use protos::engine::{
     AppConfig, Append, CandidateMessage, CommitContinuous, CommitScript, ComposingResponse,
-    DeleteBackward, Start,
+    DeleteBackward, Start, SyllableSeparator,
 };
 
 use crate::common;
@@ -23,20 +23,23 @@ fn legacy_wire() -> AppConfig {
     AppConfig {
         input_mode: "tl".into(),
         is_hanji_first: true,
-        hyphenless_roman: false,
         ..AppConfig::default()
     }
 }
 
-/// The R6 wire: `"tps"` with every stored swap / No Hyphens combination.
+/// The R6 wire: `"tps"` with every stored swap / Syllable Separator combination.
 fn tps_wires() -> Vec<AppConfig> {
     let mut wires = Vec::new();
     for swapped in [false, true] {
-        for hyphenless in [false, true] {
+        for separator in [
+            SyllableSeparator::Hyphen,
+            SyllableSeparator::None,
+            SyllableSeparator::Space,
+        ] {
             wires.push(AppConfig {
                 input_mode: "tps".into(),
                 is_hanji_first: swapped,
-                hyphenless_roman: hyphenless,
+                syllable_separator: separator as i32,
                 ..AppConfig::default()
             });
         }

@@ -73,9 +73,10 @@ final class SettingsStore: @unchecked Sendable {
             name: "literalRomanCandidateEnabled",
             defaultValue: EngineSettings.defaults.isLiteralRomanCandidateEnabled,
         )
-        static let isHyphenlessRomanEnabled = SettingsKey(
-            name: "hyphenlessRomanEnabled",
-            defaultValue: EngineSettings.defaults.isHyphenlessRomanEnabled,
+        /// Stored as the enum's raw value like `candidateDisplayMode`.
+        static let syllableSeparator = SettingsKey(
+            name: "syllableSeparator",
+            defaultValue: EngineSettings.defaults.syllableSeparator,
         )
         static let isNasalMarkerUppercaseEnabled = SettingsKey(
             name: "nasalMarkerUppercaseEnabled",
@@ -566,7 +567,7 @@ final class SettingsStore: @unchecked Sendable {
             Keys.isAutoSpaceEnabled.name,
             Keys.isCandidateWindowEnabled.name,
             Keys.isLiteralRomanCandidateEnabled.name,
-            Keys.isHyphenlessRomanEnabled.name,
+            Keys.syllableSeparator.name,
             Keys.isNasalMarkerUppercaseEnabled.name,
         )
     }

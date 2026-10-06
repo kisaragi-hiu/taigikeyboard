@@ -11,7 +11,7 @@ use taigi_desktop_core::settings::presentation::{
     display_language_label, nasal_marker_style_label, output_script_label, NASAL_MARKER_STYLES,
     OUTPUT_SCRIPTS,
 };
-use taigi_desktop_core::settings::{keys, InputMode, SettingChoice};
+use taigi_desktop_core::settings::{keys, InputMode, SettingChoice, SyllableSeparator};
 use taigi_desktop_core::strings::{DisplayLanguage, StringKey, StringResolver};
 use taigi_desktop_update::checker;
 use windows_reactor::*;
@@ -102,13 +102,16 @@ pub fn view(
             },
             context,
         ),
-        // No Hyphens (§49), directly under Output Script — it describes that output's
-        // shape.
-        cards::switch_row(
-            strings.resolve(StringKey::SettingsHyphenlessRoman),
-            document.bool(&keys::IS_HYPHENLESS_ROMAN_ENABLED),
+        // Syllable Separator (§49), directly under Output Script — it describes that
+        // output's shape.
+        choice_row(
+            strings.resolve(StringKey::SettingsSyllableSeparator),
+            SyllableSeparator::ALL,
+            document.choice(&keys::SYLLABLE_SEPARATOR),
             true,
-            context.callback(|is_on| Message::SetSwitch(keys::IS_HYPHENLESS_ROMAN_ENABLED, is_on)),
+            |choice: SyllableSeparator| strings.resolve(choice.label_key()).to_owned(),
+            |choice| Message::set_choice(choice, &keys::SYLLABLE_SEPARATOR),
+            context,
         ),
         // Nasal mark in POJ capitals (§53): the other setting that shapes the
         // output's romanization — a pop-up over the stored switch, ᴺ or ⁿ.

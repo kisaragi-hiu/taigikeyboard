@@ -221,6 +221,52 @@ impl SettingChoice for CandidateDisplayMode {
     }
 }
 
+/// How the rendered romanization separates syllables (Syllable Separator,
+/// `behavioral-invariants.md` §49): the dictionary hyphen (`tâi-uân`), a space
+/// (`tâi uân`), or nothing (`tâiuân`). Stored spellings are the same on every
+/// platform (`SettingsModels.swift` `SyllableSeparator`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum SyllableSeparator {
+    Hyphen,
+    Space,
+    None,
+}
+
+impl SyllableSeparator {
+    /// The `AppConfig.syllable_separator` wire value, sent as stored: the
+    /// engine never rewrites TPS (`AppConfig::rendered_syllable_joiner`).
+    pub fn wire(self) -> protos::engine::SyllableSeparator {
+        match self {
+            Self::Hyphen => protos::engine::SyllableSeparator::Hyphen,
+            Self::Space => protos::engine::SyllableSeparator::Space,
+            Self::None => protos::engine::SyllableSeparator::None,
+        }
+    }
+
+    /// The picker row's i18n key.
+    pub fn label_key(self) -> crate::strings::StringKey {
+        use crate::strings::StringKey;
+        match self {
+            Self::Hyphen => StringKey::DesktopTelexGuideHyphen,
+            Self::Space => StringKey::SettingsSyllableSeparatorSpace,
+            Self::None => StringKey::SettingsSyllableSeparatorNone,
+        }
+    }
+}
+
+impl SettingChoice for SyllableSeparator {
+    const ALL: &'static [Self] = &[Self::Hyphen, Self::Space, Self::None];
+    /// The dictionary form.
+    const DEFAULT: Self = Self::Hyphen;
+    fn raw(self) -> &'static str {
+        match self {
+            Self::Hyphen => "hyphen",
+            Self::Space => "space",
+            Self::None => "none",
+        }
+    }
+}
+
 /// Immutable snapshot of everything the engine needs to render a composition.
 ///
 /// A snapshot rather than a set of getters because a single user intent can
@@ -251,14 +297,13 @@ pub struct EngineSettings {
     /// (`ios/.../SharedSettings.swift`) and `literalRomanCandidateEnabled`
     /// (`android/.../PrefHelper.kt`), both default OFF (USER 2026-10-02).
     pub is_literal_roman_candidate_enabled: bool,
-    /// No Hyphens (`behavioral-invariants.md` §49) — `AppConfig.hyphenless_roman`
-    /// on the base config, sent as stored: the engine never renders TPS
-    /// hyphenless (`AppConfig::renders_hyphenless`).
-    /// CROSS-PLATFORM INVARIANT — default OFF on every platform; mirrored by
-    /// `isHyphenlessRomanEnabled` (`ios/.../SharedSettings.swift`) and
-    /// `isHyphenlessRomanEnabled` (`android/.../PrefHelper.kt`). macOS keeps a
-    /// Swift twin: `macos/.../EngineSettings.swift` `isHyphenlessRomanEnabled`.
-    pub is_hyphenless_roman_enabled: bool,
+    /// Syllable Separator (`behavioral-invariants.md` §49) —
+    /// `AppConfig.syllable_separator` on the base config, sent as stored.
+    /// CROSS-PLATFORM INVARIANT — default Hyphen on every platform; mirrored by
+    /// `syllableSeparator` (`ios/.../SharedSettings.swift`) and
+    /// `syllableSeparator` (`android/.../PrefHelper.kt`). macOS keeps a Swift
+    /// twin: `macos/.../EngineSettings.swift` `syllableSeparator`.
+    pub syllable_separator: SyllableSeparator,
     /// Nasal mark in POJ capitals (`behavioral-invariants.md` §53) — the POJ nasal marker follows
     /// the case of the letters before it (`SIÂᴺ`); off, always `ⁿ`. Sent
     /// inverted as `AppConfig.force_lowercase_nasal_marker` on the base config.
@@ -294,7 +339,7 @@ impl EngineSettings {
             is_full_width_punctuation: MODE.effective_full_width_punctuation(STORED_SWAP),
             candidate_display_mode: MODE,
             is_literal_roman_candidate_enabled: false,
-            is_hyphenless_roman_enabled: false,
+            syllable_separator: SyllableSeparator::Hyphen,
             is_nasal_marker_uppercase_enabled: true,
             is_custom_dict_enabled: true,
             dictionary_sources: DictionarySourceToggles::DEFAULT,

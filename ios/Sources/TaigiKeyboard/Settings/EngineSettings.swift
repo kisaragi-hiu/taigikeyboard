@@ -39,11 +39,11 @@ protocol EngineSettings {
     // Drift causes silent divergence (one platform shows the §34 candidate, the other does not).
     var isLiteralRomanCandidateEnabled: Bool { get }
 
-    /// No Hyphens (`behavioral-invariants.md` §49) as stored. Forwarded verbatim
-    /// as `AppConfig.hyphenless_roman`; the engine exempts the TPS layout itself.
-    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/settings/EngineSettings.kt:isHyphenlessRomanEnabled.
+    /// Syllable Separator (`behavioral-invariants.md` §49) as stored. Forwarded verbatim
+    /// as `AppConfig.syllable_separator`; the engine exempts the TPS layout itself.
+    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/settings/EngineSettings.kt:syllableSeparator.
     // Drift causes silent divergence (one platform still shows hyphens).
-    var isHyphenlessRomanEnabled: Bool { get }
+    var syllableSeparator: SyllableSeparator { get }
 
     /// The POJ marker options (double-tap folds + Nasal mark in POJ capitals, §53) bundled as a
     /// live-read value so `ComposingState` / `ToneConverter` can stay

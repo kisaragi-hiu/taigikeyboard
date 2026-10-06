@@ -348,9 +348,11 @@
       }
     },
     "telexGuideHyphen": {
-      "comment": "Telex guide row meaning for f: the syllable hyphen.",
+      "comment": "The syllable hyphen: the Telex guide row meaning for f, and the Syllable Separator picker's Hyphen value (settings.syllableSeparator).",
       "scope": {
         "platforms": [
+          "android",
+          "ios",
           "macos",
           "windows",
           "linux"

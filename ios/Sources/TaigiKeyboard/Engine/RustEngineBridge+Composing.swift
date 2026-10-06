@@ -500,7 +500,7 @@ public extension RustEngineBridge {
             isHanjiFirst: settings.isHanjiFirst,
             isOutputBothScripts: settings.isOutputBothScripts,
             candidateDisplayMode: settings.candidateDisplayMode,
-            isHyphenlessRomanEnabled: settings.isHyphenlessRomanEnabled,
+            syllableSeparator: settings.syllableSeparator,
             isTpsOrMappedToER: settings.isTpsOrMappedToER,
         )
     }

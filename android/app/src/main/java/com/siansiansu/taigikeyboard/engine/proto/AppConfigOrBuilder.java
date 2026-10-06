@@ -81,16 +81,6 @@ public interface AppConfigOrBuilder extends
   com.siansiansu.taigikeyboard.engine.proto.CandidateDisplayMode getCandidateDisplayMode();
 
   /**
-   * <pre>
-   * No Hyphens as stored, without the TPS fold.
-   * </pre>
-   *
-   * <code>bool hyphenless_roman = 10;</code>
-   * @return The hyphenlessRoman.
-   */
-  boolean getHyphenlessRoman();
-
-  /**
    * <code>bool force_lowercase_nasal_marker = 11;</code>
    * @return The forceLowercaseNasalMarker.
    */
@@ -126,4 +116,23 @@ public interface AppConfigOrBuilder extends
    * @return The hanjiConversion.
    */
   com.siansiansu.taigikeyboard.engine.proto.HanjiConversion getHanjiConversion();
+
+  /**
+   * <pre>
+   * Syllable Separator as stored, without the TPS fold.
+   * </pre>
+   *
+   * <code>.taigi.engine.SyllableSeparator syllable_separator = 14;</code>
+   * @return The enum numeric value on the wire for syllableSeparator.
+   */
+  int getSyllableSeparatorValue();
+  /**
+   * <pre>
+   * Syllable Separator as stored, without the TPS fold.
+   * </pre>
+   *
+   * <code>.taigi.engine.SyllableSeparator syllable_separator = 14;</code>
+   * @return The syllableSeparator.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.SyllableSeparator getSyllableSeparator();
 }

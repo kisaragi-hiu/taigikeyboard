@@ -12,7 +12,7 @@ use taigi_desktop_core::settings::presentation::{
     OUTPUT_SCRIPTS, WEBSITE_URL,
 };
 use taigi_desktop_core::settings::{
-    keys, InputMode, InputModeRequest, SettingChoice, SettingsDocument,
+    keys, InputMode, InputModeRequest, SettingChoice, SettingsDocument, SyllableSeparator,
 };
 use taigi_desktop_core::strings::{DisplayLanguage, StringKey};
 
@@ -76,10 +76,12 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
     );
     output_row.set_sensitive(allows_swap(context.document));
     context.on_refresh(move |document| output_row.set_sensitive(allows_swap(document)));
-    context.switch_row(
+    context.choice_row(
         &group,
-        StringKey::SettingsHyphenlessRoman,
-        keys::IS_HYPHENLESS_ROMAN_ENABLED,
+        StringKey::SettingsSyllableSeparator,
+        SyllableSeparator::ALL,
+        keys::SYLLABLE_SEPARATOR,
+        SyllableSeparator::label_key,
     );
     // Nasal mark in POJ capitals (§53): a pop-up over the stored switch, ᴺ or ⁿ.
     let nasal_marker_labels = NASAL_MARKER_STYLES

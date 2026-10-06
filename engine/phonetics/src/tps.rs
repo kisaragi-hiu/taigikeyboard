@@ -130,7 +130,7 @@ pub(crate) const ZHUYIN_TONES_ENCODE_SAFE: &[(&str, &str)] = &[
 ];
 
 /// The neutral-tone marker as TPS writes it (`--` → `·` U+00B7, `zhuyin.js:204`);
-/// No Hyphens romanization (`api::hyphenless_display`) writes the same glyph.
+/// Syllable Separator romanization (`api::syllable_joiner_display`) writes the same glyph.
 pub(crate) const KHINSIANN_DOT: &str = "\u{00b7}";
 
 const PUNCTUATION_CHARS: &[&str] = &[

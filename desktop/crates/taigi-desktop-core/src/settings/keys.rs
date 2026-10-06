@@ -22,6 +22,7 @@ use super::choices::{
 use super::document::SettingsKey;
 use super::engine_settings::{
     CandidateDisplayMode, DictionarySourceToggles, EngineSettings, InputMode, Romanization,
+    SyllableSeparator,
 };
 use crate::strings::DisplayLanguage;
 
@@ -58,10 +59,12 @@ pub const IS_LITERAL_ROMAN_CANDIDATE_ENABLED: SettingsKey<bool> = SettingsKey::n
     "literalRomanCandidateEnabled",
     ENGINE_DEFAULTS.is_literal_roman_candidate_enabled,
 );
-pub const IS_HYPHENLESS_ROMAN_ENABLED: SettingsKey<bool> = SettingsKey::new(
-    "hyphenlessRomanEnabled",
-    ENGINE_DEFAULTS.is_hyphenless_roman_enabled,
-);
+pub const SYLLABLE_SEPARATOR: SettingsKey<SyllableSeparator> =
+    SettingsKey::new("syllableSeparator", ENGINE_DEFAULTS.syllable_separator);
+/// RETIRED 2026-10-06: the No Hyphens switch, replaced by `SYLLABLE_SEPARATOR`.
+/// `SettingsDocument::from_json` carries a stored `true` over as `none`, then
+/// drops the key. macOS twin: `RetiredSettingsCleanup.swift`.
+pub const RETIRED_HYPHENLESS_ROMAN_ENABLED: &str = "hyphenlessRomanEnabled";
 pub const IS_NASAL_MARKER_UPPERCASE_ENABLED: SettingsKey<bool> = SettingsKey::new(
     "nasalMarkerUppercaseEnabled",
     ENGINE_DEFAULTS.is_nasal_marker_uppercase_enabled,
@@ -275,7 +278,7 @@ pub const GENERAL_KEYS: [&str; 10] = [
     IS_AUTO_SPACE_ENABLED.name,
     IS_CANDIDATE_WINDOW_ENABLED.name,
     IS_LITERAL_ROMAN_CANDIDATE_ENABLED.name,
-    IS_HYPHENLESS_ROMAN_ENABLED.name,
+    SYLLABLE_SEPARATOR.name,
     IS_NASAL_MARKER_UPPERCASE_ENABLED.name,
 ];
 

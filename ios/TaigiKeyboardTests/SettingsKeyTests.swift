@@ -132,8 +132,32 @@ final class SettingsKeyTests: XCTestCase {
         XCTAssertTrue(settings.isMoeDictEnabled)
         XCTAssertFalse(settings.isITaigiDictEnabled)
         XCTAssertFalse(settings.isLiteralRomanCandidateEnabled, "§34/S22 Show Typed Text First ships OFF")
-        XCTAssertFalse(settings.isHyphenlessRomanEnabled, "無連字符 ships OFF")
+        XCTAssertEqual(settings.syllableSeparator, .hyphen, "音節分隔 ships as the hyphen")
         XCTAssertTrue(settings.isNasalMarkerUppercaseEnabled, "ⁿ大本字 ships ON")
+    }
+
+    /// The retired No Hyphens switch: a stored `true` becomes `.noSeparator`, a stored separator
+    /// wins, `false` carries nothing over, and the switch goes either way.
+    func test_storedNoHyphensSwitch_carriesOverAsNoSeparator() {
+        let retiredName = "hyphenlessRomanEnabled"
+        let settings = SharedSettings(userDefaults: defaults)
+        defaults.set(true, forKey: retiredName)
+        settings.carryOverHyphenlessRoman()
+        XCTAssertEqual(settings.syllableSeparator, .noSeparator)
+        XCTAssertNil(defaults.object(forKey: retiredName))
+
+        defaults.set("space", forKey: "syllableSeparator")
+        defaults.set(true, forKey: retiredName)
+        settings.carryOverHyphenlessRoman()
+        XCTAssertEqual(settings.syllableSeparator, .space, "a stored choice wins")
+        XCTAssertNil(defaults.object(forKey: retiredName))
+
+        defaults.removeObject(forKey: "syllableSeparator")
+        defaults.set(false, forKey: retiredName)
+        settings.carryOverHyphenlessRoman()
+        XCTAssertEqual(settings.syllableSeparator, .hyphen)
+        XCTAssertNil(defaults.object(forKey: "syllableSeparator"), "off carries nothing over")
+        XCTAssertNil(defaults.object(forKey: retiredName))
     }
 
     func test_isFullAccessEnabled_absentReturnsFalse_andStoredTrueReturnsTrue() {
@@ -220,7 +244,7 @@ final class SettingsKeyTests: XCTestCase {
         settings.isToolbarAutoCollapse = false
         settings.isTpsOrMappedToER = false
         settings.isLiteralRomanCandidateEnabled = true
-        settings.isHyphenlessRomanEnabled = true
+        settings.syllableSeparator = .space
         settings.isGlobeKeyEnabled = !DeviceCapabilities.prefersGlobeKeyByDefault
 
         // RawRep enums + font.
@@ -244,7 +268,7 @@ final class SettingsKeyTests: XCTestCase {
         XCTAssertFalse(settings.isOutputBothScripts)
         XCTAssertFalse(settings.isAutoSpaceEnabled)
         XCTAssertFalse(settings.isLiteralRomanCandidateEnabled)
-        XCTAssertFalse(settings.isHyphenlessRomanEnabled)
+        XCTAssertEqual(settings.syllableSeparator, .hyphen)
         XCTAssertTrue(settings.isMoeDictEnabled)
         XCTAssertTrue(settings.isNewwordDictEnabled)
         XCTAssertTrue(settings.isKunggeDictEnabled)

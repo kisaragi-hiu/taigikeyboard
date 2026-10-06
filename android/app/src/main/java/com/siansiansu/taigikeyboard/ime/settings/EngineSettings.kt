@@ -75,14 +75,14 @@ interface EngineSettings {
      */
     val isLiteralRomanCandidateEnabled: Boolean
 
-    // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/EngineSettings.swift:isHyphenlessRomanEnabled.
+    // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/EngineSettings.swift:syllableSeparator.
     // Drift causes silent divergence (one platform still shows hyphens).
 
     /**
-     * No Hyphens (`behavioral-invariants.md` §49) as stored. Forwarded verbatim
-     * as `AppConfig.hyphenless_roman`; the engine exempts the TPS layout itself.
+     * Syllable Separator (`behavioral-invariants.md` §49) as stored. Forwarded verbatim
+     * as `AppConfig.syllable_separator`; the engine exempts the TPS layout itself.
      */
-    val isHyphenlessRomanEnabled: Boolean
+    val syllableSeparator: SyllableSeparator
 
     /**
      * The POJ marker options (double-tap folds + Nasal mark in POJ capitals, §53) bundled as a

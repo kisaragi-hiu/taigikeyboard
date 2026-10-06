@@ -134,8 +134,7 @@ final class DesktopCoreRuntimeTests: XCTestCase {
     func testWhitelist_matchesSettingsStoreDefaults() throws {
         let booleans = [
             Keys.isHanjiFirst, Keys.isAutoSpaceEnabled, Keys.isCandidateWindowEnabled,
-            Keys.isLiteralRomanCandidateEnabled, Keys.isHyphenlessRomanEnabled,
-            Keys.isNasalMarkerUppercaseEnabled, Keys.isCustomDictEnabled,
+            Keys.isLiteralRomanCandidateEnabled, Keys.isNasalMarkerUppercaseEnabled, Keys.isCustomDictEnabled,
             Keys.isKautianEnabled, Keys.isTaigitvEnabled, Keys.isItaigiEnabled, Keys.isSitbutEnabled,
             Keys.isTaihoaEnabled, Keys.isTaijitEnabled, Keys.isKunggeEnabled, Keys.isSttiEnabled,
             Keys.isKhpooEnabled, Keys.isVariantEnabled, Keys.isKhiinEnabled, Keys.isLkkEnabled,
@@ -150,6 +149,7 @@ final class DesktopCoreRuntimeTests: XCTestCase {
         var expected: [String: Taigi_DesktopShell_SettingValue.OneOf_Value?] = [
             Keys.inputMode.name: .text(Keys.inputMode.defaultValue.rawValue),
             Keys.candidateDisplayMode.name: .text(Keys.candidateDisplayMode.defaultValue.rawValue),
+            Keys.syllableSeparator.name: .text(Keys.syllableSeparator.defaultValue.rawValue),
             Keys.toneInputScheme.name: .text(Keys.toneInputScheme.defaultValue.rawValue),
         ]
         for key in booleans {

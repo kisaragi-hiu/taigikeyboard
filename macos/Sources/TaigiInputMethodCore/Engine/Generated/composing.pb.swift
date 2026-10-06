@@ -689,7 +689,7 @@ public nonisolated struct Taigi_Engine_CommitContinuous: Sendable {
   public var script: Taigi_Engine_CommitScript = .unspecified
 
   /// The pick's `CandidateMessage.roman`, as the candidate carried it (POJ-
-  /// rendered / recased / No Hyphens — the display romanization, never the
+  /// rendered / recased / syllable-separated — the display romanization, never the
   /// canonical TL).
   public var roman: String = String()
 

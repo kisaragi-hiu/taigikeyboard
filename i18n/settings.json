@@ -96,15 +96,25 @@
       "scope": { "platforms": ["macos", "windows", "linux"], "surfaces": ["host"] },
       "values": { "hanji": "羅馬字", "tailo": "Lô-má-jī", "poj": "Lô-má-jī", "en": "Romanization", "ja": "ローマ字" }
     },
-    "hyphenlessRoman": {
-      "comment": "Toggle label: render candidate / committed romanization without the dictionary's inter-syllable hyphen, neutral-tone -- as · (tâi-uân → tâiuân, hōo--guá → hōo·guá). All four platforms, host settings only.",
+    "syllableSeparator": {
+      "comment": "Picker label: how candidate / committed romanization separates syllables — the dictionary hyphen, a space, or nothing (tâi-uân / tâi uân / tâiuân); the neutral-tone -- becomes · under Space and None. Options: desktop.telexGuideHyphen, settings.syllableSeparatorSpace, settings.syllableSeparatorNone. All five platforms, host settings only.",
       "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host"] },
-      "values": { "hanji": "無連字符", "tailo": "Bô liân-jī-hû", "poj": "Bô liân-jī-hû", "en": "No Hyphens", "ja": "ハイフンなし" }
+      "values": { "hanji": "音節分隔", "tailo": "Im-tsiat hun-keh", "poj": "Im-chiat hun-keh", "en": "Syllable Separator", "ja": "音節の区切り" }
     },
-    "hyphenlessRomanInfo": {
-      "comment": "Help text for the No Hyphens toggle (mobile host app).",
+    "syllableSeparatorSpace": {
+      "comment": "Syllable Separator picker value: a space between syllables (tâi uân, hōo ·guá).",
+      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host"] },
+      "values": { "hanji": "空白", "tailo": "Khang-pe̍h", "poj": "Khang-pe̍h", "en": "Space", "ja": "スペース" }
+    },
+    "syllableSeparatorNone": {
+      "comment": "Syllable Separator picker value: nothing between syllables (tâiuân, hōo·guá).",
+      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host"] },
+      "values": { "hanji": "無", "tailo": "Bô", "poj": "Bô", "en": "None", "ja": "なし" }
+    },
+    "syllableSeparatorInfo": {
+      "comment": "Help text for the Syllable Separator picker (mobile host app).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "候選詞佮送出的羅馬字無連字符（tâi-uân → tâiuân），輕聲記號 -- 改用 ·（hōo--guá → hōo·guá）。你家己拍的連字符無影響。", "tailo": "Hāu-suán sû kah sàng-tshut ê lô-má-jī bô liân-jī-hû (tâi-uân → tâiuân), khin-siann kì-hō -- kái iōng · (hōo--guá → hōo·guá). Lí ka-kī phah ê liân-jī-hû bô íng-hióng.", "poj": "Hāu-soán sû kah sàng-chhut ê lô-má-jī bô liân-jī-hû (tâi-oân → tâioân), khin-siaⁿ kì-hō -- kái iōng · (hō͘--goá → hō͘·goá). Lí ka-kī phah ê liân-jī-hû bô éng-hióng.", "en": "Shows and commits romanization without hyphens between syllables (tâi-uân → tâiuân); the neutral-tone marker -- becomes · (hōo--guá → hōo·guá). Hyphens you type yourself are unaffected.", "ja": "候補と確定するローマ字から音節間のハイフンを省きます（tâi-uân → tâiuân）。軽声記号 -- は · になります（hōo--guá → hōo·guá）。自分で入力したハイフンは変わりません。" }
+      "values": { "hanji": "候選詞佮送出的羅馬字，音節中間用連字符（tâi-uân）、空白（tâi uân）抑是無分隔（tâiuân）。空白佮無分隔的時，輕聲記號 -- 改用 ·（hōo ·guá、hōo·guá）。", "tailo": "Hāu-suán sû kah sàng-tshut ê lô-má-jī, im-tsiat tiong-kan iōng liân-jī-hû (tâi-uân), khang-pe̍h (tâi uân) iah-sī bô hun-keh (tâiuân). Khang-pe̍h kah bô hun-keh ê sî, khin-siann kì-hō -- kái iōng · (hōo ·guá, hōo·guá).", "poj": "Hāu-soán sû kah sàng-chhut ê lô-má-jī, im-chiat tiong-kan iōng liân-jī-hû (tâi-oân), khang-pe̍h (tâi oân) iah-sī bô hun-keh (tâioân). Khang-pe̍h kah bô hun-keh ê sî, khin-siaⁿ kì-hō -- kái iōng · (hō͘ ·goá, hō͘·goá).", "en": "How candidates and committed romanization separate syllables: a hyphen (tâi-uân), a space (tâi uân), or nothing (tâiuân). With a space or nothing, the neutral-tone marker -- becomes · (hōo ·guá, hōo·guá).", "ja": "候補と確定するローマ字の音節の区切り方：ハイフン（tâi-uân）、スペース（tâi uân）、なし（tâiuân）。スペースまたはなしの場合、軽声記号 -- は · になります（hōo ·guá、hōo·guá）。" }
     },
     "candidateWindow": {
       "comment": "Toggle label on the desktop General pane: show the candidate window at all. Off = no window, Space / Enter write the typed romanization (S33).",

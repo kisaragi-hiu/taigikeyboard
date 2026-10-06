@@ -55,8 +55,8 @@ struct GeneralSettingsView: View {
     @AppStorage(SettingsStore.Keys.isLiteralRomanCandidateEnabled.name)
     private var isLiteralRomanCandidateEnabled = SettingsStore.Keys.isLiteralRomanCandidateEnabled.defaultValue
 
-    @AppStorage(SettingsStore.Keys.isHyphenlessRomanEnabled.name)
-    private var isHyphenlessRomanEnabled = SettingsStore.Keys.isHyphenlessRomanEnabled.defaultValue
+    @AppStorage(SettingsStore.Keys.syllableSeparator.name)
+    private var syllableSeparator = SettingsStore.Keys.syllableSeparator.defaultValue
     @AppStorage(SettingsStore.Keys.isNasalMarkerUppercaseEnabled.name)
     private var isNasalMarkerUppercaseEnabled = SettingsStore.Keys.isNasalMarkerUppercaseEnabled.defaultValue
 
@@ -130,9 +130,13 @@ struct GeneralSettingsView: View {
                 }
                 .disabled(!candidateDisplayMode.allowsSwapToggle)
 
-                // No Hyphens (§49), directly under Output Script — it describes that
-                // output's shape.
-                Toggle(language.string(.settingsHyphenlessRoman), isOn: $isHyphenlessRomanEnabled)
+                // Syllable Separator (§49), directly under Output Script — it describes
+                // that output's shape.
+                Picker(language.string(.settingsSyllableSeparator), selection: $syllableSeparator) {
+                    ForEach(SyllableSeparator.allCases, id: \.self) { separator in
+                        Text(language.string(separator.displayNameKey)).tag(separator)
+                    }
+                }
 
                 // Nasal mark in POJ capitals (§53): the other setting that shapes the
                 // output's romanization — a pop-up over the stored switch, ᴺ or ⁿ.

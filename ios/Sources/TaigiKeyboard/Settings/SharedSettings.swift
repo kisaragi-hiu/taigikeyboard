@@ -51,7 +51,10 @@ final class SharedSettings {
     private static let isFullAccessEnabledKey: SettingsKey<Bool> = .bool("fullAccessEnabled", default: false)
     private static let isAutoSpaceEnabledKey: SettingsKey<Bool> = .bool("autoSpaceEnabled", default: false)
     private static let isLiteralRomanCandidateEnabledKey: SettingsKey<Bool> = .bool("literalRomanCandidateEnabled", default: false)
-    private static let isHyphenlessRomanEnabledKey: SettingsKey<Bool> = .bool("hyphenlessRomanEnabled", default: false)
+    // Raw string key shared by every platform; unknown / malformed → `.hyphen`.
+    private static let syllableSeparatorKey: SettingsKey<SyllableSeparator> = .rawRep("syllableSeparator", default: .hyphen)
+    // Retired 2026-10-06: the No Hyphens switch, carried over by `carryOverHyphenlessRoman()`.
+    private static let retiredHyphenlessRomanEnabledKey: SettingsKey<Bool> = .bool("hyphenlessRomanEnabled", default: false)
     private static let isCustomDictEnabledKey: SettingsKey<Bool> = .bool("customDictEnabled", default: true)
 
     private static let isMoeDictEnabledKey: SettingsKey<Bool> = .bool("moeDictEnabled", default: true)
@@ -297,13 +300,25 @@ final class SharedSettings {
         set { userDefaults.set(newValue, for: Self.isLiteralRomanCandidateEnabledKey) }
     }
 
-    // MARK: - Hyphenless Romanization (No Hyphens, §49, default: off)
+    // MARK: - Syllable Separator (§49, default: hyphen)
 
     /// Sent to the engine as stored: the engine exempts the TPS layout itself
-    /// (`AppConfig::renders_hyphenless`), so there is no effective variant.
-    var isHyphenlessRomanEnabled: Bool {
-        get { userDefaults.value(for: Self.isHyphenlessRomanEnabledKey) }
-        set { userDefaults.set(newValue, for: Self.isHyphenlessRomanEnabledKey) }
+    /// (`AppConfig::rendered_syllable_joiner`), so there is no effective variant.
+    var syllableSeparator: SyllableSeparator {
+        get { userDefaults.value(for: Self.syllableSeparatorKey) }
+        set { userDefaults.set(newValue, for: Self.syllableSeparatorKey) }
+    }
+
+    /// The No Hyphens switch the Syllable Separator replaced (2026-10-06): a stored `true`
+    /// becomes `.noSeparator` unless a separator is already stored, then the switch goes.
+    /// Called at both launches beside `retireLegacyAppearance(themeName:)` — the keyboard can
+    /// start before the host app. Idempotent: once the switch is gone it is one absent-key read.
+    func carryOverHyphenlessRoman() {
+        guard let stored = userDefaults.storedObject(for: Self.retiredHyphenlessRomanEnabledKey) else { return }
+        if stored as? Bool == true, userDefaults.storedObject(for: Self.syllableSeparatorKey) == nil {
+            syllableSeparator = .noSeparator
+        }
+        userDefaults.remove(Self.retiredHyphenlessRomanEnabledKey)
     }
 
     // MARK: - Custom Dictionary
@@ -662,7 +677,7 @@ final class SharedSettings {
         storedIsOutputBothScripts = false
         candidateDisplayMode = .sideBySide
         isLiteralRomanCandidateEnabled = false
-        isHyphenlessRomanEnabled = false
+        syllableSeparator = .hyphen
         fontType = .keyboardDefault
         isAutoSpaceEnabled = false
         keyboardLayoutType = .phahTaigi

@@ -66,6 +66,8 @@ object L10n {
         @Composable get() = stringRes(StringKey.COMMON_FONT_GEN_YO_MIN)
     val commonFontGenYoGothic: String
         @Composable get() = stringRes(StringKey.COMMON_FONT_GEN_YO_GOTHIC)
+    val desktopTelexGuideHyphen: String
+        @Composable get() = stringRes(StringKey.DESKTOP_TELEX_GUIDE_HYPHEN)
     val desktopDictionarySourcesLink: String
         @Composable get() = stringRes(StringKey.DESKTOP_DICTIONARY_SOURCES_LINK)
     val dictionaryClear: String
@@ -398,10 +400,14 @@ object L10n {
         @Composable get() = stringRes(StringKey.SETTINGS_CANDIDATE_DISPLAY_MODE_ROMAN_ONLY)
     val settingsOutputBothScripts: String
         @Composable get() = stringRes(StringKey.SETTINGS_OUTPUT_BOTH_SCRIPTS)
-    val settingsHyphenlessRoman: String
-        @Composable get() = stringRes(StringKey.SETTINGS_HYPHENLESS_ROMAN)
-    val settingsHyphenlessRomanInfo: String
-        @Composable get() = stringRes(StringKey.SETTINGS_HYPHENLESS_ROMAN_INFO)
+    val settingsSyllableSeparator: String
+        @Composable get() = stringRes(StringKey.SETTINGS_SYLLABLE_SEPARATOR)
+    val settingsSyllableSeparatorSpace: String
+        @Composable get() = stringRes(StringKey.SETTINGS_SYLLABLE_SEPARATOR_SPACE)
+    val settingsSyllableSeparatorNone: String
+        @Composable get() = stringRes(StringKey.SETTINGS_SYLLABLE_SEPARATOR_NONE)
+    val settingsSyllableSeparatorInfo: String
+        @Composable get() = stringRes(StringKey.SETTINGS_SYLLABLE_SEPARATOR_INFO)
     val settingsLiteralRomanCandidate: String
         @Composable get() = stringRes(StringKey.SETTINGS_LITERAL_ROMAN_CANDIDATE)
     val settingsLiteralRomanCandidateInfo: String

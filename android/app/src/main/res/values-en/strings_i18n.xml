@@ -31,6 +31,7 @@
     <string name="i18n_common_fontIansui">Iansui</string>
     <string name="i18n_common_fontGenYoMin">GenYoMin</string>
     <string name="i18n_common_fontGenYoGothic">GenYoGothic</string>
+    <string name="i18n_desktop_telexGuideHyphen">Hyphen</string>
     <string name="i18n_desktop_dictionarySourcesLink">Manage Dictionaries</string>
     <string name="i18n_dictionary_clear">Clear</string>
     <string name="i18n_dictionary_customDictionary">Custom Dictionary</string>
@@ -199,8 +200,10 @@
     <string name="i18n_settings_candidateDisplayModeCombined">Hanji with Romanization</string>
     <string name="i18n_settings_candidateDisplayModeRomanOnly">Romanization Only</string>
     <string name="i18n_settings_outputBothScripts">Annotate in Brackets</string>
-    <string name="i18n_settings_hyphenlessRoman">No Hyphens</string>
-    <string name="i18n_settings_hyphenlessRomanInfo">Shows and commits romanization without hyphens between syllables (tâi-uân → tâiuân); the neutral-tone marker -- becomes · (hōo--guá → hōo·guá). Hyphens you type yourself are unaffected.</string>
+    <string name="i18n_settings_syllableSeparator">Syllable Separator</string>
+    <string name="i18n_settings_syllableSeparatorSpace">Space</string>
+    <string name="i18n_settings_syllableSeparatorNone">None</string>
+    <string name="i18n_settings_syllableSeparatorInfo">How candidates and committed romanization separate syllables: a hyphen (tâi-uân), a space (tâi uân), or nothing (tâiuân). With a space or nothing, the neutral-tone marker -- becomes · (hōo ·guá, hōo·guá).</string>
     <string name="i18n_settings_literalRomanCandidate">Show Typed Text First</string>
     <string name="i18n_settings_literalRomanCandidateInfo">Shows what you typed in the first slot of the candidate bar; tap it or press Enter to commit. When off, only Enter commits it.</string>
     <string name="i18n_settings_autoCapitalization">Auto-Capitalization</string>

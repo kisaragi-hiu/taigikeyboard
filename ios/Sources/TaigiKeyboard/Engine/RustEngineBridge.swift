@@ -189,9 +189,9 @@ public enum RustEngineBridge {
     /// read keeps its proto default. `pojMarkers == nil` leaves the three POJ
     /// marker fields at theirs (no folds, the marker follows the case).
     ///
-    /// TPS goes out as `"tps"` with the swap and No Hyphens exactly as the
+    /// TPS goes out as `"tps"` with the swap and Syllable Separator exactly as the
     /// settings hold them: the engine applies the TPS fold itself
-    /// (`AppConfig::renders_hanji_first` / `renders_hyphenless`,
+    /// (`AppConfig::renders_hanji_first` / `rendered_syllable_joiner`,
     /// `engine/protos/src/lib.rs`).
     // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/engine/EngineAppConfig.kt appConfig.
     // Drift causes silent divergence (one platform renders TPS or the swap differently).
@@ -201,7 +201,7 @@ public enum RustEngineBridge {
         isHanjiFirst: Bool = false,
         isOutputBothScripts: Bool = false,
         candidateDisplayMode: CandidateDisplayMode = .sideBySide,
-        isHyphenlessRomanEnabled: Bool = false,
+        syllableSeparator: SyllableSeparator = .hyphen,
         isTpsOrMappedToER: Bool = false,
     ) -> Taigi_Engine_AppConfig {
         var cfg = Taigi_Engine_AppConfig()
@@ -217,9 +217,20 @@ public enum RustEngineBridge {
         cfg.isHanjiFirst = isHanjiFirst
         cfg.outputBothScripts = isOutputBothScripts
         cfg.candidateDisplayMode = candidateDisplayMode.engineValue
-        cfg.hyphenlessRoman = isHyphenlessRomanEnabled
+        cfg.syllableSeparator = syllableSeparator.engineValue
         cfg.tpsOrMapsToEr = isTpsOrMappedToER
         return cfg
+    }
+}
+
+extension SyllableSeparator {
+    /// Explicit proto enum (never `.unspecified`), like `CandidateDisplayMode.engineValue`.
+    var engineValue: Taigi_Engine_SyllableSeparator {
+        switch self {
+        case .hyphen: .hyphen
+        case .space: .space
+        case .noSeparator: .none
+        }
     }
 }
 
