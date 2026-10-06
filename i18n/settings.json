@@ -124,7 +124,7 @@
     "literalRomanCandidate": {
       "comment": "Toggle label: show what is being typed as the first candidate in the strip (§34 literal-roman candidate). All four platforms.",
       "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host", "extension"] },
-      "values": { "hanji": "當咧拍的字囥第一个", "tailo": "Tng-teh phah ê jī khǹg tē-it ê", "poj": "Tng-teh phah ê jī khǹg tē-it ê", "en": "Show Typed Text First", "ja": "入力中の文字を先頭に表示" }
+      "values": { "hanji": "當咧拍 ê 字囥第一个", "tailo": "Tng-teh phah ê jī khǹg tē-it ê", "poj": "Tng-teh phah ê jī khǹg tē-it ê", "en": "Show Typed Text First", "ja": "入力中の文字を先頭に表示" }
     },
     "literalRomanCandidateInfo": {
       "comment": "Help text for the Show Typed Text First toggle.",

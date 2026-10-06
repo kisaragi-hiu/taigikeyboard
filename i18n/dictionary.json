@@ -1869,9 +1869,9 @@
         ]
       },
       "values": {
-        "hanji": "學習紀錄讀袂出來",
-        "tailo": "Ha̍k-si̍p kì-lio̍k tha̍k bē tshut-lâi",
-        "poj": "Ha̍k-si̍p kì-lio̍k tha̍k bē chhut-lâi",
+        "hanji": "學習紀錄讀失敗",
+        "tailo": "Ha̍k-si̍p kì-lio̍k tha̍k sit-pāi",
+        "poj": "Ha̍k-si̍p kì-lio̍k tha̍k sit-pāi",
         "en": "Could Not Read Learning Records",
         "ja": "学習記録を読み込めませんでした"
       }

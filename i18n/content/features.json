@@ -539,9 +539,9 @@
       "paragraphs": [
         {
           "text": {
-            "hanji": "「詞頻紀錄」會記錄你揀過各詞幾擺，定定揀 ê 詞會排較頭前。白話字佮台羅共用仝一筆紀錄。",
-            "tailo": "\"Sû pîn kì-lio̍k\" ē kì-lio̍k lí kíng kuè kok ê sû kuí-pái, tiānn-tiānn kíng ê sû ē pâi khah thâu-tsîng. Pe̍h-uē-jī kah tâi-lô kiōng-iōng kāng tsi̍t pit kì-lio̍k.",
-            "poj": "\"Sû pîn kì-lio̍k\" ē kì-lio̍k lí kéng kòe kok ê sû kúi-pái, tiāⁿ-tiāⁿ kéng ê sû ē pâi khah thâu-chêng. Pe̍h-ōe-jī kah tâi-lô kiōng-iōng kāng chi̍t pit kì-lio̍k.",
+            "hanji": "「詞頻紀錄」會記錄你揀過各詞幾擺，定定揀 ê 詞會排較頭前。白話字佮台羅共用仝一項紀錄。",
+            "tailo": "\"Sû pîn kì-lio̍k\" ē kì-lio̍k lí kíng kuè kok ê sû kuí-pái, tiānn-tiānn kíng ê sû ē pâi khah thâu-tsîng. Pe̍h-uē-jī kah tâi-lô kiōng-iōng kāng tsi̍t hāng kì-lio̍k.",
+            "poj": "\"Sû pîn kì-lio̍k\" ē kì-lio̍k lí kéng kòe kok ê sû kúi-pái, tiāⁿ-tiāⁿ kéng ê sû ē pâi khah thâu-chêng. Pe̍h-ōe-jī kah tâi-lô kiōng-iōng kāng chi̍t hāng kì-lio̍k.",
             "en": "Frequency records count how often you select each word. Frequently selected words move toward the front of the candidate list. Pe̍h-ōe-jī and Tâi-lô share the same record.",
             "ja": "単語頻度は、各単語を選んだ回数を記録します。よく選ぶ単語は候補リストの前方に移動します。白話字と台羅は同じ記録を共有します。"
           }
@@ -687,7 +687,7 @@
       "paragraphs": [
         {
           "text": {
-            "hanji": "自訂詞、詞頻佮詞關聯紀錄攏儉佇你的裝置內底，台語齒盤袂共內容送去網路。刣掉 App 可能會刣掉這寡資料，換機進前請先備份。",
+            "hanji": "自訂詞、詞頻佮詞關聯紀錄攏儉佇你 ê 裝置內底，台語齒盤袂共內容送去網路。刣掉 App 可能會刣掉這寡資料，換機進前請先備份。",
             "tailo": "Tsū-tīng-sû, sû pîn kah sû kuan-liân kì-lio̍k lóng khiām tī lí ê tsong-tì lāi-té, tâi-gí khí-puânn buē kā luē-iông sàng khì bāng-lōo. Thâi-tiāu App khó-lîng ē thâi-tiāu tsit kuá tsu-liāu, uānn ki tsìn-tsîng tshiánn sian pī-hūn.",
             "poj": "Chū-tēng-sû, sû pîn kah sû koan-liân kì-lio̍k lóng khiām tī lí ê chong-tì lāi-té, tâi-gí khí-pôaⁿ bōe kā lōe-iông sàng khì bāng-lō͘. Thâi-tiāu App khó-lêng ē thâi-tiāu chit kóa chu-liāu, ōaⁿ ki chìn-chêng chhiáⁿ sian pī-hūn.",
             "en": "Custom words, frequency records, and association records stay on your device. TaigiKeyboard does not send their contents over the network. Deleting the app may remove this data, so back it up before changing phones.",

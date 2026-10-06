@@ -262,7 +262,7 @@ def typing(mac):
     chord = "option" if mac else "Ctrl"
     shift_caption = f"＋ Tab／{enter}／選字" if mac else f"＋ Tab／{enter}／選字\n揤一下：台語 ⇄ 英文"
     blue = marks("blue", {
-        "enter": "確定", "space": "輸出對換的文字（漢字／羅馬字）", "tab": "後一个字",
+        "enter": "確定", "space": "輸出對換 ê 文字（漢字／羅馬字）", "tab": "後一个字",
         "[": "頂一頁", "]": "後一頁", "esc": None, "shift": shift_caption,
         **SLOT_KEYS, **ARROWS,
     })
@@ -271,8 +271,8 @@ def typing(mac):
     legend = [
         ("blue", "輸出佮選字"),
         ("blue", "1–9：直接選第幾个候選詞"),
-        ("blue", "Esc：刪除當咧拍的字"),
-        ("orange-solid", f"{chord} ＋ ← → ↑ ↓：修正當咧拍的字"),
+        ("blue", "Esc：刪除當咧拍 ê 字"),
+        ("orange-solid", f"{chord} ＋ ← → ↑ ↓：修正當咧拍 ê 字"),
     ]
     if not mac:
         orange.update(marks("orange", {"home": "上頭前", "end": "上尾"}))

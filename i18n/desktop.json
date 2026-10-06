@@ -214,7 +214,7 @@
         ]
       },
       "values": {
-        "hanji": "修正當咧拍的字",
+        "hanji": "修正當咧拍 ê 字",
         "tailo": "Siu-tsìng tng-teh phah ê jī",
         "poj": "Siu-chèng tng-teh phah ê jī",
         "en": "Fix What You Are Typing",
@@ -294,7 +294,7 @@
         ]
       },
       "values": {
-        "hanji": "刪除當咧拍的字",
+        "hanji": "刪除當咧拍 ê 字",
         "tailo": "San-tû tng-teh phah ê jī",
         "poj": "San-tû tng-teh phah ê jī",
         "en": "Delete What You Are Typing",
@@ -530,9 +530,9 @@
         ]
       },
       "values": {
-        "hanji": "拍袂開網頁",
-        "tailo": "Phah bē khui bāng-ia̍h",
-        "poj": "Phah bē khui bāng-ia̍h",
+        "hanji": "網頁拍開失敗",
+        "tailo": "Bāng-ia̍h phah-khui sit-pāi",
+        "poj": "Bāng-ia̍h phah-khui sit-pāi",
         "en": "Could Not Open the Page",
         "ja": "ページを開けませんでした"
       }
@@ -550,9 +550,9 @@
         ]
       },
       "values": {
-        "hanji": "讀袂著自訂詞庫",
-        "tailo": "Tha̍k bē tio̍h tsū-tīng-sû-khòo",
-        "poj": "Tha̍k bē tio̍h chū-tēng-sû-khò͘",
+        "hanji": "自訂詞庫讀失敗",
+        "tailo": "Tsū-tīng-sû-khòo tha̍k sit-pāi",
+        "poj": "Chū-tēng-sû-khò͘ tha̍k sit-pāi",
         "en": "Could Not Read the Custom Dictionary",
         "ja": "カスタム辞書を読み込めませんでした"
       }
@@ -570,9 +570,9 @@
         ]
       },
       "values": {
-        "hanji": "寫袂入自訂詞庫",
-        "tailo": "Siá bē ji̍p tsū-tīng-sû-khòo",
-        "poj": "Siá bē ji̍p chū-tēng-sû-khò͘",
+        "hanji": "自訂詞庫寫入失敗",
+        "tailo": "Tsū-tīng-sû-khòo siá-ji̍p sit-pāi",
+        "poj": "Chū-tēng-sû-khò͘ siá-ji̍p sit-pāi",
         "en": "Could Not Save to the Custom Dictionary",
         "ja": "カスタム辞書に保存できませんでした"
       }
@@ -589,9 +589,9 @@
         ]
       },
       "values": {
-        "hanji": "設定寫袂入去",
-        "tailo": "Siat-tīng siá bē ji̍p--khì",
-        "poj": "Siat-tēng siá bē ji̍p--khì",
+        "hanji": "設定寫入失敗",
+        "tailo": "Siat-tīng siá-ji̍p sit-pāi",
+        "poj": "Siat-tēng siá-ji̍p sit-pāi",
         "en": "Could Not Save the Settings",
         "ja": "設定を保存できませんでした"
       }
@@ -1029,7 +1029,7 @@
         ]
       },
       "values": {
-        "hanji": "輸出當咧拍的字",
+        "hanji": "輸出當咧拍 ê 字",
         "tailo": "Su-tshut tng-teh phah ê jī",
         "poj": "Su-chhut tng-teh phah ê jī",
         "en": "Output What You Are Typing",
@@ -1049,7 +1049,7 @@
         ]
       },
       "values": {
-        "hanji": "輸出對換的文字（漢字/羅馬字）",
+        "hanji": "輸出對換 ê 文字（漢字/羅馬字）",
         "tailo": "Su-tshut tuì-uānn ê bûn-jī (Hàn-jī / Lô-má-jī)",
         "poj": "Su-chhut tùi-oāⁿ ê bûn-jī (Hàn-jī / Lô-má-jī)",
         "en": "Output the Other Script (Hanji / Romanization)",
@@ -1353,7 +1353,7 @@
         ]
       },
       "values": {
-        "hanji": "有新版本的時陣通知你？",
+        "hanji": "有新版本 ê 時陣通知你？",
         "tailo": "Ū sin pán-pún ê sî-tsūn thong-ti lí?",
         "poj": "Ū sin pán-pún ê sî-chūn thong-ti lí?",
         "en": "Get notified about new versions?",
@@ -1528,9 +1528,9 @@
         ]
       },
       "values": {
-        "hanji": "台語齒盤猶咧使用中，檔案換袂掉。請先換做別个輸入法，登出 Windows 閣登入，才閣執行安裝程式。免重新開機。",
-        "tailo": "Tâi-gí khí-puânn iáu teh sú-iōng-tiong, tóng-àn uānn bē tiāu. Tshiánn sing uānn-tsò pa̍t ê su-ji̍p-huat, ting-tshut Windows koh ting-ji̍p, tsiah koh tsip-hîng an-tsong thîng-sik. Bián tîng-sin khui-ki.",
-        "poj": "Tâi-gí khí-pôaⁿ iáu teh sú-iōng-tiong, tóng-àn ōaⁿ bē tiāu. Chhiáⁿ seng ōaⁿ-chò pa̍t ê su-ji̍p-hoat, teng-chhut Windows koh teng-ji̍p, chiah koh chip-hêng an-chong thêng-sek. Bián têng-sin khui-ki.",
+        "hanji": "台語齒盤猶咧使用中，檔案換失敗。請先換做別个輸入法，登出 Windows 閣登入，才閣執行安裝程式。免重新開機。",
+        "tailo": "Tâi-gí khí-puânn iáu teh sú-iōng-tiong, tóng-àn uānn sit-pāi. Tshiánn sing uānn-tsò pa̍t ê su-ji̍p-huat, ting-tshut Windows koh ting-ji̍p, tsiah koh tsip-hîng an-tsong thîng-sik. Bián tîng-sin khui-ki.",
+        "poj": "Tâi-gí khí-pôaⁿ iáu teh sú-iōng-tiong, tóng-àn ōaⁿ sit-pāi. Chhiáⁿ seng ōaⁿ-chò pa̍t ê su-ji̍p-hoat, teng-chhut Windows koh teng-ji̍p, chiah koh chip-hêng an-chong thêng-sek. Bián têng-sin khui-ki.",
         "en": "TaigiKeyboard is still in use, so its files cannot be replaced. Switch to another input method, sign out of Windows and back in, then run this installer again. No restart is needed.",
         "ja": "TaigiKeyboard は使用中のため、ファイルを置き換えられません。別の入力方式に切り替え、Windows からサインアウトして再度サインインしてから、このインストーラーをもう一度実行してください。再起動は不要です。"
       }
@@ -1585,9 +1585,9 @@
         ]
       },
       "values": {
-        "hanji": "自動檢查更新設定袂起來，請佇設定內底手動檢查。",
-        "tailo": "Tsū-tōng kiám-tsa king-sin siat bē khí-lâi, tshiánn tī siat-tīng lāi-té tshiú-tōng kiám-tsa.",
-        "poj": "Chū-tōng kiám-cha keng-sin siat bē khí-lâi, chhiáⁿ tī siat-tēng lāi-té chhiú-tōng kiám-cha.",
+        "hanji": "自動檢查更新設定失敗，請佇設定內底手動檢查。",
+        "tailo": "Tsū-tōng kiám-tsa king-sin siat-tīng sit-pāi, tshiánn tī siat-tīng lāi-té tshiú-tōng kiám-tsa.",
+        "poj": "Chū-tōng kiám-cha keng-sin siat-tēng sit-pāi, chhiáⁿ tī siat-tēng lāi-té chhiú-tōng kiám-cha.",
         "en": "Automatic update checks could not be set up. Check for updates in Settings instead.",
         "ja": "更新の自動確認を設定できませんでした。設定から手動で更新を確認してください。"
       }

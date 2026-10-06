@@ -120,7 +120,7 @@
     <string name="i18n_dictionary_learningRecordsEmpty">猶無學習紀錄</string>
     <string name="i18n_dictionary_learningRecordsEditCount">改數量</string>
     <string name="i18n_dictionary_learningRecordGone">這項紀錄已經無去</string>
-    <string name="i18n_dictionary_learningRecordsReadFailed">學習紀錄讀袂出來</string>
+    <string name="i18n_dictionary_learningRecordsReadFailed">學習紀錄讀失敗</string>
     <string name="i18n_dictionary_learningRecordsWriteFailed">學習紀錄改失敗</string>
     <string name="i18n_dictionary_learningRecordsAddToCustomDictionary">加入自訂詞庫</string>
     <string name="i18n_dictionary_learningRecordsAddedToCustomDictionary">已經加入自訂詞庫</string>
@@ -203,7 +203,7 @@
     <string name="i18n_settings_syllableSeparatorSpace">空白</string>
     <string name="i18n_settings_syllableSeparatorNone">無</string>
     <string name="i18n_settings_syllableSeparatorInfo">音節中間用連字符（tâi-uân）、空白（tâi uân）抑是無分隔（tâiuân）。後兩種輕聲 -- 改用 ·。</string>
-    <string name="i18n_settings_literalRomanCandidate">當咧拍的字囥第一个</string>
+    <string name="i18n_settings_literalRomanCandidate">當咧拍 ê 字囥第一个</string>
     <string name="i18n_settings_literalRomanCandidateInfo">候選詞列第一格顯示你拍 ê 羅馬字，點揤抑是揤 Enter 送出。關閉了後干焦會當用 Enter 送出。</string>
     <string name="i18n_settings_autoCapitalization">自動大本字</string>
     <string name="i18n_settings_autoSpace">自動閬一格</string>
