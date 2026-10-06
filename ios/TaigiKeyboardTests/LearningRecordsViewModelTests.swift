@@ -196,6 +196,11 @@ final class LearningRecordsViewModelTests: XCTestCase {
         LearningRecordsViewModel(kind: kind, userData: fake, filterSettle: .zero)
     }
 
+    /// A write's outcome and, once its reload lands, the reload's notice.
+    private func landed(_ write: LearningRecordsWrite) async -> (outcome: LearningRecordsNotice?, reloadNotice: LearningRecordsNotice?) {
+        await (write.outcome, write.reload.value)
+    }
+
     /// Yields until `count` list requests are parked in `fake`.
     private func waitForParked(_ count: Int, in fake: FakeLearningRecords) async {
         for _ in 0 ..< 10000 where fake.parkedCount < count {
@@ -211,16 +216,16 @@ final class LearningRecordsViewModelTests: XCTestCase {
         let fake = FakeLearningRecords(rows: numberedRows(250))
         let viewModel = makeViewModel(fake)
 
-        await viewModel.load()
+        _ = await viewModel.load()
         XCTAssertFalse(viewModel.isLoading)
         XCTAssertEqual(viewModel.records.map(\.id), Array(1 ... 100))
 
-        await viewModel.loadNextPage()
-        await viewModel.loadNextPage()
+        _ = await viewModel.loadNextPage()
+        _ = await viewModel.loadNextPage()
         XCTAssertEqual(viewModel.records.map(\.id), Array(1 ... 250))
         XCTAssertFalse(viewModel.hasMoreRows)
 
-        await viewModel.loadNextPage()
+        _ = await viewModel.loadNextPage()
         XCTAssertEqual(fake.calls.map(\.offset), [0, 100, 200], "nothing past the matches")
         XCTAssertEqual(fake.calls.map(\.limit), [100, 100, 100])
     }
@@ -231,10 +236,10 @@ final class LearningRecordsViewModelTests: XCTestCase {
         // which does not line up: the list reloads from the top, 100 rows → the 90 left.
         let fake = FakeLearningRecords(rows: numberedRows(150))
         let viewModel = makeViewModel(fake)
-        await viewModel.load()
+        _ = await viewModel.load()
         fake.rows = Array(fake.rows.prefix(90))
 
-        await viewModel.loadNextPage()
+        _ = await viewModel.loadNextPage()
 
         XCTAssertEqual(fake.calls.map(\.offset), [0, 100, 0])
         XCTAssertEqual(viewModel.records.map(\.id), Array(1 ... 90))
@@ -245,21 +250,21 @@ final class LearningRecordsViewModelTests: XCTestCase {
         // (the fake ignores order), so the tail row keeps its id — the key must still move.
         let fake = FakeLearningRecords(rows: numberedRows(150))
         let viewModel = makeViewModel(fake)
-        await viewModel.load()
+        _ = await viewModel.load()
         let before = viewModel.pagingKey
 
         fake.isHolding = true
         let reorder = viewModel.selectOrder(.mostRecent)
         // Asked while the rows answer the old order: nothing is asked.
-        await viewModel.loadNextPage()
+        _ = await viewModel.loadNextPage()
         await waitForParked(1, in: fake)
         fake.resolve(0)
-        await reorder.value
+        _ = await reorder.value
         fake.isHolding = false
 
         XCTAssertEqual(viewModel.records.last?.id, 100)
         XCTAssertNotEqual(viewModel.pagingKey, before, "the sentinel task re-fires")
-        await viewModel.loadNextPage()
+        _ = await viewModel.loadNextPage()
         XCTAssertEqual(viewModel.records.count, 150)
         XCTAssertEqual(fake.calls.map(\.offset), [0, 0, 100])
     }
@@ -267,15 +272,16 @@ final class LearningRecordsViewModelTests: XCTestCase {
     func testAFailedNextPage_waitsForARetry() async {
         let fake = FakeLearningRecords(rows: numberedRows(150))
         let viewModel = makeViewModel(fake)
-        await viewModel.load()
+        _ = await viewModel.load()
 
         fake.failure = FakeLearningRecords.Unreadable()
-        await viewModel.loadNextPage()
+        let notice = await viewModel.loadNextPage()
+        XCTAssertEqual(notice, .readFailed(detail: "disk I/O error"))
         XCTAssertEqual(viewModel.failedRead, .nextPage)
         XCTAssertEqual(viewModel.records.count, 100)
 
         fake.failure = nil
-        await viewModel.retry()
+        _ = await viewModel.retry()
         XCTAssertNil(viewModel.failedRead)
         XCTAssertEqual(viewModel.records.map(\.id), Array(1 ... 150))
         XCTAssertEqual(fake.calls.map(\.offset), [0, 100, 100])
@@ -286,17 +292,17 @@ final class LearningRecordsViewModelTests: XCTestCase {
         // Retry re-reads the 200 listed rows as (limit 100, offset 0), (100, 100) — no offset 200.
         let fake = FakeLearningRecords(rows: numberedRows(250))
         let viewModel = makeViewModel(fake)
-        await viewModel.load()
-        await viewModel.loadNextPage()
+        _ = await viewModel.load()
+        _ = await viewModel.loadNextPage()
 
         fake.listsFail = true
-        await viewModel.setCount(viewModel.records[0], to: 7)
+        _ = await landed(viewModel.setCount(viewModel.records[0], to: 7))
         XCTAssertEqual(viewModel.failedRead, .list)
         XCTAssertEqual(viewModel.records.count, 200, "the rows stay on screen")
 
         fake.listsFail = false
         let before = fake.calls.count
-        await viewModel.retry()
+        _ = await viewModel.retry()
 
         let retried = fake.calls.dropFirst(before)
         XCTAssertEqual(retried.map(\.limit), [100, 100])
@@ -305,7 +311,7 @@ final class LearningRecordsViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.records.map(\.id), Array(1 ... 200))
         XCTAssertEqual(viewModel.records[0].count, 7)
 
-        await viewModel.loadNextPage()
+        _ = await viewModel.loadNextPage()
         XCTAssertEqual(viewModel.records.count, 250, "paging goes on")
     }
 
@@ -319,13 +325,13 @@ final class LearningRecordsViewModelTests: XCTestCase {
             record(4, "食飽", tl: "tsia̍h-pá", kind: .learnedPhrase),
         ])
         let viewModel = makeViewModel(fake, kind: .learnedPhrase)
-        await viewModel.load()
+        _ = await viewModel.load()
         XCTAssertEqual(viewModel.records.map(\.text), ["台語", "食飽"], "the page lists its own kind only")
 
-        await viewModel.filterChanged("台").value
+        _ = await viewModel.filterChanged("台").value
         XCTAssertEqual(viewModel.records.map(\.text), ["台語"])
 
-        await viewModel.selectOrder(.mostRecent).value
+        _ = await viewModel.selectOrder(.mostRecent).value
         XCTAssertEqual(fake.calls.first?.order, .mostUsed, "most used first by default")
         XCTAssertEqual(fake.calls.last, .init(kind: .learnedPhrase, order: .mostRecent, filter: "台", limit: 100, offset: 0))
         XCTAssertEqual(fake.calls.map(\.offset), [0, 0, 0])
@@ -336,11 +342,11 @@ final class LearningRecordsViewModelTests: XCTestCase {
         // the re-read asks (100, 0), (100, 100) and shows 200 rows, the new one first.
         let fake = FakeLearningRecords(rows: numberedRows(250))
         let viewModel = makeViewModel(fake)
-        await viewModel.load()
-        await viewModel.loadNextPage()
+        _ = await viewModel.load()
+        _ = await viewModel.loadNextPage()
         fake.rows.insert(record(0, "新詞"), at: 0)
 
-        await viewModel.load()
+        _ = await viewModel.load()
 
         XCTAssertEqual(fake.calls.map(\.offset), [0, 100, 0, 100])
         XCTAssertEqual(fake.calls.map(\.limit), [100, 100, 100, 100])
@@ -353,18 +359,18 @@ final class LearningRecordsViewModelTests: XCTestCase {
         // → the rows read from offset 0 on are replaced: 20 rows, matching 20.
         let fake = FakeLearningRecords(rows: numberedRows(250))
         let viewModel = makeViewModel(fake)
-        await viewModel.load()
-        await viewModel.loadNextPage()
-        await viewModel.loadNextPage()
+        _ = await viewModel.load()
+        _ = await viewModel.loadNextPage()
+        _ = await viewModel.loadNextPage()
         fake.isHolding = true
 
-        let write = Task { await viewModel.setCount(viewModel.records[0], to: 5) }
+        let write = Task { await landed(viewModel.setCount(viewModel.records[0], to: 5)) }
         await waitForParked(1, in: fake)
         fake.resolve(0)
         await waitForParked(1, in: fake)
         fake.rows = Array(fake.rows.prefix(20))
         fake.resolve(0)
-        await write.value
+        _ = await write.value
 
         XCTAssertEqual(viewModel.records.map(\.id), Array(1 ... 20))
         XCTAssertEqual(viewModel.matchingTotal, 20)
@@ -374,11 +380,11 @@ final class LearningRecordsViewModelTests: XCTestCase {
     func testAnOrderChange_overtakesAFilterStillSettling() async {
         let fake = FakeLearningRecords(rows: [record(1, "台灣"), record(2, "食飯")])
         let viewModel = LearningRecordsViewModel(kind: .frequency, userData: fake, filterSettle: .seconds(60))
-        await viewModel.load()
+        _ = await viewModel.load()
 
         let settling = viewModel.filterChanged("台")
-        await viewModel.selectOrder(.mostRecent).value
-        await settling.value
+        _ = await viewModel.selectOrder(.mostRecent).value
+        _ = await settling.value
 
         XCTAssertEqual(fake.calls.count, 2, "the settling filter does not reload again")
         XCTAssertEqual(fake.calls.last?.filter, "台")
@@ -388,7 +394,7 @@ final class LearningRecordsViewModelTests: XCTestCase {
     func testANewerRequestWins_anOlderAnswerIsDropped() async {
         let fake = FakeLearningRecords(rows: [record(1, "台灣"), record(2, "食飯")])
         let viewModel = makeViewModel(fake)
-        await viewModel.load()
+        _ = await viewModel.load()
         fake.isHolding = true
 
         let older = viewModel.filterChanged("台")
@@ -398,9 +404,9 @@ final class LearningRecordsViewModelTests: XCTestCase {
 
         // The newer (食) answer lands first; the older (台) one after it.
         fake.resolve(1)
-        await newer.value
+        _ = await newer.value
         fake.resolve(0)
-        await older.value
+        _ = await older.value
 
         XCTAssertEqual(viewModel.records.map(\.text), ["食飯"], "the 台 answer is stale")
     }
@@ -415,26 +421,26 @@ final class LearningRecordsViewModelTests: XCTestCase {
         // Stale at the keystroke, before the box settles.
         let filtered = viewModel.filterChanged("食")
         fake.resolve(0)
-        await unfiltered.value
+        _ = await unfiltered.value
         XCTAssertTrue(viewModel.records.isEmpty, "the unfiltered answer is dropped")
 
         await waitForParked(1, in: fake)
         fake.resolve(0)
-        await filtered.value
+        _ = await filtered.value
         XCTAssertEqual(viewModel.records.map(\.text), ["食飯"])
     }
 
     func testAnOrderChange_isNotGivenTheOldListsNextPage() async {
         let fake = FakeLearningRecords(rows: numberedRows(150))
         let viewModel = makeViewModel(fake)
-        await viewModel.load()
+        _ = await viewModel.load()
         fake.isHolding = true
 
         let reorder = viewModel.selectOrder(.mostRecent)
-        await viewModel.loadNextPage()
+        _ = await viewModel.loadNextPage()
         await waitForParked(1, in: fake)
         fake.resolve(0)
-        await reorder.value
+        _ = await reorder.value
 
         XCTAssertEqual(fake.calls.map(\.offset), [0, 0], "no next page while the old order is listed")
         XCTAssertEqual(viewModel.records.count, 100)
@@ -445,14 +451,17 @@ final class LearningRecordsViewModelTests: XCTestCase {
     func testSetCountAndDelete_reloadTheListedRows() async {
         let fake = FakeLearningRecords(rows: numberedRows(3))
         let viewModel = makeViewModel(fake)
-        await viewModel.load()
+        _ = await viewModel.load()
 
-        await viewModel.setCount(viewModel.records[0], to: 40)
+        let setCount = await landed(viewModel.setCount(viewModel.records[0], to: 40))
         XCTAssertEqual(viewModel.records.map(\.count), [40, 3, 3])
 
-        await viewModel.delete(viewModel.records[1])
+        let delete = await landed(viewModel.delete(viewModel.records[1]))
         XCTAssertEqual(viewModel.records.map(\.id), [1, 3])
-        XCTAssertNil(viewModel.notice)
+        XCTAssertNil(setCount.outcome)
+        XCTAssertNil(setCount.reloadNotice)
+        XCTAssertNil(delete.outcome)
+        XCTAssertNil(delete.reloadNotice)
         // trace: the reloads ask for max(100, rows listed) = 100 from the top.
         XCTAssertEqual(fake.calls.map(\.limit), [100, 100, 100])
     }
@@ -462,11 +471,11 @@ final class LearningRecordsViewModelTests: XCTestCase {
         // max(100, 250) = 250 rows as limits 100, 100, 50 from offsets 0, 100, 200.
         let fake = FakeLearningRecords(rows: numberedRows(250))
         let viewModel = makeViewModel(fake)
-        await viewModel.load()
-        await viewModel.loadNextPage()
-        await viewModel.loadNextPage()
+        _ = await viewModel.load()
+        _ = await viewModel.loadNextPage()
+        _ = await viewModel.loadNextPage()
 
-        await viewModel.setCount(viewModel.records[200], to: 9)
+        _ = await landed(viewModel.setCount(viewModel.records[200], to: 9))
 
         let reload = fake.calls.dropFirst(3)
         XCTAssertEqual(reload.map(\.offset), [0, 100, 200])
@@ -478,29 +487,29 @@ final class LearningRecordsViewModelTests: XCTestCase {
     func testARowAlreadyGone_isANoticeAndTheListReloads() async {
         let fake = FakeLearningRecords(rows: numberedRows(2))
         let viewModel = makeViewModel(fake)
-        await viewModel.load()
+        _ = await viewModel.load()
         let listed = viewModel.records[0]
         fake.rows = [fake.rows[1]]
 
-        await viewModel.delete(listed)
+        let delete = await landed(viewModel.delete(listed))
 
-        XCTAssertEqual(viewModel.notice, .gone)
+        XCTAssertEqual(delete.outcome, .gone)
         XCTAssertEqual(viewModel.records.map(\.id), [2])
     }
 
     func testFailures_carryTheEngineDetail() async {
         let fake = FakeLearningRecords(rows: numberedRows(2))
         let viewModel = makeViewModel(fake)
-        await viewModel.load()
+        _ = await viewModel.load()
         fake.failure = FakeLearningRecords.Unreadable()
 
-        await viewModel.setCount(viewModel.records[0], to: 5)
-        XCTAssertEqual(viewModel.notice, .writeFailed(detail: "disk I/O error"), "the write's notice outlives its reload's")
+        let write = await landed(viewModel.setCount(viewModel.records[0], to: 5))
+        XCTAssertEqual(write.outcome, .writeFailed(detail: "disk I/O error"))
+        XCTAssertEqual(write.reloadNotice, .readFailed(detail: "disk I/O error"))
         XCTAssertEqual(viewModel.records.map(\.id), [1, 2], "a failed read keeps the rows on screen")
 
-        viewModel.notice = nil
-        await viewModel.selectOrder(.mostRecent).value
-        XCTAssertEqual(viewModel.notice, .readFailed(detail: "disk I/O error"))
+        let reorderNotice = await viewModel.selectOrder(.mostRecent).value
+        XCTAssertEqual(reorderNotice, .readFailed(detail: "disk I/O error"))
         XCTAssertEqual(viewModel.records.map(\.id), [1, 2])
     }
 
@@ -509,12 +518,12 @@ final class LearningRecordsViewModelTests: XCTestCase {
         fake.failure = FakeLearningRecords.Unreadable()
         let viewModel = makeViewModel(fake)
 
-        await viewModel.load()
+        _ = await viewModel.load()
         XCTAssertTrue(viewModel.records.isEmpty)
         XCTAssertEqual(viewModel.failedRead, .list, "could not read ≠ nothing learned yet")
 
         fake.failure = nil
-        await viewModel.selectOrder(.mostRecent).value
+        _ = await viewModel.selectOrder(.mostRecent).value
         XCTAssertNil(viewModel.failedRead)
         XCTAssertEqual(viewModel.records.map(\.id), [1, 2])
     }
@@ -527,11 +536,11 @@ final class LearningRecordsViewModelTests: XCTestCase {
             record(2, "食飽", tl: "tsia̍h-pá", kind: .learnedPhrase),
         ])
         let viewModel = makeViewModel(fake, kind: .learnedPhrase)
-        await viewModel.load()
+        _ = await viewModel.load()
 
-        await viewModel.addToCustomDictionary(viewModel.records[0])
+        let add = await landed(viewModel.addToCustomDictionary(viewModel.records[0]))
 
-        XCTAssertEqual(viewModel.notice, .addedToCustomDictionary)
+        XCTAssertEqual(add.outcome, .addedToCustomDictionary)
         XCTAssertEqual(fake.added.map(\.text), ["台語"])
         XCTAssertEqual(viewModel.records.map(\.id), [2])
         XCTAssertEqual(fake.calls.map(\.offset), [0, 0], "the add reloads the listed rows")
@@ -543,11 +552,11 @@ final class LearningRecordsViewModelTests: XCTestCase {
             record(2, "食飽", tl: "tsia̍h-pá", kind: .frequency),
         ])
         let viewModel = makeViewModel(fake, kind: .frequency)
-        await viewModel.load()
+        _ = await viewModel.load()
 
-        await viewModel.addToCustomDictionary(viewModel.records[0])
+        let add = await landed(viewModel.addToCustomDictionary(viewModel.records[0]))
 
-        XCTAssertEqual(viewModel.notice, .addedToCustomDictionary)
+        XCTAssertEqual(add.outcome, .addedToCustomDictionary)
         XCTAssertEqual(fake.added.map(\.text), ["台語"])
         XCTAssertEqual(viewModel.records.map(\.id), [1, 2], "a frequency row still weights its word")
     }
@@ -555,15 +564,28 @@ final class LearningRecordsViewModelTests: XCTestCase {
     func testARefusedAdd_isAWriteFailureAndKeepsThePhrase() async {
         let fake = FakeLearningRecords(rows: [record(1, "台語", tl: "tâi-gí", kind: .learnedPhrase)])
         let viewModel = makeViewModel(fake, kind: .learnedPhrase)
-        await viewModel.load()
+        _ = await viewModel.load()
         fake.addRefusal = "custom dictionary is full"
 
-        await viewModel.addToCustomDictionary(viewModel.records[0])
+        let add = await landed(viewModel.addToCustomDictionary(viewModel.records[0]))
 
-        XCTAssertEqual(viewModel.notice, .writeFailed(detail: "custom dictionary is full"))
+        XCTAssertEqual(add.outcome, .writeFailed(detail: "custom dictionary is full"))
         XCTAssertTrue(fake.added.isEmpty)
         XCTAssertEqual(viewModel.records.map(\.id), [1])
         XCTAssertEqual(fake.calls.count, 2, "a refused add still reloads")
+    }
+
+    // MARK: - Notices
+
+    func testANoticeArriving_replacesTheOneUpUnlessItIsAReadFailure() {
+        let readFailed = LearningRecordsNotice.readFailed(detail: "disk I/O error")
+        let writeFailed = LearningRecordsNotice.writeFailed(detail: "disk I/O error")
+
+        XCTAssertEqual(readFailed.arriving(over: nil), readFailed)
+        XCTAssertEqual(readFailed.arriving(over: writeFailed), writeFailed, "the write's notice outlives its reload's")
+        XCTAssertEqual(readFailed.arriving(over: .gone), .gone)
+        XCTAssertEqual(writeFailed.arriving(over: readFailed), writeFailed)
+        XCTAssertEqual(LearningRecordsNotice.gone.arriving(over: .addedToCustomDictionary), .gone)
     }
 
     // MARK: - Edit field and labels
