@@ -29,7 +29,8 @@
 use crate::common::Fetch;
 use crate::common::{
     build_dictionary_fst_tl_toned, build_syllables_fst_tl, build_tkdb_v3, config_tl,
-    empty_association_bin, fetch_at_pos_response, install_lexicon, Row,
+    empty_association_bin, fetch_at_pos_response, fetch_cells, install_lexicon, selected, Row,
+    NOW_MS,
 };
 use test_support::{engine_install_lock, write_temp};
 
@@ -75,13 +76,16 @@ fn fixture_rows() -> Vec<Row> {
     ]
 }
 
-fn install_fixture() {
-    let rows = fixture_rows();
-    let dict_path = write_temp("dictionary.bin", &build_tkdb_v3(&rows));
-    let fst_path = build_dictionary_fst_tl_toned(&rows);
+fn install_rows(rows: &[Row], syllables: &[&str]) {
+    let dict_path = write_temp("dictionary.bin", &build_tkdb_v3(rows));
+    let fst_path = build_dictionary_fst_tl_toned(rows);
     let association_path = write_temp("association.bin", &empty_association_bin());
-    let syllables_path = build_syllables_fst_tl(&["hoo7", "gua2", "gua7"]);
+    let syllables_path = build_syllables_fst_tl(syllables);
     install_lexicon(&fst_path, &dict_path, &association_path, &syllables_path);
+}
+
+fn install_fixture() {
+    install_rows(&fixture_rows(), &["hoo7", "gua2", "gua7"]);
 }
 
 /// Drive `raw` through `Start → FetchAtPos` and return
@@ -164,5 +168,82 @@ fn slot0_keeps_space_synth_for_genuine_multiword_reading() {
             .iter()
             .any(|(h, r)| h.as_deref() == Some("予") && r == "hōo"),
         "hoo must surface 予/hōo; got {cands:?}"
+    );
+}
+
+/// 出來 in both separator forms (production freqs: `tshut-lâi` 529,
+/// `tshut--lâi` 16) beside the single syllables 出/tshut 25088 and
+/// 來/lâi 58294. As in production, the walker's min-cost path is the ONE
+/// whole-word edge, so its synth roman is that edge's own dict roman —
+/// an exact twin of a span-local row (`gina` bug, Discord 2026-09-30).
+fn install_separator_sibling_fixture() {
+    let rows = vec![
+        Row {
+            toneless_key: "tshutlai",
+            hanji: "出來",
+            tl: "tshut-lâi",
+            syll: 2,
+            freq: 529,
+        },
+        Row {
+            toneless_key: "tshutlai",
+            hanji: "出來",
+            tl: "tshut--lâi",
+            syll: 2,
+            freq: 16,
+        },
+        Row {
+            toneless_key: "tshut",
+            hanji: "出",
+            tl: "tshut",
+            syll: 1,
+            freq: 25_088,
+        },
+        Row {
+            toneless_key: "lai",
+            hanji: "來",
+            tl: "lâi",
+            syll: 1,
+            freq: 58_294,
+        },
+    ];
+    install_rows(&rows, &["tshut4", "lai5"]);
+}
+
+/// The 出來 romans in display order.
+fn tshutlai_romans(fetch: Fetch) -> Vec<String> {
+    fetch_cells(&config_tl(), "tshutlai", fetch)
+        .into_iter()
+        .filter(|cell| cell.0.as_deref() == Some("出來"))
+        .map(|cell| cell.1)
+        .collect()
+}
+
+#[test]
+fn slot0_keeps_walker_pick_over_its_separator_sibling_cold() {
+    let _lock = engine_install_lock();
+    install_separator_sibling_fixture();
+    // The walker picks the frequent `tshut-lâi`; the exact twin exists, so
+    // the promote must not swap in the freq-16 `tshut--lâi`.
+    assert_eq!(
+        tshutlai_romans(Fetch::default()),
+        ["tshut-lâi", "tshut--lâi"]
+    );
+}
+
+#[test]
+fn slot0_follows_the_selected_separator_form() {
+    let _lock = engine_install_lock();
+    install_separator_sibling_fixture();
+    // Selecting the rare khinsiann form makes it the walker's edge word;
+    // it must lead, not be swapped back for its hyphen sibling.
+    let picked_khinsiann = Fetch {
+        frequency: vec![selected("出來", "tshut--lâi", 10, 1_000)],
+        now_ms: NOW_MS,
+        ..Default::default()
+    };
+    assert_eq!(
+        tshutlai_romans(picked_khinsiann),
+        ["tshut--lâi", "tshut-lâi"]
     );
 }

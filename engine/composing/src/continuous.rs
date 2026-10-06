@@ -1384,10 +1384,6 @@ pub(crate) fn assemble_candidates(
                         // drop the synth. Gates:
                         // * `coverage_kind == COVERAGE_KIND_FULL` + same
                         //   `consumed_span` → a real whole-buffer dict word.
-                        // * `x.roman != slot0.roman` → only the
-                        //   separator-mismatch case; identical-form readings
-                        //   (也是 `iā sī` synth == dict) keep the synth
-                        //   verbatim so slot-0 metadata is unchanged there.
                         // * `roman_reading_eq` → `hōo guá` matches
                         //   `hōo--guá` (予我) but NOT `hōo-guā` (戶外,
                         //   tone 7 ≠ tone 2) — respects Core Principle #7
@@ -1396,14 +1392,24 @@ pub(crate) fn assemble_candidates(
                         //   custom-influenced walker path with a non-custom
                         //   dict row (would drop the user's custom-dict
                         //   effect; Codex pre-impl regression #3).
-                        let promote_idx = if slot0_cand.is_custom {
+                        // * no exact `(roman, hanji, span)` dict twin → an
+                        //   identical-form synth (`iā sī`, a one-edge `gín-á`)
+                        //   stays and the dedupe below drops its twin;
+                        //   promoting its sibling `gín--á` would swap the
+                        //   walker's pick (behavioral-invariants §22).
+                        let is_same_full_span_word = |x: &RawCandidate| {
+                            x.coverage_kind == COVERAGE_KIND_FULL
+                                && x.consumed_span == slot0_cand.consumed_span
+                                && x.hanji == slot0_cand.hanji
+                        };
+                        let has_exact_twin = c
+                            .iter()
+                            .any(|x| is_same_full_span_word(x) && x.roman == slot0_cand.roman);
+                        let promote_idx = if slot0_cand.is_custom || has_exact_twin {
                             None
                         } else {
                             c.iter().position(|x| {
-                                x.coverage_kind == COVERAGE_KIND_FULL
-                                    && x.consumed_span == slot0_cand.consumed_span
-                                    && x.hanji == slot0_cand.hanji
-                                    && x.roman != slot0_cand.roman
+                                is_same_full_span_word(x)
                                     && roman_reading_eq(&x.roman, &slot0_cand.roman)
                             })
                         };
