@@ -361,7 +361,7 @@ impl SettingsPane {
             Self::Shortcuts => StringKey::DesktopShortcutsTab,
             Self::CustomDictionary => StringKey::DictionaryCustomDictionary,
             Self::LearningRecords => StringKey::DictionaryLearningRecords,
-            Self::DictionarySources => StringKey::DesktopDictionarySourcesLink,
+            Self::DictionarySources => StringKey::DictionaryManageDictionaries,
             Self::FontManagement => StringKey::DesktopFontManagementTab,
             Self::About => StringKey::HomeAboutKeyboard,
             Self::DictionarySearch => return None,

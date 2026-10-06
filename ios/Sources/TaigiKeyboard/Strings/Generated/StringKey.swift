@@ -124,6 +124,7 @@ enum StringKey: String {
     case dictionaryLearningRecordsWriteFailed = "i18n_dictionary_learningRecordsWriteFailed"
     case dictionaryLearningRecordsMoveToCustomDictionary = "i18n_dictionary_learningRecordsMoveToCustomDictionary"
     case dictionaryLearningRecordsMovedToCustomDictionary = "i18n_dictionary_learningRecordsMovedToCustomDictionary"
+    case dictionaryManageDictionaries = "i18n_dictionary_manageDictionaries"
     case homeAppHeaderTitle = "i18n_home_appHeaderTitle"
     case homeSetupKeyboard = "i18n_home_setupKeyboard"
     case homeTypingGuide = "i18n_home_typingGuide"

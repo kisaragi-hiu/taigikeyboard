@@ -135,7 +135,9 @@ class SettingsMainActivity : AppCompatActivity() {
 
                             TAB_DICTIONARY -> {
                                 DictionarySettingsScreen(
-                                    prefs = prefs,
+                                    onManageDictionaries = {
+                                        startActivity(DictionarySourcesActivity.createIntent(this))
+                                    },
                                     onCustomDictionary = {
                                         startActivity(CustomDictionaryActivity.createIntent(this))
                                     },
@@ -146,7 +148,6 @@ class SettingsMainActivity : AppCompatActivity() {
                                         startActivity(DataManagementActivity.createIntent(this))
                                     },
                                     searchViewModel = searchViewModel,
-                                    resetCounter = resetCounter,
                                 )
                             }
 

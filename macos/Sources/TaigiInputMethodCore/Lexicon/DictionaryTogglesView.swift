@@ -3,7 +3,7 @@
 import SwiftUI
 
 /// The dictionary source toggles, in the sections iOS groups them into
-/// (`ios/.../App/Tabs/Dictionary/DictionaryTab.swift`).
+/// (`ios/.../App/Tabs/Dictionary/Views/DictionarySourcesView.swift`).
 ///
 /// `@AppStorage` per toggle rather than one snapshot object: each row is an
 /// independent setting the engine live-reads, and binding them individually is

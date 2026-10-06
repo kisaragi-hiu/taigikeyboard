@@ -125,6 +125,7 @@
     <string name="i18n_dictionary_learningRecordsWriteFailed">學習紀錄改袂好</string>
     <string name="i18n_dictionary_learningRecordsMoveToCustomDictionary">加入自訂詞庫</string>
     <string name="i18n_dictionary_learningRecordsMovedToCustomDictionary">加入自訂詞庫矣</string>
+    <string name="i18n_dictionary_manageDictionaries">辭典管理</string>
     <string name="i18n_home_appHeaderTitle">台語齒盤</string>
     <string name="i18n_home_setupKeyboard">齒盤愛拍開才會當使用</string>
     <string name="i18n_home_typingGuide">拍字說明</string>

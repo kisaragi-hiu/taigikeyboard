@@ -493,26 +493,6 @@
         "ja": "すべてを選択"
       }
     },
-    "dictionarySourcesLink": {
-      "comment": "Settings sidebar row + pane title: the dictionary-source toggles page. iOS lists the toggles inline instead.",
-      "scope": {
-        "platforms": [
-          "macos",
-          "windows",
-          "linux"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "辭典管理",
-        "tailo": "Sû-tián kuán-lí",
-        "poj": "Sû-tián koán-lí",
-        "en": "Manage Dictionaries",
-        "ja": "辞書の管理"
-      }
-    },
     "openURLFailed": {
       "comment": "Alert title when NSWorkspace could not open a dictionary's web page. macOS-only: the iOS opener is fire-and-forget.",
       "scope": {

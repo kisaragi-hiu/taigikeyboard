@@ -33,7 +33,7 @@ import com.siansiansu.taigikeyboard.ui.theme.AppStyle
  * Reusable info button that shows an ic_help icon and displays
  * an AlertDialog with the given description when tapped.
  *
- * Style matches the existing dictionary info buttons in DictionarySettingsScreen.
+ * Style matches the existing dictionary info buttons in DictionarySourcesScreen.
  */
 @Composable
 fun SettingInfoButton(

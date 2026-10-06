@@ -84,7 +84,7 @@
       }
     },
     "dataManagement": {
-      "comment": "Section title for keyboard-data management (custom words, frequency/association records, backup/import/export).",
+      "comment": "Section title for keyboard-data management (custom words, learning records, backup/import/export); the Dictionary tab lists it under the Manage Dictionaries row.",
       "scope": {
         "platforms": [
           "android",
@@ -1980,6 +1980,28 @@
         "poj": "Ka-ji̍p chū-tēng-sû-khò͘ ah",
         "en": "Added to Custom Dictionary",
         "ja": "カスタム辞書に追加しました"
+      }
+    },
+    "manageDictionaries": {
+      "comment": "Manage Dictionaries — the dictionary-source toggles page. Desktop: settings sidebar row + pane title. Mobile: Dictionary tab entry row + subpage title.",
+      "scope": {
+        "platforms": [
+          "android",
+          "ios",
+          "macos",
+          "windows",
+          "linux"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "辭典管理",
+        "tailo": "Sû-tián kuán-lí",
+        "poj": "Sû-tián koán-lí",
+        "en": "Manage Dictionaries",
+        "ja": "辞書の管理"
       }
     }
   }

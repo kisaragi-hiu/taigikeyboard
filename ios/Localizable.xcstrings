@@ -740,7 +740,7 @@
       }
     },
     "i18n_dictionary_dataManagement": {
-      "comment": "Section title for keyboard-data management (custom words, frequency/association records, backup/import/export).",
+      "comment": "Section title for keyboard-data management (custom words, learning records, backup/import/export); the Dictionary tab lists it under the Manage Dictionaries row.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -1815,6 +1815,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "教育部辞典"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_manageDictionaries": {
+      "comment": "Manage Dictionaries — the dictionary-source toggles page. Desktop: settings sidebar row + pane title. Mobile: Dictionary tab entry row + subpage title.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manage Dictionaries"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "辞書の管理"
           }
         }
       }
