@@ -48,7 +48,7 @@
     },
     "typingSectionTitle": {
       "comment": "Section header for typing-behaviour settings.",
-      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "拍字設定", "tailo": "Phah-jī siat-tīng", "poj": "Phah-jī siat-tēng", "en": "Typing", "ja": "入力" }
     },
     "candidateDisplayMode": {
@@ -97,18 +97,18 @@
       "values": { "hanji": "羅馬字", "tailo": "Lô-má-jī", "poj": "Lô-má-jī", "en": "Romanization", "ja": "ローマ字" }
     },
     "syllableSeparator": {
-      "comment": "Picker label: how candidate / committed romanization separates syllables — the dictionary hyphen, a space, or nothing (tâi-uân / tâi uân / tâiuân); the neutral-tone -- becomes · under Space and None. Options: desktop.telexGuideHyphen, settings.syllableSeparatorSpace, settings.syllableSeparatorNone. All five platforms, host settings only.",
-      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host"] },
+      "comment": "Picker label: how candidate / committed romanization separates syllables — the dictionary hyphen, a space, or nothing (tâi-uân / tâi uân / tâiuân); the neutral-tone -- becomes · under Space and None. Options: desktop.telexGuideHyphen, settings.syllableSeparatorSpace, settings.syllableSeparatorNone. All five platforms (host settings) plus the mobile keyboard settings overlay.",
+      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "音節分隔", "tailo": "Im-tsiat hun-keh", "poj": "Im-chiat hun-keh", "en": "Syllable Separator", "ja": "音節の区切り" }
     },
     "syllableSeparatorSpace": {
       "comment": "Syllable Separator picker value: a space between syllables (tâi uân, hōo ·guá).",
-      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host"] },
+      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "空白", "tailo": "Khang-pe̍h", "poj": "Khang-pe̍h", "en": "Space", "ja": "スペース" }
     },
     "syllableSeparatorNone": {
       "comment": "Syllable Separator picker value: nothing between syllables (tâiuân, hōo·guá).",
-      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host"] },
+      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "無", "tailo": "Bô", "poj": "Bô", "en": "None", "ja": "なし" }
     },
     "syllableSeparatorInfo": {
@@ -158,7 +158,7 @@
     },
     "keyboardSectionTitle": {
       "comment": "Section header for keyboard-chrome settings.",
-      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "齒盤設定", "tailo": "Khí-puânn siat-tīng", "poj": "Khí-pôaⁿ siat-tēng", "en": "Keyboard", "ja": "キーボード" }
     },
     "toolbarAutoCollapse": {
@@ -183,7 +183,7 @@
     },
     "feedbackSectionTitle": {
       "comment": "Section header for key-press feedback settings.",
-      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "拍字反應", "tailo": "Phah-jī huán-ìng", "poj": "Phah-jī hoán-èng", "en": "Key-Press Feedback", "ja": "入力フィードバック" }
     },
     "soundFeedback": {
@@ -207,18 +207,18 @@
       "values": { "hanji": "連紲拍 nn → ⁿ", "tailo": "Liân-suà phah nn -> ⁿ", "poj": "Liân-sòa phah nn -> ⁿ", "en": "Double-tap nn → ⁿ", "ja": "nn を続けて入力 → ⁿ" }
     },
     "nasalMarkerUppercase": {
-      "comment": "Picker label: how the POJ nasal marker is written in capitals — the stored switch, true = ᴺ (nasalMarkerUppercaseCapital, the default), false = ⁿ (nasalMarkerUppercaseSmall). All five platforms, host settings only.",
-      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host"] },
+      "comment": "Picker label: how the POJ nasal marker is written in capitals — the stored switch, true = ᴺ (nasalMarkerUppercaseCapital, the default), false = ⁿ (nasalMarkerUppercaseSmall). All five platforms (host settings) plus the mobile keyboard settings overlay.",
+      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "白話字大本鼻音", "tailo": "Pe̍h-uē-jī tuā-pún phīnn-im", "poj": "Pe̍h-ōe-jī tōa-pún phīⁿ-im", "en": "Nasal mark in POJ capitals", "ja": "白話字の大文字での鼻音記号" }
     },
     "nasalMarkerUppercaseCapital": {
       "comment": "Picker value (default): in capitals the nasal marker follows the letters before it, ᴺ (SIÂᴺ).",
-      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host"] },
+      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "ᴺ（SIÂᴺ）", "tailo": "ᴺ (SIÂᴺ)", "poj": "ᴺ (SIÂᴺ)", "en": "ᴺ (SIÂᴺ)", "ja": "ᴺ（SIÂᴺ）" }
     },
     "nasalMarkerUppercaseSmall": {
       "comment": "Picker value: the nasal marker is always the small ⁿ, even in capitals (SIÂⁿ).",
-      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host"] },
+      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "ⁿ（SIÂⁿ）", "tailo": "ⁿ (SIÂⁿ)", "poj": "ⁿ (SIÂⁿ)", "en": "ⁿ (SIÂⁿ)", "ja": "ⁿ（SIÂⁿ）" }
     },
     "tpsOrMapsToER": {

@@ -17,12 +17,12 @@
 // Icon definitions extracted from androidx.compose.material:material-icons-extended
 // to eliminate the large transitive dependency. Path data is identical to the originals.
 //
-// Icons in this file (22 total):
+// Icons in this file (19 total):
 //   Filled: EmojiEmotions, EmojiEvents, EmojiFlags, EmojiFoodBeverage, EmojiNature,
 //           EmojiObjects, EmojiPeople, EmojiSymbols, EmojiTransportation
-//   Outlined: ContentCopy, FileDownload, FileUpload, FormatSize, Language,
-//             ShortText, SpaceBar, Translate, Vibration, ViewStream
-//   AutoMirrored.Outlined: MenuBook, OpenInNew, VolumeUp
+//   Outlined: Abc, ContentCopy, FileDownload, FileUpload, FormatSize,
+//             ShortText, SpaceBar, Translate
+//   AutoMirrored.Outlined: MenuBook, OpenInNew
 
 package com.siansiansu.taigikeyboard.ui.components
 
@@ -844,81 +844,6 @@ public val Icons.Outlined.Abc: ImageVector
 
 private var _abc: ImageVector? = null
 
-public val Icons.Outlined.Language: ImageVector
-    get() {
-        if (_language != null) {
-            return _language!!
-        }
-        _language =
-            materialIcon(name = "Outlined.Language") {
-                materialPath {
-                    moveTo(11.99f, 2.0f)
-                    curveTo(6.47f, 2.0f, 2.0f, 6.48f, 2.0f, 12.0f)
-                    reflectiveCurveToRelative(4.47f, 10.0f, 9.99f, 10.0f)
-                    curveTo(17.52f, 22.0f, 22.0f, 17.52f, 22.0f, 12.0f)
-                    reflectiveCurveTo(17.52f, 2.0f, 11.99f, 2.0f)
-                    close()
-                    moveTo(18.92f, 8.0f)
-                    horizontalLineToRelative(-2.95f)
-                    curveToRelative(-0.32f, -1.25f, -0.78f, -2.45f, -1.38f, -3.56f)
-                    curveToRelative(1.84f, 0.63f, 3.37f, 1.91f, 4.33f, 3.56f)
-                    close()
-                    moveTo(12.0f, 4.04f)
-                    curveToRelative(0.83f, 1.2f, 1.48f, 2.53f, 1.91f, 3.96f)
-                    horizontalLineToRelative(-3.82f)
-                    curveToRelative(0.43f, -1.43f, 1.08f, -2.76f, 1.91f, -3.96f)
-                    close()
-                    moveTo(4.26f, 14.0f)
-                    curveTo(4.1f, 13.36f, 4.0f, 12.69f, 4.0f, 12.0f)
-                    reflectiveCurveToRelative(0.1f, -1.36f, 0.26f, -2.0f)
-                    horizontalLineToRelative(3.38f)
-                    curveToRelative(-0.08f, 0.66f, -0.14f, 1.32f, -0.14f, 2.0f)
-                    reflectiveCurveToRelative(0.06f, 1.34f, 0.14f, 2.0f)
-                    lineTo(4.26f, 14.0f)
-                    close()
-                    moveTo(5.08f, 16.0f)
-                    horizontalLineToRelative(2.95f)
-                    curveToRelative(0.32f, 1.25f, 0.78f, 2.45f, 1.38f, 3.56f)
-                    curveToRelative(-1.84f, -0.63f, -3.37f, -1.9f, -4.33f, -3.56f)
-                    close()
-                    moveTo(8.03f, 8.0f)
-                    lineTo(5.08f, 8.0f)
-                    curveToRelative(0.96f, -1.66f, 2.49f, -2.93f, 4.33f, -3.56f)
-                    curveTo(8.81f, 5.55f, 8.35f, 6.75f, 8.03f, 8.0f)
-                    close()
-                    moveTo(12.0f, 19.96f)
-                    curveToRelative(-0.83f, -1.2f, -1.48f, -2.53f, -1.91f, -3.96f)
-                    horizontalLineToRelative(3.82f)
-                    curveToRelative(-0.43f, 1.43f, -1.08f, 2.76f, -1.91f, 3.96f)
-                    close()
-                    moveTo(14.34f, 14.0f)
-                    lineTo(9.66f, 14.0f)
-                    curveToRelative(-0.09f, -0.66f, -0.16f, -1.32f, -0.16f, -2.0f)
-                    reflectiveCurveToRelative(0.07f, -1.35f, 0.16f, -2.0f)
-                    horizontalLineToRelative(4.68f)
-                    curveToRelative(0.09f, 0.65f, 0.16f, 1.32f, 0.16f, 2.0f)
-                    reflectiveCurveToRelative(-0.07f, 1.34f, -0.16f, 2.0f)
-                    close()
-                    moveTo(14.59f, 19.56f)
-                    curveToRelative(0.6f, -1.11f, 1.06f, -2.31f, 1.38f, -3.56f)
-                    horizontalLineToRelative(2.95f)
-                    curveToRelative(-0.96f, 1.65f, -2.49f, 2.93f, -4.33f, 3.56f)
-                    close()
-                    moveTo(16.36f, 14.0f)
-                    curveToRelative(0.08f, -0.66f, 0.14f, -1.32f, 0.14f, -2.0f)
-                    reflectiveCurveToRelative(-0.06f, -1.34f, -0.14f, -2.0f)
-                    horizontalLineToRelative(3.38f)
-                    curveToRelative(0.16f, 0.64f, 0.26f, 1.31f, 0.26f, 2.0f)
-                    reflectiveCurveToRelative(-0.1f, 1.36f, -0.26f, 2.0f)
-                    horizontalLineToRelative(-3.38f)
-                    close()
-                }
-            }
-        return _language!!
-    }
-
-private var _language: ImageVector? = null
-
 public val Icons.Outlined.ShortText: ImageVector
     get() {
         if (_shortText != null) {
@@ -1023,98 +948,6 @@ public val Icons.Outlined.Translate: ImageVector
     }
 
 private var _translate: ImageVector? = null
-
-public val Icons.Outlined.Vibration: ImageVector
-    get() {
-        if (_vibration != null) {
-            return _vibration!!
-        }
-        _vibration =
-            materialIcon(name = "Outlined.Vibration") {
-                materialPath {
-                    moveTo(0.0f, 15.0f)
-                    horizontalLineToRelative(2.0f)
-                    lineTo(2.0f, 9.0f)
-                    lineTo(0.0f, 9.0f)
-                    verticalLineToRelative(6.0f)
-                    close()
-                    moveTo(3.0f, 17.0f)
-                    horizontalLineToRelative(2.0f)
-                    lineTo(5.0f, 7.0f)
-                    lineTo(3.0f, 7.0f)
-                    verticalLineToRelative(10.0f)
-                    close()
-                    moveTo(22.0f, 9.0f)
-                    verticalLineToRelative(6.0f)
-                    horizontalLineToRelative(2.0f)
-                    lineTo(24.0f, 9.0f)
-                    horizontalLineToRelative(-2.0f)
-                    close()
-                    moveTo(19.0f, 17.0f)
-                    horizontalLineToRelative(2.0f)
-                    lineTo(21.0f, 7.0f)
-                    horizontalLineToRelative(-2.0f)
-                    verticalLineToRelative(10.0f)
-                    close()
-                    moveTo(16.5f, 3.0f)
-                    horizontalLineToRelative(-9.0f)
-                    curveTo(6.67f, 3.0f, 6.0f, 3.67f, 6.0f, 4.5f)
-                    verticalLineToRelative(15.0f)
-                    curveToRelative(0.0f, 0.83f, 0.67f, 1.5f, 1.5f, 1.5f)
-                    horizontalLineToRelative(9.0f)
-                    curveToRelative(0.83f, 0.0f, 1.5f, -0.67f, 1.5f, -1.5f)
-                    verticalLineToRelative(-15.0f)
-                    curveToRelative(0.0f, -0.83f, -0.67f, -1.5f, -1.5f, -1.5f)
-                    close()
-                    moveTo(16.0f, 19.0f)
-                    lineTo(8.0f, 19.0f)
-                    lineTo(8.0f, 5.0f)
-                    horizontalLineToRelative(8.0f)
-                    verticalLineToRelative(14.0f)
-                    close()
-                }
-            }
-        return _vibration!!
-    }
-
-private var _vibration: ImageVector? = null
-
-public val Icons.Outlined.ViewStream: ImageVector
-    get() {
-        if (_viewStream != null) {
-            return _viewStream!!
-        }
-        _viewStream =
-            materialIcon(name = "Outlined.ViewStream") {
-                materialPath {
-                    moveTo(3.0f, 7.0f)
-                    verticalLineToRelative(10.0f)
-                    curveToRelative(0.0f, 1.1f, 0.9f, 2.0f, 2.0f, 2.0f)
-                    horizontalLineToRelative(14.0f)
-                    curveToRelative(1.1f, 0.0f, 2.0f, -0.9f, 2.0f, -2.0f)
-                    verticalLineTo(7.0f)
-                    curveToRelative(0.0f, -1.1f, -0.9f, -2.0f, -2.0f, -2.0f)
-                    horizontalLineTo(5.0f)
-                    curveTo(3.9f, 5.0f, 3.0f, 5.9f, 3.0f, 7.0f)
-                    close()
-                    moveTo(19.0f, 17.0f)
-                    horizontalLineTo(5.0f)
-                    verticalLineToRelative(-4.0f)
-                    horizontalLineToRelative(14.0f)
-                    verticalLineTo(17.0f)
-                    close()
-                    moveTo(5.0f, 11.0f)
-                    verticalLineTo(7.0f)
-                    horizontalLineToRelative(14.0f)
-                    verticalLineToRelative(4.0f)
-                    horizontalLineTo(5.0f)
-                    close()
-                }
-            }
-        return _viewStream!!
-    }
-
-private var _viewStream: ImageVector? = null
 
 // =============================================================================
 // AutoMirrored.Outlined icons
@@ -1230,47 +1063,3 @@ public val Icons.AutoMirrored.Outlined.OpenInNew: ImageVector
     }
 
 private var _openInNew: ImageVector? = null
-
-public val Icons.AutoMirrored.Outlined.VolumeUp: ImageVector
-    get() {
-        if (_volumeUp != null) {
-            return _volumeUp!!
-        }
-        _volumeUp =
-            materialIcon(name = "AutoMirrored.Outlined.VolumeUp", autoMirror = true) {
-                materialPath {
-                    moveTo(3.0f, 9.0f)
-                    verticalLineToRelative(6.0f)
-                    horizontalLineToRelative(4.0f)
-                    lineToRelative(5.0f, 5.0f)
-                    lineTo(12.0f, 4.0f)
-                    lineTo(7.0f, 9.0f)
-                    lineTo(3.0f, 9.0f)
-                    close()
-                    moveTo(10.0f, 8.83f)
-                    verticalLineToRelative(6.34f)
-                    lineTo(7.83f, 13.0f)
-                    lineTo(5.0f, 13.0f)
-                    verticalLineToRelative(-2.0f)
-                    horizontalLineToRelative(2.83f)
-                    lineTo(10.0f, 8.83f)
-                    close()
-                    moveTo(16.5f, 12.0f)
-                    curveToRelative(0.0f, -1.77f, -1.02f, -3.29f, -2.5f, -4.03f)
-                    verticalLineToRelative(8.05f)
-                    curveToRelative(1.48f, -0.73f, 2.5f, -2.25f, 2.5f, -4.02f)
-                    close()
-                    moveTo(14.0f, 3.23f)
-                    verticalLineToRelative(2.06f)
-                    curveToRelative(2.89f, 0.86f, 5.0f, 3.54f, 5.0f, 6.71f)
-                    reflectiveCurveToRelative(-2.11f, 5.85f, -5.0f, 6.71f)
-                    verticalLineToRelative(2.06f)
-                    curveToRelative(4.01f, -0.91f, 7.0f, -4.49f, 7.0f, -8.77f)
-                    curveToRelative(0.0f, -4.28f, -2.99f, -7.86f, -7.0f, -8.77f)
-                    close()
-                }
-            }
-        return _volumeUp!!
-    }
-
-private var _volumeUp: ImageVector? = null

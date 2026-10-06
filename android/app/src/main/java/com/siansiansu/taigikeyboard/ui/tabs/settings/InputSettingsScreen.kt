@@ -1,6 +1,6 @@
 package com.siansiansu.taigikeyboard.ui.tabs.settings
 
-// Main Settings tab screen — input mode, typing, keyboard, feedback, diagnostics, reset.
+// Main Settings tab screen — input mode, POJ / TPS, typing, keyboard, feedback, diagnostics, reset.
 
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -47,7 +47,6 @@ import com.siansiansu.taigikeyboard.ui.components.OpenInNew
 import com.siansiansu.taigikeyboard.ui.components.SettingNavigationRow
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
-import com.siansiansu.taigikeyboard.ui.components.SettingsIcons
 import com.siansiansu.taigikeyboard.ui.components.SwitchRow
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 import com.siansiansu.taigikeyboard.ui.theme.SectionHeader
@@ -209,129 +208,7 @@ fun InputSettingsScreen(
 
                 Spacer(Modifier.height(24.dp))
 
-                // Global keyboard font — its own card below Input Mode (font is a global
-                // setting, not per-theme). Mirrors iOS SettingsTab font Section.
-                SettingsCard {
-                    SettingNavigationRow(
-                        label = L10n.themeCustomFont,
-                        value = fontDisplayName(fontType),
-                        onClick = { showFontPicker = true },
-                    )
-                }
-
-                Spacer(Modifier.height(24.dp))
-
-                SectionHeader(L10n.settingsTypingSectionTitle)
-                SettingsCard {
-                    SettingNavigationRow(
-                        label = L10n.settingsCandidateDisplayMode,
-                        value = candidateDisplayModeDisplayName(candidateDisplayMode),
-                        onClick = { showCandidateDisplayModePicker = true },
-                    )
-                    SettingsDivider()
-                    SwitchRow(
-                        label = L10n.settingsOutputBothScripts,
-                        checked = outputBoth,
-                        infoText = featureSummary(FEATURE_ID_HANLO_DESIGN),
-                        enabled = candidateDisplayMode.showsHanji,
-                        onCheckedChange = {
-                            outputBoth = it
-                            prefs.storedOutputBothScripts = it
-                        },
-                    )
-                    SettingsDivider()
-                    SettingNavigationRow(
-                        label = L10n.settingsSyllableSeparator,
-                        value = syllableSeparatorDisplayName(syllableSeparator),
-                        infoText = L10n.settingsSyllableSeparatorInfo,
-                        onClick = { showSyllableSeparatorPicker = true },
-                    )
-                    SettingsDivider()
-                    SwitchRow(
-                        label = L10n.settingsLiteralRomanCandidate,
-                        checked = literalRomanCandidate,
-                        infoText = L10n.settingsLiteralRomanCandidateInfo,
-                        onCheckedChange = {
-                            literalRomanCandidate = it
-                            prefs.literalRomanCandidateEnabled = it
-                        },
-                    )
-                    SettingsDivider()
-                    SwitchRow(
-                        label = L10n.settingsAutoCapitalization,
-                        checked = autoCap,
-                        infoText = featureSummary(FEATURE_ID_CASE_SWITCH),
-                        onCheckedChange = {
-                            autoCap = it
-                            prefs.autoCapitalizationEnabled = it
-                        },
-                    )
-                    SettingsDivider()
-                    SwitchRow(
-                        label = L10n.settingsAutoSpace,
-                        checked = autoSpace,
-                        infoText = featureSummary(FEATURE_ID_HANLO_DESIGN),
-                        onCheckedChange = {
-                            autoSpace = it
-                            prefs.isAutoSpaceEnabled = it
-                        },
-                    )
-                }
-
-                Spacer(Modifier.height(24.dp))
-
-                SectionHeader(L10n.settingsKeyboardSectionTitle)
-                SettingsCard {
-                    SwitchRow(
-                        label = L10n.settingsToolbarAutoCollapse,
-                        checked = toolbarAutoCollapse,
-                        icon = SettingsIcons.toolbar,
-                        infoText = L10n.settingsToolbarAutoCollapseInfo,
-                        onCheckedChange = {
-                            toolbarAutoCollapse = it
-                            prefs.isToolbarAutoCollapse = it
-                        },
-                    )
-                    SettingsDivider()
-                    SwitchRow(
-                        label = L10n.settingsGlobeKey,
-                        checked = isGlobeKeyEnabled,
-                        icon = SettingsIcons.globe,
-                        infoText = L10n.settingsGlobeKeyInfo,
-                        onCheckedChange = {
-                            isGlobeKeyEnabled = it
-                            prefs.isGlobeKeyEnabled = it
-                        },
-                    )
-                }
-
-                Spacer(Modifier.height(24.dp))
-
-                SectionHeader(L10n.settingsFeedbackSectionTitle)
-                SettingsCard {
-                    SwitchRow(
-                        label = L10n.settingsSoundFeedback,
-                        checked = soundFeedback,
-                        icon = SettingsIcons.sound,
-                        onCheckedChange = {
-                            soundFeedback = it
-                            prefs.isSoundFeedbackEnabled = it
-                        },
-                    )
-                    SettingsDivider()
-                    SwitchRow(
-                        label = L10n.settingsVibrationFeedback,
-                        checked = vibrationFeedback,
-                        icon = SettingsIcons.vibration,
-                        onCheckedChange = {
-                            vibrationFeedback = it
-                            prefs.isVibrationFeedbackEnabled = it
-                        },
-                    )
-                }
-
-                Spacer(Modifier.height(24.dp))
-
+                // Mode-specific settings sit right under Input Mode: POJ, then TPS. Mirrors iOS SettingsTab.
                 SectionHeader(L10n.settingsPojMode)
                 SettingsCard {
                     SwitchRow(
@@ -372,6 +249,121 @@ fun InputSettingsScreen(
                         onCheckedChange = {
                             tpsOrMapsToER = it
                             prefs.tpsOrMapsToER = it
+                        },
+                    )
+                }
+
+                Spacer(Modifier.height(24.dp))
+
+                // Typing options: candidates, then output format, then automatic behaviour.
+                SectionHeader(L10n.settingsTypingSectionTitle)
+                SettingsCard {
+                    SettingNavigationRow(
+                        label = L10n.settingsCandidateDisplayMode,
+                        value = candidateDisplayModeDisplayName(candidateDisplayMode),
+                        onClick = { showCandidateDisplayModePicker = true },
+                    )
+                    SettingsDivider()
+                    SwitchRow(
+                        label = L10n.settingsLiteralRomanCandidate,
+                        checked = literalRomanCandidate,
+                        infoText = L10n.settingsLiteralRomanCandidateInfo,
+                        onCheckedChange = {
+                            literalRomanCandidate = it
+                            prefs.literalRomanCandidateEnabled = it
+                        },
+                    )
+                    SettingsDivider()
+                    SwitchRow(
+                        label = L10n.settingsOutputBothScripts,
+                        checked = outputBoth,
+                        infoText = featureSummary(FEATURE_ID_HANLO_DESIGN),
+                        enabled = candidateDisplayMode.showsHanji,
+                        onCheckedChange = {
+                            outputBoth = it
+                            prefs.storedOutputBothScripts = it
+                        },
+                    )
+                    SettingsDivider()
+                    SettingNavigationRow(
+                        label = L10n.settingsSyllableSeparator,
+                        value = syllableSeparatorDisplayName(syllableSeparator),
+                        infoText = L10n.settingsSyllableSeparatorInfo,
+                        onClick = { showSyllableSeparatorPicker = true },
+                    )
+                    SettingsDivider()
+                    SwitchRow(
+                        label = L10n.settingsAutoCapitalization,
+                        checked = autoCap,
+                        infoText = featureSummary(FEATURE_ID_CASE_SWITCH),
+                        onCheckedChange = {
+                            autoCap = it
+                            prefs.autoCapitalizationEnabled = it
+                        },
+                    )
+                    SettingsDivider()
+                    SwitchRow(
+                        label = L10n.settingsAutoSpace,
+                        checked = autoSpace,
+                        infoText = featureSummary(FEATURE_ID_HANLO_DESIGN),
+                        onCheckedChange = {
+                            autoSpace = it
+                            prefs.isAutoSpaceEnabled = it
+                        },
+                    )
+                }
+
+                Spacer(Modifier.height(24.dp))
+
+                // Font is a global keyboard setting (not per-theme), so it leads the Keyboard card.
+                SectionHeader(L10n.settingsKeyboardSectionTitle)
+                SettingsCard {
+                    SettingNavigationRow(
+                        label = L10n.themeCustomFont,
+                        value = fontDisplayName(fontType),
+                        onClick = { showFontPicker = true },
+                    )
+                    SettingsDivider()
+                    SwitchRow(
+                        label = L10n.settingsToolbarAutoCollapse,
+                        checked = toolbarAutoCollapse,
+                        infoText = L10n.settingsToolbarAutoCollapseInfo,
+                        onCheckedChange = {
+                            toolbarAutoCollapse = it
+                            prefs.isToolbarAutoCollapse = it
+                        },
+                    )
+                    SettingsDivider()
+                    SwitchRow(
+                        label = L10n.settingsGlobeKey,
+                        checked = isGlobeKeyEnabled,
+                        infoText = L10n.settingsGlobeKeyInfo,
+                        onCheckedChange = {
+                            isGlobeKeyEnabled = it
+                            prefs.isGlobeKeyEnabled = it
+                        },
+                    )
+                }
+
+                Spacer(Modifier.height(24.dp))
+
+                SectionHeader(L10n.settingsFeedbackSectionTitle)
+                SettingsCard {
+                    SwitchRow(
+                        label = L10n.settingsSoundFeedback,
+                        checked = soundFeedback,
+                        onCheckedChange = {
+                            soundFeedback = it
+                            prefs.isSoundFeedbackEnabled = it
+                        },
+                    )
+                    SettingsDivider()
+                    SwitchRow(
+                        label = L10n.settingsVibrationFeedback,
+                        checked = vibrationFeedback,
+                        onCheckedChange = {
+                            vibrationFeedback = it
+                            prefs.isVibrationFeedbackEnabled = it
                         },
                     )
                 }

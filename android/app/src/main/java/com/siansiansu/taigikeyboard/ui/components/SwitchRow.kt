@@ -1,14 +1,10 @@
 package com.siansiansu.taigikeyboard.ui.components
 
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchColors
@@ -17,7 +13,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
@@ -28,8 +23,6 @@ fun SwitchRow(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
-    icon: ImageVector? = null,
-    iconTint: Color = MaterialTheme.colorScheme.primary,
     labelColor: Color = MaterialTheme.colorScheme.onSurface,
     fontFamily: FontFamily? = null,
     infoText: String? = null,
@@ -37,7 +30,7 @@ fun SwitchRow(
     /** Switch colors; null = Material 3 defaults (the app). The keyboard overlay passes theme colors. */
     switchColors: SwitchColors? = null,
 ) {
-    // Disabled rows dim label + icon (M3 disabled-content alpha) and drop the row's toggle target.
+    // Disabled rows dim the label (M3 disabled-content alpha) and drop the row's toggle target.
     val contentAlpha = if (enabled) 1f else DISABLED_CONTENT_ALPHA
     // Whole row is the toggle target (standard Android Settings / Material3 + iOS Form parity).
     // `toggleable` placed before `padding` so the ripple + touch target fill the full row, and it
@@ -56,15 +49,6 @@ fun SwitchRow(
                 ).padding(horizontal = 20.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (icon != null) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(24.dp),
-                tint = iconTint.copy(alpha = iconTint.alpha * contentAlpha),
-            )
-            Spacer(Modifier.width(12.dp))
-        }
         // Measure the trailing switch first; localized labels wrap within the remaining width.
         SettingRowLabel(
             label = label,

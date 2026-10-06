@@ -104,151 +104,7 @@ struct SettingsTab: View {
                     }
                 }
 
-                // Global keyboard font — its own Section (separate card) below Input Mode.
-                // Applies to every theme (font is NOT per-theme); native Form grouped
-                // container, no hand-rolled card.
-                Section {
-                    NavigationLink {
-                        ThemeFontPickerView(
-                            selectedFont: $selectedFontType,
-                            onChange: { settings.fontType = $0 },
-                        )
-                    } label: {
-                        HStack {
-                            Text(lang.string(.themeCustomFont))
-                            Spacer()
-                            Text(lang.string(selectedFontType.displayNameKey))
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                }
-
-                // Typing options
-                Section {
-                    // Default Form picker style = navigation-link row + selection subpage, the same
-                    // shape as the Input Mode / Font rows above without a bespoke subpage view.
-                    Picker(selection: $candidateDisplayMode) {
-                        ForEach(CandidateDisplayMode.allCases, id: \.self) { mode in
-                            Text(lang.string(mode.displayNameKey)).tag(mode)
-                        }
-                    } label: {
-                        Text(lang.string(.settingsCandidateDisplayMode))
-                    }
-                    .onChange(of: candidateDisplayMode) { _, newValue in
-                        settings.candidateDisplayMode = newValue
-                    }
-
-                    Toggle(isOn: $isOutputBothScripts) {
-                        HStack {
-                            Text(lang.string(.settingsOutputBothScripts))
-                            SettingInfoButton(description: featureSummary("hanloDesign"))
-                        }
-                    }
-                    // Annotate in Brackets is meaningless without hanji; stored value stays untouched.
-                    .disabled(!candidateDisplayMode.showsHanji)
-                    .onChange(of: isOutputBothScripts) { _, newValue in
-                        settings.storedIsOutputBothScripts = newValue
-                    }
-
-                    // One line, like the switch it replaced: the label and its info button, then
-                    // a menu picker. The button sits beside the picker, not inside its label, so
-                    // tapping it never opens the menu.
-                    HStack {
-                        Text(lang.string(.settingsSyllableSeparator))
-                        SettingInfoButton(description: lang.string(.settingsSyllableSeparatorInfo))
-                        Spacer()
-                        Picker(lang.string(.settingsSyllableSeparator), selection: $syllableSeparator) {
-                            ForEach(SyllableSeparator.allCases, id: \.self) { separator in
-                                Text(lang.string(separator.displayNameKey)).tag(separator)
-                            }
-                        }
-                        .labelsHidden()
-                        .pickerStyle(.menu)
-                    }
-                    .onChange(of: syllableSeparator) { _, newValue in
-                        settings.syllableSeparator = newValue
-                    }
-
-                    Toggle(isOn: $literalRomanCandidateEnabled) {
-                        HStack {
-                            Text(lang.string(.settingsLiteralRomanCandidate))
-                            SettingInfoButton(description: lang.string(.settingsLiteralRomanCandidateInfo))
-                        }
-                    }
-                    .onChange(of: literalRomanCandidateEnabled) { _, newValue in
-                        settings.isLiteralRomanCandidateEnabled = newValue
-                    }
-
-                    Toggle(isOn: $autoCapitalizationEnabled) {
-                        HStack {
-                            Text(lang.string(.settingsAutoCapitalization))
-                            SettingInfoButton(description: featureSummary("caseSwitch"))
-                        }
-                    }
-
-                    Toggle(isOn: $autoSpaceEnabled) {
-                        HStack {
-                            Text(lang.string(.settingsAutoSpace))
-                            SettingInfoButton(description: featureSummary("hanloDesign"))
-                        }
-                    }
-                    .onChange(of: autoSpaceEnabled) { _, newValue in
-                        settings.isAutoSpaceEnabled = newValue
-                    }
-                } header: {
-                    Text(lang.string(.settingsTypingSectionTitle))
-                }
-
-                // Keyboard settings
-                Section {
-                    Toggle(isOn: $toolbarAutoCollapse) {
-                        HStack {
-                            Label {
-                                Text(lang.string(.settingsToolbarAutoCollapse))
-                            } icon: {
-                                Image(latinSystemName: SettingsIcons.toolbar)
-                                    .foregroundColor(AppStyle.accentBlue)
-                            }
-                            SettingInfoButton(description: lang.string(.settingsToolbarAutoCollapseInfo))
-                        }
-                    }
-                    .onChange(of: toolbarAutoCollapse) { _, newValue in
-                        settings.isToolbarAutoCollapse = newValue
-                    }
-
-                    Toggle(isOn: $isGlobeKeyEnabled) {
-                        HStack {
-                            Label {
-                                Text(lang.string(.settingsGlobeKey))
-                            } icon: {
-                                Image(latinSystemName: SettingsIcons.globeKey)
-                                    .foregroundColor(AppStyle.accentBlue)
-                            }
-                            SettingInfoButton(description: lang.string(.settingsGlobeKeyInfo))
-                        }
-                    }
-                    .onChange(of: isGlobeKeyEnabled) { _, newValue in
-                        settings.isGlobeKeyEnabled = newValue
-                    }
-                } header: {
-                    Text(lang.string(.settingsKeyboardSectionTitle))
-                }
-
-                // Feedback
-                Section {
-                    Toggle(isOn: $isAudioFeedbackEnabled) {
-                        Label(lang.string(.settingsSoundFeedback), systemImage: SettingsIcons.soundFeedback)
-                    }
-
-                    Toggle(isOn: $isHapticFeedbackEnabled) {
-                        Label(lang.string(.settingsVibrationFeedback), systemImage: SettingsIcons.vibrationFeedback)
-                    }
-                } header: {
-                    Text(lang.string(.settingsFeedbackSectionTitle))
-                        .font(AppStyle.sectionHeaderFont)
-                }
-
-                // POJ settings
+                // Mode-specific settings sit right under Input Mode: POJ, then TPS.
                 Section {
                     Toggle(lang.string(.settingsDoubleTapOO), isOn: $isDoubleTapOOEnabled)
                         .onChange(of: isDoubleTapOOEnabled) { _, newValue in
@@ -279,7 +135,6 @@ struct SettingsTab: View {
                         .font(AppStyle.sectionHeaderFont)
                 }
 
-                // TPS (Phonetic Symbols) settings
                 Section {
                     Toggle(isOn: $isTpsOrMappedToER) {
                         HStack {
@@ -295,6 +150,131 @@ struct SettingsTab: View {
                         .font(AppStyle.sectionHeaderFont)
                 }
 
+                // Typing options: candidates, then output format, then automatic behaviour.
+                Section {
+                    // Navigation-link picker = gray value + selection subpage, the same shape as the
+                    // Input Mode / Font rows. Explicit: a Form's automatic style is a menu on iOS 27.
+                    Picker(selection: $candidateDisplayMode) {
+                        ForEach(CandidateDisplayMode.allCases, id: \.self) { mode in
+                            Text(lang.string(mode.displayNameKey)).tag(mode)
+                        }
+                    } label: {
+                        Text(lang.string(.settingsCandidateDisplayMode))
+                    }
+                    .pickerStyle(.navigationLink)
+                    .onChange(of: candidateDisplayMode) { _, newValue in
+                        settings.candidateDisplayMode = newValue
+                    }
+
+                    Toggle(isOn: $literalRomanCandidateEnabled) {
+                        HStack {
+                            Text(lang.string(.settingsLiteralRomanCandidate))
+                            SettingInfoButton(description: lang.string(.settingsLiteralRomanCandidateInfo))
+                        }
+                    }
+                    .onChange(of: literalRomanCandidateEnabled) { _, newValue in
+                        settings.isLiteralRomanCandidateEnabled = newValue
+                    }
+
+                    Toggle(isOn: $isOutputBothScripts) {
+                        HStack {
+                            Text(lang.string(.settingsOutputBothScripts))
+                            SettingInfoButton(description: featureSummary("hanloDesign"))
+                        }
+                    }
+                    // Annotate in Brackets is meaningless without hanji; stored value stays untouched.
+                    .disabled(!candidateDisplayMode.showsHanji)
+                    .onChange(of: isOutputBothScripts) { _, newValue in
+                        settings.storedIsOutputBothScripts = newValue
+                    }
+
+                    // Same shape as Candidate Display: a menu picker would draw the value in the accent colour.
+                    Picker(selection: $syllableSeparator) {
+                        ForEach(SyllableSeparator.allCases, id: \.self) { separator in
+                            Text(lang.string(separator.displayNameKey)).tag(separator)
+                        }
+                    } label: {
+                        HStack {
+                            Text(lang.string(.settingsSyllableSeparator))
+                            SettingInfoButton(description: lang.string(.settingsSyllableSeparatorInfo))
+                        }
+                    }
+                    .pickerStyle(.navigationLink)
+                    .onChange(of: syllableSeparator) { _, newValue in
+                        settings.syllableSeparator = newValue
+                    }
+
+                    Toggle(isOn: $autoCapitalizationEnabled) {
+                        HStack {
+                            Text(lang.string(.settingsAutoCapitalization))
+                            SettingInfoButton(description: featureSummary("caseSwitch"))
+                        }
+                    }
+
+                    Toggle(isOn: $autoSpaceEnabled) {
+                        HStack {
+                            Text(lang.string(.settingsAutoSpace))
+                            SettingInfoButton(description: featureSummary("hanloDesign"))
+                        }
+                    }
+                    .onChange(of: autoSpaceEnabled) { _, newValue in
+                        settings.isAutoSpaceEnabled = newValue
+                    }
+                } header: {
+                    Text(lang.string(.settingsTypingSectionTitle))
+                        .font(AppStyle.sectionHeaderFont)
+                }
+
+                // Keyboard settings. Font applies to every theme (font is NOT per-theme).
+                Section {
+                    NavigationLink {
+                        ThemeFontPickerView(
+                            selectedFont: $selectedFontType,
+                            onChange: { settings.fontType = $0 },
+                        )
+                    } label: {
+                        HStack {
+                            Text(lang.string(.themeCustomFont))
+                            Spacer()
+                            Text(lang.string(selectedFontType.displayNameKey))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+
+                    Toggle(isOn: $toolbarAutoCollapse) {
+                        HStack {
+                            Text(lang.string(.settingsToolbarAutoCollapse))
+                            SettingInfoButton(description: lang.string(.settingsToolbarAutoCollapseInfo))
+                        }
+                    }
+                    .onChange(of: toolbarAutoCollapse) { _, newValue in
+                        settings.isToolbarAutoCollapse = newValue
+                    }
+
+                    Toggle(isOn: $isGlobeKeyEnabled) {
+                        HStack {
+                            Text(lang.string(.settingsGlobeKey))
+                            SettingInfoButton(description: lang.string(.settingsGlobeKeyInfo))
+                        }
+                    }
+                    .onChange(of: isGlobeKeyEnabled) { _, newValue in
+                        settings.isGlobeKeyEnabled = newValue
+                    }
+                } header: {
+                    Text(lang.string(.settingsKeyboardSectionTitle))
+                        .font(AppStyle.sectionHeaderFont)
+                }
+
+                // Feedback
+                Section {
+                    Toggle(lang.string(.settingsSoundFeedback), isOn: $isAudioFeedbackEnabled)
+
+                    Toggle(lang.string(.settingsVibrationFeedback), isOn: $isHapticFeedbackEnabled)
+                } header: {
+                    Text(lang.string(.settingsFeedbackSectionTitle))
+                        .font(AppStyle.sectionHeaderFont)
+                }
+
                 // Diagnostics
                 Section {
                     Button {
@@ -305,13 +285,17 @@ struct SettingsTab: View {
                             diagnosticCopied = false
                         }
                     } label: {
-                        Label(
-                            diagnosticCopied
+                        // In-app action: primary text, accent icon (the share / email rows below leave
+                        // the app and keep the link colour).
+                        Label {
+                            Text(diagnosticCopied
                                 ? lang.string(.settingsDiagnosticCopied)
-                                : lang.string(.settingsDiagnosticCopy),
-                            systemImage: diagnosticCopied ? "checkmark" : "doc.on.doc",
-                        )
-                        .foregroundColor(.primary)
+                                : lang.string(.settingsDiagnosticCopy))
+                                .foregroundColor(.primary)
+                        } icon: {
+                            Image(latinSystemName: diagnosticCopied ? "checkmark" : "doc.on.doc")
+                                .foregroundColor(AppStyle.accentBlue)
+                        }
                     }
 
                     ShareLink(
@@ -401,6 +385,8 @@ struct SettingsTab: View {
         isNasalMarkerUppercaseEnabled = settings.isNasalMarkerUppercaseEnabled
         candidateDisplayMode = settings.candidateDisplayMode
         isOutputBothScripts = settings.storedIsOutputBothScripts
+        literalRomanCandidateEnabled = settings.isLiteralRomanCandidateEnabled
+        syllableSeparator = settings.syllableSeparator
         isTpsOrMappedToER = settings.isTpsOrMappedToER
         toolbarAutoCollapse = settings.isToolbarAutoCollapse
         isGlobeKeyEnabled = settings.isGlobeKeyEnabled

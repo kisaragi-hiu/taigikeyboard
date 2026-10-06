@@ -1,4 +1,4 @@
-// Covers General / Feedback / POJ double-tap / TPS or->e mapping / Open main app.
+// Covers POJ / TPS / Typing / Keyboard / Feedback (the Settings tab's sections and order) / Open main app.
 
 import KeyboardKit
 import SwiftUI
@@ -26,6 +26,8 @@ struct SettingsSelectionOverlay: View {
     @State private var isHapticFeedbackEnabled: Bool
     @State private var isDoubleTapOOEnabled: Bool
     @State private var isDoubleTapNNEnabled: Bool
+    @State private var isNasalMarkerUppercaseEnabled: Bool
+    @State private var syllableSeparator: SyllableSeparator
     @State private var isTpsOrMappedToER: Bool
     @State private var isGlobeKeyEnabled: Bool
 
@@ -39,6 +41,8 @@ struct SettingsSelectionOverlay: View {
     private static let autoCapKey = "com.keyboardkit.settings.keyboard.isAutocapitalizationEnabled"
     private static let audioFeedbackKey = "com.keyboardkit.settings.feedback.isAudioFeedbackEnabled"
     private static let hapticFeedbackKey = "com.keyboardkit.settings.feedback.isHapticFeedbackEnabled"
+    /// Body tier (`ui-style-guide.md`), the size the Settings tab and the Android overlay use.
+    private static let rowFontSize: CGFloat = 17
 
     init(
         isExpanded: Bool,
@@ -68,6 +72,8 @@ struct SettingsSelectionOverlay: View {
         )
         _isDoubleTapOOEnabled = State(initialValue: s.isDoubleTapOOEnabled)
         _isDoubleTapNNEnabled = State(initialValue: s.isDoubleTapNNEnabled)
+        _isNasalMarkerUppercaseEnabled = State(initialValue: s.isNasalMarkerUppercaseEnabled)
+        _syllableSeparator = State(initialValue: s.syllableSeparator)
         _isTpsOrMappedToER = State(initialValue: s.isTpsOrMappedToER)
         _isGlobeKeyEnabled = State(initialValue: s.isGlobeKeyEnabled)
     }
@@ -82,22 +88,55 @@ struct SettingsSelectionOverlay: View {
         VStack(spacing: 0) {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 2) {
-                    // General settings
-                    candidateDisplayModeRow
+                    sectionHeader(lang.string(.settingsPojMode))
+                    settingsToggle(lang.string(.settingsDoubleTapOO), isOn: $isDoubleTapOOEnabled) {
+                        SharedSettings.shared.isDoubleTapOOEnabled = $0
+                    }
+                    settingsToggle(lang.string(.settingsDoubleTapNN), isOn: $isDoubleTapNNEnabled) {
+                        SharedSettings.shared.isDoubleTapNNEnabled = $0
+                    }
+                    menuPickerRow(
+                        lang.string(.settingsNasalMarkerUppercase),
+                        selection: $isNasalMarkerUppercaseEnabled,
+                        options: [
+                            (true, lang.string(.settingsNasalMarkerUppercaseCapital)),
+                            (false, lang.string(.settingsNasalMarkerUppercaseSmall)),
+                        ],
+                    ) { SharedSettings.shared.isNasalMarkerUppercaseEnabled = $0 }
+
+                    sectionHeader(lang.string(.settingsTpsMode))
+                    settingsToggle(lang.string(.settingsTpsOrMapsToER), isOn: $isTpsOrMappedToER) {
+                        SharedSettings.shared.isTpsOrMappedToER = $0
+                    }
+
+                    sectionHeader(lang.string(.settingsTypingSectionTitle))
+                    menuPickerRow(
+                        lang.string(.settingsCandidateDisplayMode),
+                        selection: $candidateDisplayMode,
+                        options: CandidateDisplayMode.allCases.map { ($0, lang.string($0.displayNameKey)) },
+                        onChange: onCandidateDisplayModeChange,
+                    )
+                    settingsToggle(lang.string(.settingsLiteralRomanCandidate), isOn: $literalRomanCandidateEnabled) {
+                        SharedSettings.shared.isLiteralRomanCandidateEnabled = $0
+                    }
                     settingsToggle(lang.string(.settingsOutputBothScripts), isOn: $isOutputBothScripts) {
                         SharedSettings.shared.storedIsOutputBothScripts = $0
                     }
                     // Annotate in Brackets is meaningless without hanji; stored value stays untouched.
                     .disabled(!candidateDisplayMode.showsHanji)
-                    settingsToggle(lang.string(.settingsLiteralRomanCandidate), isOn: $literalRomanCandidateEnabled) {
-                        SharedSettings.shared.isLiteralRomanCandidateEnabled = $0
-                    }
+                    menuPickerRow(
+                        lang.string(.settingsSyllableSeparator),
+                        selection: $syllableSeparator,
+                        options: SyllableSeparator.allCases.map { ($0, lang.string($0.displayNameKey)) },
+                    ) { SharedSettings.shared.syllableSeparator = $0 }
                     settingsToggle(lang.string(.settingsAutoCapitalization), isOn: $autoCapitalizationEnabled) {
                         KeyboardSettings.store.set($0, forKey: Self.autoCapKey)
                     }
                     settingsToggle(lang.string(.settingsAutoSpace), isOn: $autoSpaceEnabled) {
                         SharedSettings.shared.isAutoSpaceEnabled = $0
                     }
+
+                    sectionHeader(lang.string(.settingsKeyboardSectionTitle))
                     settingsToggle(lang.string(.settingsToolbarAutoCollapse), isOn: $toolbarAutoCollapse) {
                         SharedSettings.shared.isToolbarAutoCollapse = $0
                     }
@@ -105,7 +144,7 @@ struct SettingsSelectionOverlay: View {
                         SharedSettings.shared.isGlobeKeyEnabled = $0
                     }
 
-                    // Feedback settings
+                    sectionHeader(lang.string(.settingsFeedbackSectionTitle))
                     settingsToggle(lang.string(.settingsSoundFeedback), isOn: $isAudioFeedbackEnabled) {
                         KeyboardSettings.store.set($0, forKey: Self.audioFeedbackKey)
                     }
@@ -113,22 +152,8 @@ struct SettingsSelectionOverlay: View {
                         KeyboardSettings.store.set($0, forKey: Self.hapticFeedbackKey)
                     }
 
-                    // POJ settings
-                    settingsToggle(lang.string(.settingsDoubleTapOO), isOn: $isDoubleTapOOEnabled) {
-                        SharedSettings.shared.isDoubleTapOOEnabled = $0
-                    }
-                    settingsToggle(lang.string(.settingsDoubleTapNN), isOn: $isDoubleTapNNEnabled) {
-                        SharedSettings.shared.isDoubleTapNNEnabled = $0
-                    }
-
-                    // TPS settings
-                    settingsToggle(lang.string(.settingsTpsOrMapsToER), isOn: $isTpsOrMappedToER) {
-                        SharedSettings.shared.isTpsOrMappedToER = $0
-                    }
-
                     openAppButton
                 }
-                .padding(.top, 12)
                 .padding(.horizontal, 16)
                 .padding(.bottom, 8)
             }
@@ -149,6 +174,8 @@ struct SettingsSelectionOverlay: View {
             isHapticFeedbackEnabled = KeyboardSettings.store.object(forKey: Self.hapticFeedbackKey) as? Bool ?? true
             isDoubleTapOOEnabled = s.isDoubleTapOOEnabled
             isDoubleTapNNEnabled = s.isDoubleTapNNEnabled
+            isNasalMarkerUppercaseEnabled = s.isNasalMarkerUppercaseEnabled
+            syllableSeparator = s.syllableSeparator
             isTpsOrMappedToER = s.isTpsOrMappedToER
             isGlobeKeyEnabled = s.isGlobeKeyEnabled
             isReady = true
@@ -157,15 +184,27 @@ struct SettingsSelectionOverlay: View {
 
     // MARK: - Components
 
+    /// Each section opens with its header; the header's top padding is the gap above it (and the panel's top inset).
+    private func sectionHeader(_ title: String) -> some View {
+        KeyboardOverlaySectionHeader(title: title)
+            .padding(.top, 12)
+            .padding(.bottom, 2)
+    }
+
     /// Menu-picker row shaped like the toggles (label left, current value right).
-    /// Three values do not fit as segments beside the label at keyboard width.
-    private var candidateDisplayModeRow: some View {
+    /// The choices do not fit as segments beside the label at keyboard width.
+    private func menuPickerRow<Value: Hashable>(
+        _ label: String,
+        selection: Binding<Value>,
+        options: [(Value, String)],
+        onChange: @escaping (Value) -> Void,
+    ) -> some View {
         HStack(spacing: 8) {
-            Text(lang.string(.settingsCandidateDisplayMode))
+            Text(label)
             Spacer()
-            Picker(lang.string(.settingsCandidateDisplayMode), selection: $candidateDisplayMode) {
-                ForEach(CandidateDisplayMode.allCases, id: \.self) { mode in
-                    Text(lang.string(mode.displayNameKey)).tag(mode)
+            Picker(label, selection: selection) {
+                ForEach(options, id: \.0) { value, name in
+                    Text(name).tag(value)
                 }
             }
             .pickerStyle(.menu)
@@ -174,11 +213,11 @@ struct SettingsSelectionOverlay: View {
             .tint(theme.primaryTextColor)
             .fixedSize()
         }
-        .font(KeyboardFonts.globalFont(size: 15))
+        .font(KeyboardFonts.globalFont(size: Self.rowFontSize))
         .foregroundColor(theme.primaryTextColor)
-        .frame(height: 44)
-        .onChange(of: candidateDisplayMode) { _, newValue in
-            onCandidateDisplayModeChange(newValue)
+        .frame(minHeight: 44)
+        .onChange(of: selection.wrappedValue) { _, newValue in
+            onChange(newValue)
             autoDismissIfNeeded()
         }
     }
@@ -191,10 +230,9 @@ struct SettingsSelectionOverlay: View {
         Toggle(isOn: isOn) {
             Text(label)
         }
-        .font(KeyboardFonts.globalFont(size: 15))
+        .font(KeyboardFonts.globalFont(size: Self.rowFontSize))
         .foregroundColor(theme.primaryTextColor)
-        .tint(.accentColor)
-        .frame(height: 44)
+        .frame(minHeight: 44)
         .onChange(of: isOn.wrappedValue) { _, newValue in
             onChange(newValue)
             autoDismissIfNeeded()
@@ -207,10 +245,10 @@ struct SettingsSelectionOverlay: View {
             onDismiss()
         }) {
             Text(lang.string(.settingsOpenApp))
-                .font(KeyboardFonts.globalFont(size: 15))
+                .font(KeyboardFonts.globalFont(size: Self.rowFontSize))
                 .foregroundColor(.accentColor)
                 .frame(maxWidth: .infinity)
-                .frame(height: 44)
+                .frame(minHeight: 44)
         }
         .buttonStyle(.plain)
         .padding(.top, 16)
