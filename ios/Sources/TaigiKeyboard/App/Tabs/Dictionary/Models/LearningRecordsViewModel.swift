@@ -11,7 +11,8 @@ import Foundation
 @MainActor
 final class LearningRecordsViewModel: ObservableObject {
     /// Rows per engine page; the next page loads when the last row shows.
-    static let pageSize: UInt32 = 100
+    /// `nonisolated`: `reload(rowCount:)`'s default argument reads it outside the main actor.
+    nonisolated static let pageSize: UInt32 = 100
     /// The filter reloads once typing pauses this long — the desktop's
     /// `FILTER_SETTLE`, so a word typed letter by letter is one query.
     /// `nonisolated`: `init`'s default argument reads it outside the main actor.
