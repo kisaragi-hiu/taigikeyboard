@@ -1,6 +1,6 @@
 package com.siansiansu.taigikeyboard.ui.tabs.settings
 
-// Main Settings tab screen — input mode, typing, keyboard, feedback, POJ / TPS, diagnostics, reset.
+// Main Settings tab screen — input mode, typing, keyboard, POJ / TPS, feedback, diagnostics, reset.
 
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -300,30 +300,7 @@ fun InputSettingsScreen(
 
                 Spacer(Modifier.height(24.dp))
 
-                SectionHeader(L10n.settingsFeedbackSectionTitle)
-                SettingsCard {
-                    SwitchRow(
-                        label = L10n.settingsSoundFeedback,
-                        checked = soundFeedback,
-                        onCheckedChange = {
-                            soundFeedback = it
-                            prefs.isSoundFeedbackEnabled = it
-                        },
-                    )
-                    SettingsDivider()
-                    SwitchRow(
-                        label = L10n.settingsVibrationFeedback,
-                        checked = vibrationFeedback,
-                        onCheckedChange = {
-                            vibrationFeedback = it
-                            prefs.isVibrationFeedbackEnabled = it
-                        },
-                    )
-                }
-
-                Spacer(Modifier.height(24.dp))
-
-                // Mode-specific settings follow the shared sections (default mode is TL): POJ, then TPS. Mirrors iOS SettingsTab.
+                // Mode-specific settings follow Typing / Keyboard (default mode is TL): POJ, then TPS. Feedback closes the settings. Mirrors iOS SettingsTab.
                 SectionHeader(L10n.settingsPojMode)
                 SettingsCard {
                     SwitchRow(
@@ -364,6 +341,29 @@ fun InputSettingsScreen(
                         onCheckedChange = {
                             tpsOrMapsToER = it
                             prefs.tpsOrMapsToER = it
+                        },
+                    )
+                }
+
+                Spacer(Modifier.height(24.dp))
+
+                SectionHeader(L10n.settingsFeedbackSectionTitle)
+                SettingsCard {
+                    SwitchRow(
+                        label = L10n.settingsSoundFeedback,
+                        checked = soundFeedback,
+                        onCheckedChange = {
+                            soundFeedback = it
+                            prefs.isSoundFeedbackEnabled = it
+                        },
+                    )
+                    SettingsDivider()
+                    SwitchRow(
+                        label = L10n.settingsVibrationFeedback,
+                        checked = vibrationFeedback,
+                        onCheckedChange = {
+                            vibrationFeedback = it
+                            prefs.isVibrationFeedbackEnabled = it
                         },
                     )
                 }

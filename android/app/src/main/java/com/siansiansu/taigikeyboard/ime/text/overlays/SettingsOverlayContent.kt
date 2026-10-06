@@ -54,7 +54,7 @@ import kotlinx.coroutines.launch
  * Compose content for the keyboard settings overlay.
  *
  * Renders the Settings tab's (InputSettingsScreen) keyboard settings in its section order —
- * Typing / Keyboard / Feedback / POJ / TPS — styled for the keyboard overlay. Uses shared SwitchRow.
+ * Typing / Keyboard / POJ / TPS / Feedback — styled for the keyboard overlay. Uses shared SwitchRow.
  */
 @Composable
 fun SettingsOverlayContent(
@@ -225,32 +225,6 @@ fun SettingsOverlayContent(
             switchColors = switchColors,
         )
 
-        SectionHeader(L10n.settingsFeedbackSectionTitle, labelColor)
-        SwitchRow(
-            label = L10n.settingsSoundFeedback,
-            checked = soundFeedback,
-            onCheckedChange = {
-                soundFeedback = it
-                prefs.isSoundFeedbackEnabled = it
-                autoDismissIfNeeded()
-            },
-            labelColor = labelColor,
-            fontFamily = fontFamily,
-            switchColors = switchColors,
-        )
-        SwitchRow(
-            label = L10n.settingsVibrationFeedback,
-            checked = vibrationFeedback,
-            onCheckedChange = {
-                vibrationFeedback = it
-                prefs.isVibrationFeedbackEnabled = it
-                autoDismissIfNeeded()
-            },
-            labelColor = labelColor,
-            fontFamily = fontFamily,
-            switchColors = switchColors,
-        )
-
         SectionHeader(L10n.settingsPojMode, labelColor)
         SwitchRow(
             label = L10n.settingsDoubleTapOO,
@@ -297,6 +271,32 @@ fun SettingsOverlayContent(
             onCheckedChange = {
                 tpsOrER = it
                 prefs.tpsOrMapsToER = it
+                autoDismissIfNeeded()
+            },
+            labelColor = labelColor,
+            fontFamily = fontFamily,
+            switchColors = switchColors,
+        )
+
+        SectionHeader(L10n.settingsFeedbackSectionTitle, labelColor)
+        SwitchRow(
+            label = L10n.settingsSoundFeedback,
+            checked = soundFeedback,
+            onCheckedChange = {
+                soundFeedback = it
+                prefs.isSoundFeedbackEnabled = it
+                autoDismissIfNeeded()
+            },
+            labelColor = labelColor,
+            fontFamily = fontFamily,
+            switchColors = switchColors,
+        )
+        SwitchRow(
+            label = L10n.settingsVibrationFeedback,
+            checked = vibrationFeedback,
+            onCheckedChange = {
+                vibrationFeedback = it
+                prefs.isVibrationFeedbackEnabled = it
                 autoDismissIfNeeded()
             },
             labelColor = labelColor,

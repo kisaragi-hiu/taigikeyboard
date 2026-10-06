@@ -1,4 +1,4 @@
-// Covers Typing / Keyboard / Feedback / POJ / TPS (the Settings tab's sections and order) / Open main app.
+// Covers Typing / Keyboard / POJ / TPS / Feedback (the Settings tab's sections and order) / Open main app.
 
 import KeyboardKit
 import SwiftUI
@@ -123,14 +123,6 @@ struct SettingsSelectionOverlay: View {
                         SharedSettings.shared.isGlobeKeyEnabled = $0
                     }
 
-                    sectionHeader(lang.string(.settingsFeedbackSectionTitle))
-                    settingsToggle(lang.string(.settingsSoundFeedback), isOn: $isAudioFeedbackEnabled) {
-                        KeyboardSettings.store.set($0, forKey: Self.audioFeedbackKey)
-                    }
-                    settingsToggle(lang.string(.settingsVibrationFeedback), isOn: $isHapticFeedbackEnabled) {
-                        KeyboardSettings.store.set($0, forKey: Self.hapticFeedbackKey)
-                    }
-
                     sectionHeader(lang.string(.settingsPojMode))
                     settingsToggle(lang.string(.settingsDoubleTapOO), isOn: $isDoubleTapOOEnabled) {
                         SharedSettings.shared.isDoubleTapOOEnabled = $0
@@ -150,6 +142,14 @@ struct SettingsSelectionOverlay: View {
                     sectionHeader(lang.string(.settingsTpsMode))
                     settingsToggle(lang.string(.settingsTpsOrMapsToER), isOn: $isTpsOrMappedToER) {
                         SharedSettings.shared.isTpsOrMappedToER = $0
+                    }
+
+                    sectionHeader(lang.string(.settingsFeedbackSectionTitle))
+                    settingsToggle(lang.string(.settingsSoundFeedback), isOn: $isAudioFeedbackEnabled) {
+                        KeyboardSettings.store.set($0, forKey: Self.audioFeedbackKey)
+                    }
+                    settingsToggle(lang.string(.settingsVibrationFeedback), isOn: $isHapticFeedbackEnabled) {
+                        KeyboardSettings.store.set($0, forKey: Self.hapticFeedbackKey)
                     }
 
                     openAppButton

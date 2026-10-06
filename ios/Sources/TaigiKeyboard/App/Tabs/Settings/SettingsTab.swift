@@ -219,17 +219,7 @@ struct SettingsTab: View {
                         .font(AppStyle.sectionHeaderFont)
                 }
 
-                // Feedback
-                Section {
-                    Toggle(lang.string(.settingsSoundFeedback), isOn: $isAudioFeedbackEnabled)
-
-                    Toggle(lang.string(.settingsVibrationFeedback), isOn: $isHapticFeedbackEnabled)
-                } header: {
-                    Text(lang.string(.settingsFeedbackSectionTitle))
-                        .font(AppStyle.sectionHeaderFont)
-                }
-
-                // Mode-specific settings follow the shared sections (default mode is TL): POJ, then TPS.
+                // Mode-specific settings follow Typing / Keyboard (default mode is TL): POJ, then TPS. Feedback closes the settings.
                 Section {
                     Toggle(lang.string(.settingsDoubleTapOO), isOn: $isDoubleTapOOEnabled)
                         .onChange(of: isDoubleTapOOEnabled) { _, newValue in
@@ -272,6 +262,16 @@ struct SettingsTab: View {
                     }
                 } header: {
                     Text(lang.string(.settingsTpsMode))
+                        .font(AppStyle.sectionHeaderFont)
+                }
+
+                // Feedback
+                Section {
+                    Toggle(lang.string(.settingsSoundFeedback), isOn: $isAudioFeedbackEnabled)
+
+                    Toggle(lang.string(.settingsVibrationFeedback), isOn: $isHapticFeedbackEnabled)
+                } header: {
+                    Text(lang.string(.settingsFeedbackSectionTitle))
                         .font(AppStyle.sectionHeaderFont)
                 }
 
