@@ -45,6 +45,7 @@ final class SettingsStoreTests: XCTestCase {
     func testResetGeneralSettings_putsEveryRowBackAndLeavesTheRestAlone() {
         let store = makeStore()
         userDefaults.set(InputMode.poj.rawValue, forKey: SettingsStore.Keys.inputMode.name)
+        userDefaults.set(KeyboardLayout.colemak.rawValue, forKey: SettingsStore.Keys.keyboardLayout.name)
         userDefaults.set(ToneInputScheme.telex.rawValue, forKey: SettingsStore.Keys.toneInputScheme.name)
         userDefaults.set(false, forKey: SettingsStore.Keys.isHanjiFirst.name)
         userDefaults.set("en", forKey: SettingsStore.Keys.displayLanguage.name)
@@ -59,6 +60,8 @@ final class SettingsStoreTests: XCTestCase {
         store.resetGeneralSettings()
 
         XCTAssertEqual(store.inputMode, SettingsStore.Keys.inputMode.defaultValue)
+        XCTAssertEqual(store.keyboardLayout, .qwerty)
+        XCTAssertNil(userDefaults.object(forKey: SettingsStore.Keys.keyboardLayout.name))
         XCTAssertEqual(store.toneInputScheme, SettingsStore.Keys.toneInputScheme.defaultValue)
         XCTAssertTrue(store.storedIsHanjiFirst, "back to hanji-first")
         XCTAssertNil(userDefaults.object(forKey: SettingsStore.Keys.isHanjiFirst.name), "removed, not written")
@@ -74,6 +77,20 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertNil(userDefaults.object(forKey: SettingsStore.Keys.syllableSeparator.name), "removed, not written")
         XCTAssertEqual(store.candidateLayout, .horizontal, "外觀's key")
         XCTAssertEqual(store.updateLastNotifiedVersion, "1.0.0", "bookkeeping")
+    }
+
+    // MARK: - Keyboard layout
+
+    func testKeyboardLayout_readsTheStoredChoiceLive_andDefaultsToQwerty() {
+        let store = makeStore()
+        XCTAssertEqual(store.keyboardLayout, .qwerty)
+        XCTAssertNil(userDefaults.object(forKey: SettingsStore.Keys.keyboardLayout.name))
+        for layout in KeyboardLayout.allCases {
+            userDefaults.set(layout.rawValue, forKey: SettingsStore.Keys.keyboardLayout.name)
+            XCTAssertEqual(store.keyboardLayout, layout)
+        }
+        userDefaults.set("unknown", forKey: SettingsStore.Keys.keyboardLayout.name)
+        XCTAssertEqual(store.keyboardLayout, .qwerty)
     }
 
     // MARK: - Candidate display mode

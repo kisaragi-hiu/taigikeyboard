@@ -11,6 +11,11 @@
       "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host"] },
       "values": { "hanji": "輸入模式", "tailo": "Su-ji̍p bôo-sik", "poj": "Su-ji̍p bô͘-sek", "en": "Input Mode", "ja": "入力モード" }
     },
+    "keyboardLayout": {
+      "comment": "macOS General picker: QWERTY (default), Dvorak, Colemak for TL/POJ input. TPS keeps its fixed QWERTY positions.",
+      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "values": { "hanji": "齒盤排列", "tailo": "Khí-puânn pâi-lia̍t", "poj": "Khí-pôaⁿ pâi-lia̍t", "en": "Keyboard Layout", "ja": "キーボード配列" }
+    },
     "displayLanguage": {
       "comment": "Settings row + sub-screen title for selecting the app UI display language (orthogonal to the input mode). Most option labels are endonyms (own-script, not i18n keys); the Automatic option uses displayLanguageAutomatic.",
       "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host"] },

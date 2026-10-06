@@ -220,6 +220,13 @@ public final class TaigiInputController: IMKInputController {
     @MainActor
     private var inputModeObservation: AnyObject?
 
+    @MainActor
+    private var keyboardLayoutObservation: AnyObject?
+
+    /// Re-applied on every activation, even when this controller is reused.
+    @MainActor
+    private var appliedKeyboardLayout: KeyboardLayout?
+
     /// KVO on the TPS key panel's stored wish, armed and released with
     /// `displayModeObservation`: the chord in another session, or a reset of
     /// General, takes this session's panel up or down at once.
@@ -260,6 +267,8 @@ public final class TaigiInputController: IMKInputController {
             controller.tenure += 1
             controller.lastClient = client
             controller.backend.activate(controller.sessionToken, settings: controller.settings)
+            controller.appliedKeyboardLayout = nil
+            controller.applyKeyboardLayout()
             // After the claim, which just cleared the previous session's
             // endpoint: this session is the one the shortcut hotkeys should
             // now act through, and registering is what turns them on.
@@ -284,7 +293,14 @@ public final class TaigiInputController: IMKInputController {
                 of: SettingsStore.Keys.inputMode,
                 onMainActor: { [weak controller] in
                     controller?.dismissPalettes()
+                    controller?.applyKeyboardLayout()
                     controller?.syncTpsKeyboard()
+                },
+            )
+            controller.keyboardLayoutObservation = controller.settings.observeChanges(
+                of: SettingsStore.Keys.keyboardLayout,
+                onMainActor: { [weak controller] in
+                    controller?.applyKeyboardLayout()
                 },
             )
             controller.tpsKeyboardObservation = controller.settings.observeChanges(
@@ -307,7 +323,7 @@ public final class TaigiInputController: IMKInputController {
             // up by the outgoing session would be picked from by this one.
             controller.symbolPickerPresenter.hideForHandover()
             controller.symbolPickerCells = []
-            // Dropped, not cleared: activation makes no client call, and the
+            // Dropped, not cleared: activation makes no document call, and the
             // deactivation IMK sends first already cleared it (`endSession`).
             controller.isSymbolPickerPlaceholderMarked = false
             controller.symbolPickerShortcut = KeyboardShortcuts.getShortcut(for: .showSymbolPicker)
@@ -641,6 +657,7 @@ public final class TaigiInputController: IMKInputController {
             // `inputModeObservation`, whose hop lands after a key already
             // queued.
             controller.dismissPalettes()
+            controller.applyKeyboardLayout()
             // The TPS key panel comes and goes with TPS; its stored wish stays.
             controller.syncTpsKeyboard()
             // Then the HUD, because the chord fires from anywhere and a
@@ -675,6 +692,19 @@ public final class TaigiInputController: IMKInputController {
         } else {
             TpsKeyboardPanel.shared.hideNow()
         }
+    }
+
+    /// IMKInputSession.h requires the layout override on every activation.
+    /// This setter asks no document questions, preserving the Chromium
+    /// activation rule. The client receives events translated by macOS,
+    /// including printable keys our composing classifier passes through.
+    @MainActor
+    private func applyKeyboardLayout() {
+        guard backend.owns(sessionToken), let client = lastClient else { return }
+        let layout: KeyboardLayout = settings.inputMode == .tps ? .qwerty : settings.keyboardLayout
+        guard appliedKeyboardLayout != layout else { return }
+        client.overrideKeyboard(withKeyboardNamed: layout.inputSourceID)
+        appliedKeyboardLayout = layout
     }
 
     // MARK: - Shortcut actions
@@ -1352,6 +1382,8 @@ public final class TaigiInputController: IMKInputController {
         displayModeObservation = nil
         candidateWindowObservation = nil
         inputModeObservation = nil
+        keyboardLayoutObservation = nil
+        appliedKeyboardLayout = nil
         tpsKeyboardObservation = nil
     }
 

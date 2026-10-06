@@ -79,14 +79,16 @@ final class CandidateSlotKeyTests: XCTestCase {
         XCTAssertEqual(recorded(snapshot("#", modifiers: .shift)), "s|0023")
     }
 
-    /// `⇧;` is refused the same way: it is the ninth slot key's
-    /// Hanji/romanization chord, and a US layout types `:` for it. A `:`
-    /// reached without that key still records.
+    /// `⇧;` is the ninth slot key's Hanji/romanization chord. The character
+    /// follows the selected layout: QWERTY `;`, Dvorak `z`, Colemak `p` positions.
     func testAShiftedSemicolon_isRefusedAsTheSlotKeyItIs() throws {
-        XCTAssertEqual(
-            KeyRules.press(snapshot(":", modifiers: .shift, keyCode: kVK_ANSI_Semicolon)),
-            .refused(.typesRomanization),
-        )
+        for code in [kVK_ANSI_Semicolon, kVK_ANSI_Z, kVK_ANSI_P] {
+            XCTAssertEqual(
+                KeyRules.press(snapshot(":", modifiers: .shift, keyCode: code)),
+                .refused(.typesRomanization),
+            )
+        }
+        // A synthetic snapshot without a hardware key retains its character.
         XCTAssertEqual(recorded(snapshot(":", modifiers: .shift)), "s|003A")
     }
 

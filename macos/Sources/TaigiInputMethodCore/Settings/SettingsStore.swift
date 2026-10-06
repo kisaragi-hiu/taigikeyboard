@@ -43,6 +43,12 @@ final class SettingsStore: @unchecked Sendable {
             name: "inputMode",
             defaultValue: EngineSettings.defaults.inputMode,
         )
+        /// macOS-only OS integration: IMK applies the layout before events
+        /// reach the engine, so this key is not in the Rust settings snapshot.
+        static let keyboardLayout = SettingsKey(
+            name: "keyboardLayout",
+            defaultValue: KeyboardLayout.qwerty,
+        )
         /// The romanization Switch TPS returns to: the one last left for
         /// TPS. Written only by `switchInputMode(_:)`, with the core's answer;
         /// read only by the core, through that request — `tl` or `poj`, and
@@ -471,6 +477,11 @@ final class SettingsStore: @unchecked Sendable {
         choice(Keys.toneInputScheme)
     }
 
+    /// The user's romanization layout, kept while TPS uses fixed positions.
+    var keyboardLayout: KeyboardLayout {
+        choice(Keys.keyboardLayout)
+    }
+
     /// The keys that pick a candidate, as the window labels them: the digits
     /// under TPS, whose window opens on demand; otherwise the tone scheme's.
     /// CROSS-PLATFORM INVARIANT — mirrors desktop-core
@@ -560,6 +571,7 @@ final class SettingsStore: @unchecked Sendable {
     func resetGeneralSettings() {
         removeStoredValues(
             Keys.inputMode.name,
+            Keys.keyboardLayout.name,
             Keys.lastRomanizationMode.name,
             Keys.isTpsKeyboardShown.name,
             Keys.toneInputScheme.name,

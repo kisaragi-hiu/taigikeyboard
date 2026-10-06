@@ -20,11 +20,11 @@ pub(crate) const OPTION: u64 = 1 << 19;
 pub(crate) const COMMAND: u64 = 1 << 20;
 
 /// Carbon's ANSI key codes (`kVK_ANSI_*`, positions on the keyboard) for the
-/// keys the core reads a code for — `1`…`9` and `;` (`chord.rs`
-/// `NUMBER_ROW_KEY_CODES` / `SEMICOLON_KEY_CODE`) — each with the code the
-/// core spells it with (the Windows virtual key). `6` and `9` sit out of
-/// numeric order on Carbon's side.
-const KEY_CODES: [(u32, u16); 26] = [
+/// number row and keypad keys the core reads by position, each with the code
+/// the core spells it with (the Windows virtual key). `6` and `9` sit out of
+/// numeric order on Carbon's side. The semicolon follows its layout character
+/// instead (`core_key_code`).
+const KEY_CODES: [(u32, u16); 25] = [
     (0x12, 0x31), // 1
     (0x13, 0x32), // 2
     (0x14, 0x33), // 3
@@ -34,7 +34,6 @@ const KEY_CODES: [(u32, u16); 26] = [
     (0x1A, 0x37), // 7
     (0x1C, 0x38), // 8
     (0x19, 0x39), // 9
-    (0x29, 0xBA), // ;
     // The keypad (`kVK_ANSI_Keypad*`): its `1`…`9` are the TPS slot keys
     // (`CandidateSlotKeySet::TpsDigits`) and no keypad key is a TPS layout key
     // (`tps_layout.rs`). `8` and `9` skip 0x5A; `=` has no Windows keypad
@@ -62,10 +61,16 @@ const KEY_CODES: [(u32, u16); 26] = [
 /// (Return and Delete included, as AppKit names them), and six of them are
 /// the navigation keys (`NavigationKey.init(NSEvent.SpecialKey)`).
 pub(crate) fn snapshot(event: &KeyEvent) -> KeyEventSnapshot {
+    let unmodified = event
+        .characters_ignoring_modifiers
+        .as_deref()
+        .or(event.characters.as_deref());
     KeyEventSnapshot {
         characters: event.characters.clone(),
         characters_ignoring_modifiers: event.characters_ignoring_modifiers.clone(),
-        key_code: event.key_code.and_then(core_key_code),
+        key_code: event
+            .key_code
+            .and_then(|carbon| core_key_code(carbon, unmodified)),
         modifiers: modifiers(event.modifier_flags),
         is_named_special_key: event.special_key.is_some(),
         navigation_key: event.special_key.and_then(navigation_key),
@@ -99,10 +104,13 @@ pub(crate) fn recorded_press(event: &KeyEvent) -> RecordedPress {
             .clone()
             .or_else(|| event.characters.clone())
     };
+    let key_code = event
+        .key_code
+        .and_then(|carbon| core_key_code(carbon, key.as_deref()));
     RecordedPress {
         key,
         modifiers,
-        key_code: event.key_code.and_then(core_key_code),
+        key_code,
         is_repeat: false,
     }
 }
@@ -116,13 +124,18 @@ pub(crate) fn modifiers(flags: u64) -> KeyModifiers {
     }
 }
 
-/// The core's code for a Carbon key code, or `None` for a key the core
-/// reads no code for.
-fn core_key_code(carbon: u32) -> Option<u16> {
-    KEY_CODES
-        .iter()
-        .find(|(mac, _)| *mac == carbon)
-        .map(|(_, core)| *core)
+/// The core's key identity. Number-row and keypad keys retain their positions;
+/// semicolon follows the selected layout's `;` / shifted `:` character.
+/// Carbon 0x29 types S under Dvorak and O under Colemak, so treating that
+/// position as semicolon would select slot nine instead of typing the letter.
+fn core_key_code(carbon: u32, unmodified: Option<&str>) -> Option<u16> {
+    match KEY_CODES.iter().find(|(mac, _)| *mac == carbon) {
+        Some((_, core)) => Some(*core),
+        None if matches!(unmodified, Some(";" | ":")) => {
+            Some(0xBA) // VK_OEM_1, the core's semicolon key.
+        }
+        None => None,
+    }
 }
 
 /// `NSUpArrowFunctionKey` … `NSPageDownFunctionKey`.
@@ -151,6 +164,11 @@ fn line_edge_key(special_key: u32) -> Option<LineEdgeKey> {
 mod tests {
     use super::*;
     use crate::test_support::key_event;
+    use taigi_desktop_core::keys::{
+        evaluate_press, ChordRejection, ComposingKeyBindings, ComposingKeyIntent, RecorderOutcome,
+        RecorderTier,
+    };
+    use taigi_desktop_core::platform::DesktopPlatform;
 
     fn event(characters: &str, modifier_flags: u64) -> KeyEvent {
         key_event(characters, modifier_flags, None)
@@ -185,25 +203,23 @@ mod tests {
     }
 
     #[test]
-    fn the_number_row_and_semicolon_reach_the_core_as_its_codes() {
-        // trace: kVK_ANSI_1…9 = 12 13 14 15 17 16 1A 1C 19, kVK_ANSI_Semicolon
-        // = 29 (Carbon HIToolbox); core NUMBER_ROW_KEY_CODES = 0x31…0x39,
-        // SEMICOLON_KEY_CODE = 0xBA.
+    fn the_number_row_and_keypad_reach_the_core_as_its_codes() {
+        // trace: kVK_ANSI_1…9 = 12 13 14 15 17 16 1A 1C 19 (Carbon
+        // HIToolbox); core NUMBER_ROW_KEY_CODES = 0x31…0x39.
         let carbon = [0x12, 0x13, 0x14, 0x15, 0x17, 0x16, 0x1A, 0x1C, 0x19];
         for (index, code) in carbon.into_iter().enumerate() {
             assert_eq!(
-                core_key_code(code),
+                core_key_code(code, None),
                 Some(0x31 + index as u16),
                 "digit {}",
                 index + 1
             );
         }
-        assert_eq!(core_key_code(0x29), Some(0xBA));
         // kVK_ANSI_Keypad1…9 = 53 54 55 56 57 58 59 5B 5C → VK_NUMPAD1…9.
         let keypad = [0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5B, 0x5C];
         for (index, code) in keypad.into_iter().enumerate() {
             assert_eq!(
-                core_key_code(code),
+                core_key_code(code, None),
                 Some(0x61 + index as u16),
                 "keypad {}",
                 index + 1
@@ -219,11 +235,11 @@ mod tests {
             (0x4E, 0x6D),
             (0x51, 0x92),
         ] {
-            assert_eq!(core_key_code(carbon), Some(core), "{carbon:#x}");
+            assert_eq!(core_key_code(carbon, None), Some(core), "{carbon:#x}");
         }
         // kVK_ANSI_0, kVK_ANSI_A, kVK_Return, kVK_ANSI_Quote: no code the core reads.
-        for other in [0x1D, 0x00, 0x24, 0x27] {
-            assert_eq!(core_key_code(other), None, "{other:#x}");
+        for other in [0x1D, 0x00, 0x24, 0x27, 0x29] {
+            assert_eq!(core_key_code(other, None), None, "{other:#x}");
         }
     }
 
@@ -237,6 +253,61 @@ mod tests {
             snapshot(&shifted_three),
             KeyEventSnapshot::chord(Some("#"), "#", KeyModifiers::SHIFT).with_key_code(0x33)
         );
+    }
+
+    #[test]
+    fn romanization_layouts_keep_shifted_letters_as_input() {
+        // System layout probe: Carbon 0x29 types S under Dvorak and O under
+        // Colemak with Shift held. Neither letter is a candidate slot key.
+        for letter in ["S", "O"] {
+            let mut key = event(letter, SHIFT);
+            key.key_code = Some(0x29);
+            for showing_candidates in [false, true] {
+                assert_eq!(
+                    ComposingKeyIntent::intent(
+                        &snapshot(&key),
+                        true,
+                        showing_candidates,
+                        &ComposingKeyBindings::default(),
+                        DesktopPlatform::MacOS,
+                    ),
+                    ComposingKeyIntent::Input(letter.to_owned()),
+                    "{letter}, showing_candidates={showing_candidates}",
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn romanization_layouts_pick_the_semicolon_at_its_layout_position() {
+        // System layouts: the semicolon is at Carbon 0x29 under QWERTY,
+        // 0x06 under Dvorak and 0x23 under Colemak. Shift types a colon.
+        for carbon in [0x29, 0x06, 0x23] {
+            for (character, flags, flip) in [(";", 0, false), (":", SHIFT, true)] {
+                let mut key = event(character, flags);
+                key.key_code = Some(carbon);
+                assert_eq!(
+                    ComposingKeyIntent::intent(
+                        &snapshot(&key),
+                        true,
+                        true,
+                        &ComposingKeyBindings::default(),
+                        DesktopPlatform::MacOS,
+                    ),
+                    ComposingKeyIntent::SelectCandidateSlot { slot: 8, flip },
+                    "{character} at {carbon:#x}",
+                );
+                assert_eq!(
+                    evaluate_press(
+                        RecorderTier::Composing,
+                        &recorded_press(&key),
+                        DesktopPlatform::MacOS,
+                    ),
+                    RecorderOutcome::Refused(ChordRejection::TypesRomanization),
+                    "the recorder must reserve the same slot key at {carbon:#x}",
+                );
+            }
+        }
     }
 
     #[test]
