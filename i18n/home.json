@@ -111,11 +111,11 @@
         ]
       },
       "values": {
-        "hanji": "手機仔系統規定第三方齒盤愛手動啟用才會當使用，請照下跤 ê 說明完成設定。",
-        "tailo": "Tshiú-ki-á hē-thóng kui-tīng tē-sann hong khí-puânn ài tshiú-tōng khé-iōng tsiah ē-tàng sú-iōng, tshiánn tsiàu ē-kha ê suat-bîng uân-sîng siat-tīng.",
-        "poj": "Chhiú-ki-á hē-thóng kui-tēng tē-saⁿ hong khí-pôaⁿ ài chhiú-tōng khé-iōng chiah ē-tàng sú-iōng, chhiáⁿ chiàu ē-kha ê soat-bêng oân-sêng siat-tēng.",
-        "en": "Your phone requires third-party keyboards to be enabled manually. Follow the steps below to finish setup.",
-        "ja": "スマートフォンの仕様上、サードパーティ製キーボードは手動で有効にする必要があります。下記の手順に従って設定を完了してください。"
+        "hanji": "第三方齒盤愛手動啟用，請照下跤 ê 步驟設定。",
+        "tailo": "Tē-sann hong khí-puânn ài tshiú-tōng khé-iōng, tshiánn tsiàu ē-kha ê pōo-tsōo siat-tīng.",
+        "poj": "Tē-saⁿ hong khí-pôaⁿ ài chhiú-tōng khé-iōng, chhiáⁿ chiàu ē-kha ê pō͘-chō͘ siat-tēng.",
+        "en": "Third-party keyboards must be enabled manually. Follow the steps below.",
+        "ja": "サードパーティ製キーボードは手動で有効にする必要があります。下記の手順に従ってください。"
       }
     },
     "setupInfoMessage": {
@@ -149,11 +149,11 @@
         ]
       },
       "values": {
-        "hanji": "無仝牌子 ê 手機仔，設定 ê 方式可能會淡薄仔無仝款，毋過方式應該攏差不多。",
-        "tailo": "Bô kâng pâi-tsú ê tshiú-ki-á, siat-tīng ê hong-sik khó-lîng huē tām-po̍h-á bô-kāng-khuán, m̄-koh hong-sik ìng-kai láng tsha-put-to.",
-        "poj": "Bô kâng pâi-chú ê chhiú-ki-á, siat-tēng ê hong-sek khó-lêng hōe tām-po̍h-á bô-kāng-khoán, m̄-koh hong-sek èng-kai láng chha-put-to.",
-        "en": "Steps may differ slightly between phone brands, but the overall process is much the same.",
-        "ja": "スマートフォンのメーカーによって設定方法が少し異なる場合がありますが、大まかな流れはほぼ同じです。"
+        "hanji": "無仝牌子 ê 手機仔，設定方式可能淡薄仔無仝。",
+        "tailo": "Bô kâng pâi-tsú ê tshiú-ki-á, siat-tīng hong-sik khó-lîng tām-po̍h-á bô kâng.",
+        "poj": "Bô kâng pâi-chú ê chhiú-ki-á, siat-tēng hong-sek khó-lêng tām-po̍h-á bô kâng.",
+        "en": "Steps may differ slightly between phone brands.",
+        "ja": "スマートフォンのメーカーによって設定方法が少し異なる場合があります。"
       }
     },
     "setupGuideCompletedMessage": {

@@ -85,7 +85,7 @@ struct LearningRecordsView: View {
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.large)
         .alert(
-            lang.string(.dictionaryLearningRecordsEditQuantity),
+            lang.string(.dictionaryLearningRecordsEditCount),
             isPresented: Binding(
                 get: { editingRecord != nil },
                 set: {
@@ -96,7 +96,7 @@ struct LearningRecordsView: View {
             ),
             presenting: editingRecord,
         ) { record in
-            TextField(lang.string(.dictionaryLearningRecordsQuantity), text: $countInput)
+            TextField(lang.string(.dictionaryLearningRecordsCount), text: $countInput)
                 .keyboardType(.numberPad)
             Button(lang.string(.commonCancel), role: .cancel) {}
             Button(lang.string(.commonSave)) {

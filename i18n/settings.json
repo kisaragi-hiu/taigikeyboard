@@ -114,7 +114,7 @@
     "syllableSeparatorInfo": {
       "comment": "Help text for the Syllable Separator picker (mobile host app).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "候選詞佮送出的羅馬字，音節中間用連字符（tâi-uân）、空白（tâi uân）抑是無分隔（tâiuân）。空白佮無分隔的時，輕聲記號 -- 改用 ·（hōo ·guá、hōo·guá）。", "tailo": "Hāu-suán sû kah sàng-tshut ê lô-má-jī, im-tsiat tiong-kan iōng liân-jī-hû (tâi-uân), khang-pe̍h (tâi uân) iah-sī bô hun-keh (tâiuân). Khang-pe̍h kah bô hun-keh ê sî, khin-siann kì-hō -- kái iōng · (hōo ·guá, hōo·guá).", "poj": "Hāu-soán sû kah sàng-chhut ê lô-má-jī, im-chiat tiong-kan iōng liân-jī-hû (tâi-oân), khang-pe̍h (tâi oân) iah-sī bô hun-keh (tâioân). Khang-pe̍h kah bô hun-keh ê sî, khin-siaⁿ kì-hō -- kái iōng · (hō͘ ·goá, hō͘·goá).", "en": "How candidates and committed romanization separate syllables: a hyphen (tâi-uân), a space (tâi uân), or nothing (tâiuân). With a space or nothing, the neutral-tone marker -- becomes · (hōo ·guá, hōo·guá).", "ja": "候補と確定するローマ字の音節の区切り方：ハイフン（tâi-uân）、スペース（tâi uân）、なし（tâiuân）。スペースまたはなしの場合、軽声記号 -- は · になります（hōo ·guá、hōo·guá）。" }
+      "values": { "hanji": "音節中間用連字符（tâi-uân）、空白（tâi uân）抑是無分隔（tâiuân）。後兩種輕聲 -- 改用 ·。", "tailo": "Im-tsiat tiong-kan iōng liân-jī-hû (tâi-uân), khang-pe̍h (tâi uân) iah-sī bô hun-keh (tâiuân). Āu nn̄g tsióng khin-siann -- kái iōng ·.", "poj": "Im-chiat tiong-kan iōng liân-jī-hû (tâi-oân), khang-pe̍h (tâi oân) iah-sī bô hun-keh (tâioân). Āu nn̄g chióng khin-siaⁿ -- kái iōng ·.", "en": "Syllables are separated by a hyphen (tâi-uân), a space (tâi uân), or nothing (tâiuân). With the last two, the neutral-tone -- becomes ·.", "ja": "音節の区切り：ハイフン（tâi-uân）、スペース（tâi uân）、なし（tâiuân）。後の二つでは軽声 -- は · になります。" }
     },
     "candidateWindow": {
       "comment": "Toggle label on the desktop General pane: show the candidate window at all. Off = no window, Space / Enter write the typed romanization (S33).",
@@ -169,7 +169,7 @@
     "toolbarAutoCollapseInfo": {
       "comment": "Help text for the auto-hide-toolbar toggle.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "選字了後工具列會自動合起來，予齒盤面頂空間較大。", "tailo": "Suán jī liáu-āu kang-khū-lia̍t huē tsū-tōng ha̍p--khí-lâi, hōo khí-puânn bīn-tíng khang-king khah-tōa.", "poj": "Soán jī liáu-āu kang-khū-lia̍t hōe chū-tōng ha̍p--khí-lâi, hō͘ khí-pôaⁿ bīn-téng khang-keng khah-tōa.", "en": "After you pick a word, the toolbar collapses automatically to give the keyboard more room.", "ja": "単語を選ぶとツールバーが自動的に閉じ、キーボードの表示領域が広くなります。" }
+      "values": { "hanji": "予齒盤面頂空間較大。", "tailo": "Hōo khí-puânn bīn-tíng khang-king khah-tōa.", "poj": "Hō͘ khí-pôaⁿ bīn-téng khang-keng khah-tōa.", "en": "Gives the keyboard more room.", "ja": "キーボードの表示領域が広くなります。" }
     },
     "globeKey": {
       "comment": "Toggle label: show the globe / keyboard-switch key.",
@@ -209,7 +209,7 @@
     "nasalMarkerUppercase": {
       "comment": "Picker label: how the POJ nasal marker is written in capitals — the stored switch, true = ᴺ (nasalMarkerUppercaseCapital, the default), false = ⁿ (nasalMarkerUppercaseSmall). All five platforms, host settings only.",
       "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host"] },
-      "values": { "hanji": "白話字大本字的鼻音符號輸出", "tailo": "Pe̍h-uē-jī tuā-pún-jī ê phīnn-im hû-hō su-tshut", "poj": "Pe̍h-ōe-jī tōa-pún-jī ê phīⁿ-im hû-hō su-chhut", "en": "Nasal mark in POJ capitals", "ja": "白話字の大文字での鼻音記号" }
+      "values": { "hanji": "白話字大本鼻音", "tailo": "Pe̍h-uē-jī tuā-pún phīnn-im", "poj": "Pe̍h-ōe-jī tōa-pún phīⁿ-im", "en": "Nasal mark in POJ capitals", "ja": "白話字の大文字での鼻音記号" }
     },
     "nasalMarkerUppercaseCapital": {
       "comment": "Picker value (default): in capitals the nasal marker follows the letters before it, ᴺ (SIÂᴺ).",
@@ -232,14 +232,14 @@
       "values": { "hanji": "開啟時 or 顯示做 ㄜ，關閉時顯示做 ㄛ。袂影響揣詞結果。", "tailo": "Phah-khui sî or hián-sī tsò ㄜ, kuainn--khí-lâi sî hián-sī tsò ㄛ. Buē íng-hióng tshuē sû kiat-kó.", "poj": "Phah-khui sî or hián-sī chò ㄜ, koaiⁿ--khí-lâi sî hián-sī chò ㄛ. Bōe éng-hióng chhōe sû kiat-kó.", "en": "When on, 'or' appears as ㄜ; when off, as ㄛ. Search results are unaffected.", "ja": "オンでは「or」を ㄜ、オフでは ㄛ と表示します。検索結果には影響しません。" }
     },
     "resetSettings": {
-      "comment": "Destructive action row + dialog title: reset all settings and delete frequency/association records; custom words are preserved.",
+      "comment": "Destructive action row + dialog title: reset all settings and delete the learning records (frequency, association, learned phrases); custom words are preserved.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "恢復設定佮使用紀錄", "tailo": "Hue-ho̍k siat-tīng kah sú-iōng kì-lio̍k", "poj": "Hoe-ho̍k siat-tēng kah sú-iōng kì-lio̍k", "en": "Reset Settings and Usage Records", "ja": "設定と利用記録をリセット" }
+      "values": { "hanji": "恢復設定佮學習紀錄", "tailo": "Hue-ho̍k siat-tīng kah ha̍k-si̍p kì-lio̍k", "poj": "Hoe-ho̍k siat-tēng kah ha̍k-si̍p kì-lio̍k", "en": "Reset Settings and Learning Records", "ja": "設定と学習記録をリセット" }
     },
     "resetSettingsMessage": {
-      "comment": "Confirmation-dialog body for resetting settings and deleting frequency/association records; explicitly states that custom words are preserved.",
+      "comment": "Confirmation-dialog body for resetting settings and deleting the learning records; explicitly states that custom words are preserved.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "這會恢復所有設定，嘛會刪除詞頻佮詞關聯紀錄。自訂詞會保留。敢欲繼續？", "tailo": "Tse ē hue-ho̍k sóo-iú siat-tīng, mā ē san-tû sû pîn kah sû kuan-liân kì-lio̍k. Tsū-tīng-sû ē pó-liû. Kám beh kè-sio̍k?", "poj": "Che ē hoe-ho̍k só͘-iú siat-tēng, mā ē san-tû sû pîn kah sû koan-liân kì-lio̍k. Chū-tēng-sû ē pó-liû. Kám beh kè-sio̍k?", "en": "This resets all settings and deletes frequency and association records. Custom words are kept. Continue?", "ja": "すべての設定をリセットし、単語頻度と単語連携の記録を削除します。カスタム単語は保持されます。続けますか？" }
+      "values": { "hanji": "這會恢復所有設定，嘛會刪除學習紀錄。自訂詞會保留。敢欲繼續？", "tailo": "Tse ē hue-ho̍k sóo-iú siat-tīng, mā ē san-tû ha̍k-si̍p kì-lio̍k. Tsū-tīng-sû ē pó-liû. Kám beh kè-sio̍k?", "poj": "Che ē hoe-ho̍k só͘-iú siat-tēng, mā ē san-tû ha̍k-si̍p kì-lio̍k. Chū-tēng-sû ē pó-liû. Kám beh kè-sio̍k?", "en": "This resets all settings and deletes the learning records. Custom words are kept. Continue?", "ja": "すべての設定をリセットし、学習記録を削除します。カスタム単語は保持されます。続けますか？" }
     },
     "resetSuccess": {
       "comment": "Toast shown after settings were reset successfully.",

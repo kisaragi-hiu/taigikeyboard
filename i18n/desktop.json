@@ -1235,9 +1235,9 @@
         "latest": "string"
       },
       "values": {
-        "hanji": "台語齒盤 {latest} 會使下載矣。",
-        "tailo": "Tâi-gí khí-puânn {latest} ē-sái hā-tsài--ah.",
-        "poj": "Tâi-gí khí-pôaⁿ {latest} ē-sái hā-chài--ah.",
+        "hanji": "台語齒盤 {latest} 會使 táng-lóo。",
+        "tailo": "Tâi-gí khí-puânn {latest} ē-sái táng-lóo.",
+        "poj": "Tâi-gí khí-pôaⁿ {latest} ē-sái táng-ló͘.",
         "en": "TaigiKeyboard {latest} is available for download.",
         "ja": "台語キーボード {latest} がダウンロードできます。"
       }
@@ -1255,9 +1255,9 @@
         ]
       },
       "values": {
-        "hanji": "去下載",
-        "tailo": "Khì hā-tsài",
-        "poj": "Khì hā-chài",
+        "hanji": "去 táng-lóo",
+        "tailo": "Khì táng-lóo",
+        "poj": "Khì táng-ló͘",
         "en": "Download",
         "ja": "ダウンロード"
       }
@@ -1450,9 +1450,9 @@
         ]
       },
       "values": {
-        "hanji": "下載安裝",
-        "tailo": "Hā-tsài an-tsong",
-        "poj": "Hā-chài an-chong",
+        "hanji": "Táng-lóo 安裝",
+        "tailo": "Táng-lóo an-tsong",
+        "poj": "Táng-ló͘ an-chong",
         "en": "Download and Install",
         "ja": "ダウンロードしてインストール"
       }

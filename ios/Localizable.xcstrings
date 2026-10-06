@@ -560,19 +560,19 @@
       }
     },
     "i18n_dictionary_backupPrivacyWarning": {
-      "comment": "Privacy note that backup files contain all usage records and are cross-platform.",
+      "comment": "Privacy note that backup files contain all usage records.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "A backup contains your custom words, frequency records, and association records. You can import it on iOS or Android. Store the file securely because it may contain private content."
+            "value": "A backup contains your custom words, frequency records, and association records, which may be private. Store it securely."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "バックアップには、カスタム単語、単語頻度、単語連携の記録が含まれます。iOS と Android のどちらでもインポートできます。個人的な内容が含まれる場合があるため、安全に保管してください。"
+            "value": "バックアップには、カスタム単語、単語頻度、単語連携の記録が含まれ、個人的な内容が含まれる場合があります。安全に保管してください。"
           }
         }
       }
@@ -883,24 +883,6 @@
         }
       }
     },
-    "i18n_dictionary_exportBackupSuccess": {
-      "comment": "Toast/dialog confirming the full backup exported successfully.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Backup exported successfully"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "バックアップをエクスポートしました"
-          }
-        }
-      }
-    },
     "i18n_dictionary_exportCSV": {
       "comment": "Button: export the custom dictionary to a CSV file.",
       "extractionState": "manual",
@@ -920,19 +902,19 @@
       }
     },
     "i18n_dictionary_exportSuccess": {
-      "comment": "Toast/dialog confirming the custom dictionary exported successfully.",
+      "comment": "Toast/dialog confirming an export finished (custom dictionary CSV or full backup).",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "CSV exported successfully"
+            "value": "Export Complete"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "CSV をエクスポートしました"
+            "value": "エクスポートが完了しました"
           }
         }
       }
@@ -962,13 +944,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The list shows the first 100 records. Use the \"Type to search\" field below to find other records."
+            "value": "The list shows the first 100 records. Use \"Type to search\" for the rest."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "一覧には先頭の 100 件だけを表示します。ほかの記録は、下の「入力して検索」で検索してください。"
+            "value": "一覧には先頭の 100 件だけを表示します。ほかは「入力して検索」で検索してください。"
           }
         }
       }
@@ -1531,8 +1513,26 @@
         }
       }
     },
-    "i18n_dictionary_learningRecordsEditQuantity": {
-      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records), mobile. Title of the dialog that edits one row's count.",
+    "i18n_dictionary_learningRecordsCount": {
+      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). Column header / field label: the stored count the user can edit.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Count"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "回数"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_learningRecordsEditCount": {
+      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). Dialog title / button tooltip for editing one row's count.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -1671,24 +1671,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "フレーズ"
-          }
-        }
-      }
-    },
-    "i18n_dictionary_learningRecordsQuantity": {
-      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records), mobile. Row label and edit-dialog field label: the stored count the user can edit.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Count"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "回数"
           }
         }
       }
@@ -2600,13 +2582,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Steps may differ slightly between phone brands, but the overall process is much the same."
+            "value": "Steps may differ slightly between phone brands."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "スマートフォンのメーカーによって設定方法が少し異なる場合がありますが、大まかな流れはほぼ同じです。"
+            "value": "スマートフォンのメーカーによって設定方法が少し異なる場合があります。"
           }
         }
       }
@@ -2654,13 +2636,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Your phone requires third-party keyboards to be enabled manually. Follow the steps below to finish setup."
+            "value": "Third-party keyboards must be enabled manually. Follow the steps below."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "スマートフォンの仕様上、サードパーティ製キーボードは手動で有効にする必要があります。下記の手順に従って設定を完了してください。"
+            "value": "サードパーティ製キーボードは手動で有効にする必要があります。下記の手順に従ってください。"
           }
         }
       }
@@ -3854,37 +3836,37 @@
       }
     },
     "i18n_settings_resetSettings": {
-      "comment": "Destructive action row + dialog title: reset all settings and delete frequency/association records; custom words are preserved.",
+      "comment": "Destructive action row + dialog title: reset all settings and delete the learning records (frequency, association, learned phrases); custom words are preserved.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Reset Settings and Usage Records"
+            "value": "Reset Settings and Learning Records"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "設定と利用記録をリセット"
+            "value": "設定と学習記録をリセット"
           }
         }
       }
     },
     "i18n_settings_resetSettingsMessage": {
-      "comment": "Confirmation-dialog body for resetting settings and deleting frequency/association records; explicitly states that custom words are preserved.",
+      "comment": "Confirmation-dialog body for resetting settings and deleting the learning records; explicitly states that custom words are preserved.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This resets all settings and deletes frequency and association records. Custom words are kept. Continue?"
+            "value": "This resets all settings and deletes the learning records. Custom words are kept. Continue?"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "すべての設定をリセットし、単語頻度と単語連携の記録を削除します。カスタム単語は保持されます。続けますか？"
+            "value": "すべての設定をリセットし、学習記録を削除します。カスタム単語は保持されます。続けますか？"
           }
         }
       }
@@ -3932,13 +3914,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "How candidates and committed romanization separate syllables: a hyphen (tâi-uân), a space (tâi uân), or nothing (tâiuân). With a space or nothing, the neutral-tone marker -- becomes · (hōo ·guá, hōo·guá)."
+            "value": "Syllables are separated by a hyphen (tâi-uân), a space (tâi uân), or nothing (tâiuân). With the last two, the neutral-tone -- becomes ·."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "候補と確定するローマ字の音節の区切り方：ハイフン（tâi-uân）、スペース（tâi uân）、なし（tâiuân）。スペースまたはなしの場合、軽声記号 -- は · になります（hōo ·guá、hōo·guá）。"
+            "value": "音節の区切り：ハイフン（tâi-uân）、スペース（tâi uân）、なし（tâiuân）。後の二つでは軽声 -- は · になります。"
           }
         }
       }
@@ -4022,13 +4004,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "After you pick a word, the toolbar collapses automatically to give the keyboard more room."
+            "value": "Gives the keyboard more room."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "単語を選ぶとツールバーが自動的に閉じ、キーボードの表示領域が広くなります。"
+            "value": "キーボードの表示領域が広くなります。"
           }
         }
       }

@@ -402,7 +402,7 @@
       }
     },
     "exportSuccess": {
-      "comment": "Toast/dialog confirming the custom dictionary exported successfully.",
+      "comment": "Toast/dialog confirming an export finished (custom dictionary CSV or full backup).",
       "scope": {
         "platforms": [
           "android",
@@ -413,11 +413,11 @@
         ]
       },
       "values": {
-        "hanji": "CSV 順利匯出",
-        "tailo": "CSV sūn-lī huē-tshut",
-        "poj": "CSV sūn-lī hōe-chhut",
-        "en": "CSV exported successfully",
-        "ja": "CSV をエクスポートしました"
+        "hanji": "匯出完成",
+        "tailo": "Huē-tshut uân-sîng",
+        "poj": "Hōe-chhut oân-sêng",
+        "en": "Export Complete",
+        "ja": "エクスポートが完了しました"
       }
     },
     "importResult": {
@@ -974,11 +974,11 @@
         ]
       },
       "values": {
-        "hanji": "清單干焦顯示頭 100 項。欲揣其他紀錄，請用下跤 ê「揣字」。",
-        "tailo": "Tshing-tuann kan-ta hián-sī thâu 100 hāng. Beh tshuē kî-thann kì-lio̍k, tshiánn iōng ē-kha ê \"tshuē jī\".",
-        "poj": "Chheng-toaⁿ kan-ta hián-sī thâu 100 hāng. Beh chhōe kî-thaⁿ kì-lio̍k, chhiáⁿ iōng ē-kha ê \"chhōe jī\".",
-        "en": "The list shows the first 100 records. Use the \"Type to search\" field below to find other records.",
-        "ja": "一覧には先頭の 100 件だけを表示します。ほかの記録は、下の「入力して検索」で検索してください。"
+        "hanji": "清單干焦顯示頭 100 項，其他請用「揣字」。",
+        "tailo": "Tshing-tuann kan-ta hián-sī thâu 100 hāng, kî-thann tshiánn iōng \"tshuē jī\".",
+        "poj": "Chheng-toaⁿ kan-ta hián-sī thâu 100 hāng, kî-thaⁿ chhiáⁿ iōng \"chhōe jī\".",
+        "en": "The list shows the first 100 records. Use \"Type to search\" for the rest.",
+        "ja": "一覧には先頭の 100 件だけを表示します。ほかは「入力して検索」で検索してください。"
       }
     },
     "backupRestore": {
@@ -1038,25 +1038,6 @@
         "ja": "すべてを一括インポート"
       }
     },
-    "exportBackupSuccess": {
-      "comment": "Toast/dialog confirming the full backup exported successfully.",
-      "scope": {
-        "platforms": [
-          "android",
-          "ios"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "備份順利匯出",
-        "tailo": "Pī-hūn sūn-lī huē-tshut",
-        "poj": "Pī-hūn sūn-lī hōe-chhut",
-        "en": "Backup exported successfully",
-        "ja": "バックアップをエクスポートしました"
-      }
-    },
     "importBackupResult": {
       "comment": "Backup-import result message: counts of custom-dictionary, frequency, and association records imported.",
       "scope": {
@@ -1082,7 +1063,7 @@
       }
     },
     "backupPrivacyWarning": {
-      "comment": "Privacy note that backup files contain all usage records and are cross-platform.",
+      "comment": "Privacy note that backup files contain all usage records.",
       "scope": {
         "platforms": [
           "android",
@@ -1093,11 +1074,11 @@
         ]
       },
       "values": {
-        "hanji": "備份檔案包含自訂詞、詞頻佮詞關聯紀錄，會當佇 iOS 佮 Android 匯入。檔案可能包含私人內容，請妥當保管。",
-        "tailo": "Pī-hūn tòng-àn pau-hâm tsū-tīng-sû, sû pîn kah sû kuan-liân kì-lio̍k, ē-tàng tī iOS kah Android huē-ji̍p. Tòng-àn khó-lîng pau-hâm su-jîn luē-iông, tshiánn thò-tòng pó-kuán.",
-        "poj": "Pī-hūn tòng-àn pau-hâm chū-tēng-sû, sû pîn kah sû koan-liân kì-lio̍k, ē-tàng tī iOS kah Android hōe-ji̍p. Tòng-àn khó-lêng pau-hâm su-jîn lōe-iông, chhiáⁿ thò-tòng pó-koán.",
-        "en": "A backup contains your custom words, frequency records, and association records. You can import it on iOS or Android. Store the file securely because it may contain private content.",
-        "ja": "バックアップには、カスタム単語、単語頻度、単語連携の記録が含まれます。iOS と Android のどちらでもインポートできます。個人的な内容が含まれる場合があるため、安全に保管してください。"
+        "hanji": "備份包含自訂詞、詞頻佮詞關聯紀錄，可能有私人內容，請妥當保管。",
+        "tailo": "Pī-hūn pau-hâm tsū-tīng-sû, sû pîn kah sû kuan-liân kì-lio̍k, khó-lîng ū su-jîn luē-iông, tshiánn thò-tòng pó-kuán.",
+        "poj": "Pī-hūn pau-hâm chū-tēng-sû, sû pîn kah sû koan-liân kì-lio̍k, khó-lêng ū su-jîn lōe-iông, chhiáⁿ thò-tòng pó-koán.",
+        "en": "A backup contains your custom words, frequency records, and association records, which may be private. Store it securely.",
+        "ja": "バックアップには、カスタム単語、単語頻度、単語連携の記録が含まれ、個人的な内容が含まれる場合があります。安全に保管してください。"
       }
     },
     "moeDescription": {
@@ -1582,9 +1563,9 @@
         ]
       },
       "values": {
-        "hanji": "學習紀錄刪掉矣",
-        "tailo": "Ha̍k-si̍p kì-lio̍k thâi-tiāu ah",
-        "poj": "Ha̍k-si̍p kì-lio̍k thâi-tiāu ah",
+        "hanji": "學習紀錄已經刪掉",
+        "tailo": "Ha̍k-si̍p kì-lio̍k í-king thâi-tiāu",
+        "poj": "Ha̍k-si̍p kì-lio̍k í-keng thâi-tiāu",
         "en": "Learning Records Cleared",
         "ja": "学習記録を消去しました"
       }
@@ -1604,9 +1585,9 @@
         ]
       },
       "values": {
-        "hanji": "學習紀錄刪袂掉",
-        "tailo": "Ha̍k-si̍p kì-lio̍k thâi bē tiāu",
-        "poj": "Ha̍k-si̍p kì-lio̍k thâi bē tiāu",
+        "hanji": "學習紀錄刪失敗",
+        "tailo": "Ha̍k-si̍p kì-lio̍k thâi sit-pāi",
+        "poj": "Ha̍k-si̍p kì-lio̍k thâi sit-pāi",
         "en": "Could Not Clear Learning Records",
         "ja": "学習記録を消去できませんでした"
       }
@@ -1648,9 +1629,9 @@
         ]
       },
       "values": {
-        "hanji": "詞頻統計",
-        "tailo": "Sû-pîn thóng-kè",
-        "poj": "Sû-pîn thóng-kè",
+        "hanji": "詞頻紀錄",
+        "tailo": "Sû-pîn kì-lio̍k",
+        "poj": "Sû-pîn kì-lio̍k",
         "en": "Word Frequency",
         "ja": "単語頻度"
       }
@@ -1670,17 +1651,19 @@
         ]
       },
       "values": {
-        "hanji": "拍字記持",
-        "tailo": "Phah-jī kì-tî",
-        "poj": "Phah-jī kì-tî",
+        "hanji": "詞句紀錄",
+        "tailo": "Sû-kù kì-lio̍k",
+        "poj": "Sû-kù kì-lio̍k",
         "en": "Phrases",
         "ja": "フレーズ"
       }
     },
     "learningRecordsCount": {
-      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). Column header / field label: the stored count the user can edit. Mobile uses learningRecordsQuantity.",
+      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). Column header / field label: the stored count the user can edit.",
       "scope": {
         "platforms": [
+          "android",
+          "ios",
           "macos",
           "windows",
           "linux"
@@ -1690,9 +1673,9 @@
         ]
       },
       "values": {
-        "hanji": "擺數",
-        "tailo": "Pái-sòo",
-        "poj": "Pái-sò͘",
+        "hanji": "數量",
+        "tailo": "Sòo-liōng",
+        "poj": "Sò͘-liōng",
         "en": "Count",
         "ja": "回数"
       }
@@ -1808,9 +1791,11 @@
       }
     },
     "learningRecordsEditCount": {
-      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). Dialog title / button tooltip for editing one row's count. Mobile uses learningRecordsEditQuantity.",
+      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). Dialog title / button tooltip for editing one row's count.",
       "scope": {
         "platforms": [
+          "android",
+          "ios",
           "macos",
           "windows",
           "linux"
@@ -1820,9 +1805,9 @@
         ]
       },
       "values": {
-        "hanji": "改擺數",
-        "tailo": "Kái pái-sòo",
-        "poj": "Kái pái-sò͘",
+        "hanji": "改數量",
+        "tailo": "Kái sòo-liōng",
+        "poj": "Kái sò͘-liōng",
         "en": "Edit Count",
         "ja": "回数を編集"
       }
@@ -1840,49 +1825,11 @@
         ]
       },
       "values": {
-        "hanji": "擺數超過 40，排序就攏仝款。",
-        "tailo": "Pái-sòo tshiau-kuè 40, pâi-sū tō lóng kāng-khuán.",
-        "poj": "Pái-sò͘ chhiau-kòe 40, pâi-sū tō lóng kāng-khoán.",
+        "hanji": "數量超過 40，排序就攏仝款。",
+        "tailo": "Sòo-liōng tshiau-kuè 40, pâi-sū tō lóng kāng-khuán.",
+        "poj": "Sò͘-liōng chhiau-kòe 40, pâi-sū tō lóng kāng-khoán.",
         "en": "Counts above 40 rank the same.",
         "ja": "40 回を超えると順位は変わりません。"
-      }
-    },
-    "learningRecordsQuantity": {
-      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records), mobile. Row label and edit-dialog field label: the stored count the user can edit.",
-      "scope": {
-        "platforms": [
-          "android",
-          "ios"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "數量",
-        "tailo": "Sòo-liōng",
-        "poj": "Sò͘-liōng",
-        "en": "Count",
-        "ja": "回数"
-      }
-    },
-    "learningRecordsEditQuantity": {
-      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records), mobile. Title of the dialog that edits one row's count.",
-      "scope": {
-        "platforms": [
-          "android",
-          "ios"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "改數量",
-        "tailo": "Kái sòo-liōng",
-        "poj": "Kái sò͘-liōng",
-        "en": "Edit Count",
-        "ja": "回数を編集"
       }
     },
     "learningRecordGone": {
@@ -1900,9 +1847,9 @@
         ]
       },
       "values": {
-        "hanji": "這筆紀錄已經無去矣",
-        "tailo": "Tsit pit kì-lio̍k í-king bô--khì ah",
-        "poj": "Chit pit kì-lio̍k í-keng bô--khì ah",
+        "hanji": "這項紀錄已經無去",
+        "tailo": "Tsit hāng kì-lio̍k í-king bô--khì",
+        "poj": "Chit hāng kì-lio̍k í-keng bô--khì",
         "en": "This Record Is No Longer Stored",
         "ja": "この記録はもうありません"
       }
@@ -1944,9 +1891,9 @@
         ]
       },
       "values": {
-        "hanji": "學習紀錄改袂好",
-        "tailo": "Ha̍k-si̍p kì-lio̍k kái bē hó",
-        "poj": "Ha̍k-si̍p kì-lio̍k kái bē hó",
+        "hanji": "學習紀錄改失敗",
+        "tailo": "Ha̍k-si̍p kì-lio̍k kái sit-pāi",
+        "poj": "Ha̍k-si̍p kì-lio̍k kái sit-pāi",
         "en": "Could Not Change the Learning Record",
         "ja": "学習記録を変更できませんでした"
       }
@@ -1988,9 +1935,9 @@
         ]
       },
       "values": {
-        "hanji": "加入自訂詞庫矣",
-        "tailo": "Ka-ji̍p tsū-tīng-sû-khòo ah",
-        "poj": "Ka-ji̍p chū-tēng-sû-khò͘ ah",
+        "hanji": "已經加入自訂詞庫",
+        "tailo": "Í-king ka-ji̍p tsū-tīng-sû-khòo",
+        "poj": "Í-keng ka-ji̍p chū-tēng-sû-khò͘",
         "en": "Added to Custom Dictionary",
         "ja": "カスタム辞書に追加しました"
       }

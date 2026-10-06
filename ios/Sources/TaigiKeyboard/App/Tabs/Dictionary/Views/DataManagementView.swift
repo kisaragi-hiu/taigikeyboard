@@ -75,7 +75,7 @@ struct DataManagementView: View {
         .alert(lang.string(.dictionaryExportBackup), isPresented: $showExportSuccessAlert) {
             Button(lang.string(.commonOk)) {}
         } message: {
-            Text(lang.string(.dictionaryExportBackupSuccess))
+            Text(lang.string(.dictionaryExportSuccess))
         }
         .alert(lang.string(.dictionaryImportBackup), isPresented: $showBackupResultAlert) {
             Button(lang.string(.commonOk)) {}

@@ -262,7 +262,7 @@ private fun RecordRow(
     val lastUsed = learningRecordLastUsedLabel(record.lastUsedMs)
     val usage =
         buildString {
-            append("${L10n.dictionaryLearningRecordsQuantity} ${record.count}")
+            append("${L10n.dictionaryLearningRecordsCount} ${record.count}")
             if (lastUsed.isNotEmpty()) append(" · ${L10n.dictionaryLearningRecordsLastUsed} $lastUsed")
         }
     Row(
@@ -357,7 +357,7 @@ private fun EditCountDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(L10n.dictionaryLearningRecordsEditQuantity) },
+        title = { Text(L10n.dictionaryLearningRecordsEditCount) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Column {
@@ -373,7 +373,7 @@ private fun EditCountDialog(
                 OutlinedTextField(
                     value = countText,
                     onValueChange = { typed -> countText = typed.filter(Char::isDigit).take(MAX_LEARNING_RECORD_COUNT.toString().length) },
-                    label = { Text(L10n.dictionaryLearningRecordsQuantity) },
+                    label = { Text(L10n.dictionaryLearningRecordsCount) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
