@@ -119,8 +119,11 @@ struct EngineUserDataClient: UserDataClient {
     /// The page requests, off the main actor. A GCD queue rather than a task
     /// per request: a request can wait on SQLite — right after launch on the
     /// engine finishing its takeover — and that wait must not hold a thread of
-    /// the shared pool.
-    private static let requests = DispatchQueue(label: "EngineUserDataClient.requests", qos: .userInitiated)
+    /// the shared pool. `.default`, the QoS of the engine's own store threads
+    /// that answer it (`engine/userdata` `database.rs` worker, `handle.rs` open
+    /// thread): a higher-QoS queue blocked on them is a priority inversion
+    /// (Thread Performance Checker, `thread_parking/darwin.rs`).
+    private static let requests = DispatchQueue(label: "EngineUserDataClient.requests", qos: .default)
 
     /// The largest file an import reads. CROSS-PLATFORM INVARIANT — the engine
     /// refuses the same size (`engine/userdata/src/csv.rs`); checked on this
