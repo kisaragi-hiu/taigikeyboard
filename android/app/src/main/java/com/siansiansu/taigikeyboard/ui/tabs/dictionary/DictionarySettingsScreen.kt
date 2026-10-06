@@ -2,9 +2,7 @@ package com.siansiansu.taigikeyboard.ui.tabs.dictionary
 
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -37,7 +35,6 @@ import com.siansiansu.taigikeyboard.ui.components.FilterSearchBar
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
-import com.siansiansu.taigikeyboard.ui.theme.SectionHeader
 
 private const val MAX_VISIBLE_SEARCH_RESULTS = 5
 private val SEARCH_RESULTS_MAX_HEIGHT = 200.dp
@@ -101,14 +98,7 @@ fun DictionarySettingsScreen(
                         onClick = onManageDictionaries,
                         trailingIcon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     )
-                }
-
-                Spacer(Modifier.height(24.dp))
-
-                // Keyboard data
-                SectionHeader(L10n.dictionaryDataManagement)
-
-                SettingsCard {
+                    SettingsDivider()
                     ActionRow(
                         label = L10n.dictionaryCustomDictionary,
                         onClick = onCustomDictionary,

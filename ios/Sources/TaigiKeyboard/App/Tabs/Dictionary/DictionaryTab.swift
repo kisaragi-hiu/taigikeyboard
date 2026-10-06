@@ -22,10 +22,6 @@ struct DictionaryTab: View {
                     NavigationLink(destination: DictionarySourcesView()) {
                         Text(lang.string(.desktopDictionarySourcesLink))
                     }
-                }
-
-                // Keyboard data
-                Section {
                     NavigationLink(destination: CustomDictionaryView()) {
                         Text(lang.string(.dictionaryCustomDictionary))
                     }
@@ -35,9 +31,6 @@ struct DictionaryTab: View {
                     NavigationLink(destination: DataManagementView()) {
                         Text(lang.string(.dictionaryBackupRestore))
                     }
-                } header: {
-                    Text(lang.string(.dictionaryDataManagement))
-                        .font(AppStyle.sectionHeaderFont)
                 }
             }
             .navigationTitle(lang.string(TabType.dictionary.titleKey))

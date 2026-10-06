@@ -757,24 +757,6 @@
         }
       }
     },
-    "i18n_dictionary_dataManagement": {
-      "comment": "Section title for keyboard-data management (custom words, learning records, backup/import/export); the Dictionary tab lists it under the Manage Dictionaries row.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Keyboard Data"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "キーボードデータ"
-          }
-        }
-      }
-    },
     "i18n_dictionary_deleteAll": {
       "comment": "Destructive action: delete all custom-dictionary entries.",
       "extractionState": "manual",

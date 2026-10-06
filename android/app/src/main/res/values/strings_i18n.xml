@@ -36,7 +36,6 @@
     <string name="i18n_dictionary_customDictionary">自訂詞庫</string>
     <string name="i18n_dictionary_customDictEnabled">啟用自訂詞庫</string>
     <string name="i18n_dictionary_customDictEnabledInfo">拍開了後，自訂詞會出現佇候選詞內底。</string>
-    <string name="i18n_dictionary_dataManagement">使用資料</string>
     <string name="i18n_dictionary_variantDictionary">異用字</string>
     <string name="i18n_dictionary_khiin">在來字</string>
     <string name="i18n_dictionary_customDictDescription">自訂詞庫使用 CSV 純文字檔案，第 1 欄囥欲拍 ê 羅馬字，第 2 欄囥漢字，毋免囥標題。</string>
