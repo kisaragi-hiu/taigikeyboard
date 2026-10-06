@@ -150,11 +150,20 @@ final class LearningRecordsViewModel: ObservableObject {
     }
 
     func setCount(_ record: Taigi_Engine_LearningRecord, to count: Int64) async {
-        await write { try await $0.setLearningRecordCount(record, count: count) }
+        await write { try await $0.setLearningRecordCount(record, count: count) ? nil : .gone }
     }
 
     func delete(_ record: Taigi_Engine_LearningRecord) async {
-        await write { try await $0.deleteLearningRecord(record) }
+        await write { try await $0.deleteLearningRecord(record) ? nil : .gone }
+    }
+
+    /// Files the learned phrase as a custom word and forgets it; the reload
+    /// drops its row. A refusal keeps the phrase and says why.
+    func moveToCustomDictionary(_ record: Taigi_Engine_LearningRecord) async {
+        await write {
+            try await $0.moveLearningRecordToCustomDictionary(record)
+            return .moved
+        }
     }
 
     /// The count the edit alert's field holds: a whole number in
@@ -168,12 +177,13 @@ final class LearningRecordsViewModel: ObservableObject {
 
     // MARK: - Loading
 
-    /// Every write reloads: the row moved, went, or was never there. A row
-    /// already gone is said, not reported as a failure.
-    private func write(_ change: (any UserDataClient) async throws -> Bool) async {
+    /// Every write reloads: the row moved, went, or was never there. `change`
+    /// answers the notice its outcome earns (a row already gone is said, not
+    /// reported as a failure), or `nil` for none.
+    private func write(_ change: (any UserDataClient) async throws -> LearningRecordsNotice?) async {
         do {
-            if try await !change(userData) {
-                notice = .gone
+            if let outcome = try await change(userData) {
+                notice = outcome
             }
         } catch {
             notice = .writeFailed(detail: error.localizedDescription)
@@ -258,6 +268,8 @@ enum LearningRecordsNotice: Equatable {
     case writeFailed(detail: String)
     /// An edit or delete found the row deleted, evicted, or its id taken.
     case gone
+    /// A learned phrase was filed in the custom dictionary and forgotten here.
+    case moved
 }
 
 extension Taigi_Engine_LearningRecord {

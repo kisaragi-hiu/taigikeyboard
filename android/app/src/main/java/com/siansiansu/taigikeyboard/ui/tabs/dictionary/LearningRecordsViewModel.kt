@@ -51,13 +51,16 @@ sealed interface LearningRecordsMessage {
         val detail: String,
     ) : LearningRecordsMessage
 
-    /** A count edit or a delete failed. */
+    /** A count edit, a delete or a move failed — a move the engine refused included. */
     data class WriteFailed(
         val detail: String,
     ) : LearningRecordsMessage
 
     /** The row was no longer stored (deleted, evicted, its id reused) — said, not a failure. */
     data object Gone : LearningRecordsMessage
+
+    /** The learned phrase is in the custom dictionary now, and gone from this list. */
+    data object Moved : LearningRecordsMessage
 }
 
 data class LearningRecordsState(
@@ -148,10 +151,17 @@ class LearningRecordsViewModel internal constructor(
     fun setCount(
         record: LearningRecord,
         count: Long,
-    ) = write { userData.setLearningRecordCount(record, count) != null }
+    ) = write { goneUnless(userData.setLearningRecordCount(record, count) != null) }
 
     /** No confirmation, like deleting one custom word: the keyboard learns the row again on the next pick. */
-    fun delete(record: LearningRecord) = write { userData.deleteLearningRecord(record) }
+    fun delete(record: LearningRecord) = write { goneUnless(userData.deleteLearningRecord(record)) }
+
+    /** Phrases only — a frequency row keeps weighting its word; a refusal keeps the row and is said. */
+    fun moveToCustomDictionary(record: LearningRecord) =
+        write {
+            userData.moveLearningRecordToCustomDictionary(record)
+            LearningRecordsMessage.Moved
+        }
 
     /**
      * Reads the rows listed so far again from the first, one engine page at a
@@ -167,14 +177,14 @@ class LearningRecordsViewModel internal constructor(
     }
 
     /**
-     * Runs [request] — `false` when the row was gone — then reads every row
-     * loaded so far again: the row moved, went, or was never there.
+     * Runs [request] — answering the message to show, if any — then reads
+     * every row loaded so far again: the row moved, went, or was never there.
      */
-    private fun write(request: suspend () -> Boolean) {
+    private fun write(request: suspend () -> LearningRecordsMessage?) {
         viewModelScope.launch {
             val message =
                 try {
-                    if (request()) null else LearningRecordsMessage.Gone
+                    request()
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -271,6 +281,9 @@ class LearningRecordsViewModel internal constructor(
         }
     }
 }
+
+/** [LearningRecordsMessage.Gone] when the write found no stored row. */
+private fun goneUnless(isStored: Boolean): LearningRecordsMessage? = if (isStored) null else LearningRecordsMessage.Gone
 
 /**
  * The day a row was last used, `yyyy-MM-dd` in [zone] — the desktop's

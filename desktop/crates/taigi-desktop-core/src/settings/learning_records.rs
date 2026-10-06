@@ -89,20 +89,34 @@ pub fn fetch(
 
 /// Sets `record`'s count.
 pub fn set_count_job(record: LearningRecord, count: i64) -> JobOutcome {
-    applied(user_data::set_learning_record_count(record, count).map(|stored| stored.is_some()))
+    applied(
+        user_data::set_learning_record_count(record, count).map(|stored| stored.is_some()),
+        None,
+    )
 }
 
 /// Forgets `record`; the keyboard learns it again on the next pick.
 pub fn delete_job(record: LearningRecord) -> JobOutcome {
-    applied(user_data::delete_learning_record(record))
+    applied(user_data::delete_learning_record(record), None)
 }
 
-/// Every write reloads: the row moved, went, or was never there. A row
-/// already gone (deleted elsewhere, evicted, its id taken by another word)
-/// is said, not reported as a failure.
-fn applied(result: Result<bool, UserDataError>) -> JobOutcome {
+/// Makes the learned phrase `record` a custom word; the reload takes it off
+/// the list, so the receipt says where it went. The page offers this on the
+/// Phrases list only: a frequency row keeps weighting its word.
+pub fn move_to_custom_dictionary_job(record: LearningRecord) -> JobOutcome {
+    applied(
+        user_data::move_learning_record_to_custom_dictionary(record).map(|()| true),
+        Some(StringKey::DictionaryLearningRecordsMovedToCustomDictionary),
+    )
+}
+
+/// Every write reloads: the row moved, went, or was never there. A write
+/// that landed says `receipt`, when it has one; a row already gone (deleted
+/// elsewhere, evicted, its id taken by another word) is said, not reported
+/// as a failure.
+fn applied(result: Result<bool, UserDataError>, receipt: Option<StringKey>) -> JobOutcome {
     let message = match result {
-        Ok(true) => None,
+        Ok(true) => receipt.map(PageMessage::Done),
         Ok(false) => Some(PageMessage::Done(StringKey::DictionaryLearningRecordGone)),
         Err(error) => Some(PageMessage::failure(LearningRecord::WRITE_FAILED, error)),
     };
@@ -147,7 +161,7 @@ fn civil_date(days: i64) -> (i64, u32, u32) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::engine::user_data::UserDataPage;
+    use crate::engine::user_data::{CustomDictionaryRefusal, UserDataPage};
     use crate::settings::listing::LoadLanded;
 
     fn record(id: i64, text: &str) -> LearningRecord {
@@ -198,21 +212,53 @@ mod tests {
     }
 
     #[test]
+    fn a_move_says_it_landed_or_why_not_and_reloads() {
+        assert_eq!(
+            applied(
+                Ok(true),
+                Some(StringKey::DictionaryLearningRecordsMovedToCustomDictionary)
+            ),
+            JobOutcome {
+                message: Some(PageMessage::Done(
+                    StringKey::DictionaryLearningRecordsMovedToCustomDictionary
+                )),
+                is_reload_wanted: true
+            }
+        );
+        let refused = applied(
+            Err(UserDataError::Refused {
+                refusal: CustomDictionaryRefusal::Full,
+                detail: "custom dictionary is full (max 30000 entries)".to_owned(),
+            }),
+            Some(StringKey::DictionaryLearningRecordsMovedToCustomDictionary),
+        );
+        assert!(refused.is_reload_wanted);
+        assert_eq!(
+            refused.message,
+            Some(PageMessage::Failure {
+                title: StringKey::DictionaryLearningRecordsWriteFailed,
+                detail: "custom dictionary is full (max 30000 entries)".to_owned(),
+            })
+        );
+    }
+
+    #[test]
     fn a_write_reloads_and_says_a_missing_row_without_calling_it_a_failure() {
         assert_eq!(
-            applied(Ok(true)),
+            applied(Ok(true), None),
             JobOutcome {
                 message: None,
                 is_reload_wanted: true
             }
         );
         assert_eq!(
-            applied(Ok(false)).message,
+            applied(Ok(false), None).message,
             Some(PageMessage::Done(StringKey::DictionaryLearningRecordGone))
         );
-        let failed = applied(Err(UserDataError::EngineUnavailable(
-            "learningRecordDelete",
-        )));
+        let failed = applied(
+            Err(UserDataError::EngineUnavailable("learningRecordDelete")),
+            None,
+        );
         assert!(failed.is_reload_wanted);
         assert!(matches!(
             failed.message,

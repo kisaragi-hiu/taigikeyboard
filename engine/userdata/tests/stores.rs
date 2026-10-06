@@ -280,6 +280,40 @@ fn editing_the_romanization_drops_the_old_keys_and_deleting_removes_the_entry() 
     assert!(store.rows_matching(&query_key("goa", "tl"), 20).is_empty());
 }
 
+#[test]
+fn add_unless_stored_keeps_one_row_per_word_whatever_its_spelling() {
+    let directory = scratch();
+    let store = custom_store(&directory, Arc::new(derive_custom_search_keys), 3);
+    // trace: canonical_tl_form("góa", Tl) folds the POJ spelling to "guá"
+    // (`phonetics::api::canonical_tl_form` doc), so the stored POJ row IS 我/guá.
+    store
+        .upsert(&CustomDictionaryRow::new("góa", "我"))
+        .unwrap();
+    store
+        .add_unless_stored(&CustomDictionaryRow::new("guá", "我"))
+        .unwrap();
+    assert_eq!(store.count().unwrap(), 1, "the same word, spelled in POJ");
+
+    // Same Hanji, another reading (Core Principle #6): a second word.
+    store
+        .upsert(&CustomDictionaryRow::new("tāng", "重"))
+        .unwrap();
+    store
+        .add_unless_stored(&CustomDictionaryRow::new("tîng", "重"))
+        .unwrap();
+    assert_eq!(store.count().unwrap(), 3);
+
+    // Full: a new word is refused, a stored one is not.
+    assert!(matches!(
+        store.add_unless_stored(&CustomDictionaryRow::new("tâi-uân", "台灣")),
+        Err(CustomDictionaryError::CapacityReached { limit: 3 })
+    ));
+    store
+        .add_unless_stored(&CustomDictionaryRow::new("tîng", "重"))
+        .unwrap();
+    assert_eq!(store.count().unwrap(), 3);
+}
+
 // INVARIANT_CUSTOM_DICT_CAPACITY (behavioral-invariants.md §27)
 #[test]
 fn the_capacity_refuses_a_new_entry_but_never_an_edit() {

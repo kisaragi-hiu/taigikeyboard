@@ -110,6 +110,39 @@ final class LearningRecordsPageTests: XCTestCase {
         XCTAssertNil(model.message)
     }
 
+    /// The phrase lands in the custom dictionary, leaves this list, and the
+    /// move is said.
+    func testMoveToCustomDictionary_filesThePhraseAndReloadsWithoutIt() async throws {
+        let (model, client) = makeModel([record(.learnedPhrase, id: 1), record(.learnedPhrase, id: 2)])
+        model.kind = .learnedPhrase
+        await model.loadFirstPage()
+
+        try await model.moveToCustomDictionary(XCTUnwrap(model.list.rows.first { $0.id == 1 }))
+
+        XCTAssertEqual(model.message, .done(.dictionaryLearningRecordsMovedToCustomDictionary))
+        XCTAssertEqual(model.list.rows.map(\.id), [2])
+        XCTAssertEqual(model.list.countLabel, "1")
+        let custom = try client.list(filter: "", limit: 10, offset: 0).rows
+        XCTAssertEqual(custom.map(\.roman), ["ji1"])
+        XCTAssertEqual(custom.map(\.hanji), ["字1"])
+        XCTAssertFalse(model.activity.isWorking)
+    }
+
+    /// A refusal — a full dictionary — is a write failure, and the row stays.
+    func testMoveToCustomDictionary_refused_isAWriteFailureAndKeepsTheRow() async throws {
+        let (model, client) = makeModel([record(.learnedPhrase, id: 1)])
+        client.refusesLearningRecordMoves = true
+        model.kind = .learnedPhrase
+        await model.loadFirstPage()
+
+        try await model.moveToCustomDictionary(XCTUnwrap(model.list.rows.first))
+
+        guard case .failure(.dictionaryLearningRecordsWriteFailed, _)? = model.message else {
+            return XCTFail("expected the write-failed alert, got \(String(describing: model.message))")
+        }
+        XCTAssertEqual(model.list.rows.map(\.id), [1])
+    }
+
     /// A row gone since it was listed is said as such — not a failure — and
     /// the list is reloaded so the row stops showing.
     func testAWriteToARowAlreadyGone_saysItIsGone() async throws {

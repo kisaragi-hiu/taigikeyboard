@@ -1,6 +1,7 @@
 package com.siansiansu.taigikeyboard.ui.tabs.dictionary
 
 import android.app.Application
+import com.siansiansu.taigikeyboard.engine.proto.CustomDictionaryRefusal
 import com.siansiansu.taigikeyboard.engine.proto.LearningRecord
 import com.siansiansu.taigikeyboard.engine.proto.LearningRecordKind
 import com.siansiansu.taigikeyboard.engine.proto.LearningRecordOrder
@@ -61,6 +62,7 @@ class LearningRecordsViewModelTest {
 
         val setCalls = mutableListOf<Pair<LearningRecord, Long>>()
         val deleteCalls = mutableListOf<LearningRecord>()
+        val moveCalls = mutableListOf<LearningRecord>()
         var isRowGone = false
         var writeFailure: Exception? = null
 
@@ -108,6 +110,13 @@ class LearningRecordsViewModelTest {
             deleteCalls += record
             writeFailure?.let { throw it }
             return !isRowGone
+        }
+
+        /** Like the engine: the row leaves the list once added; a refusal keeps it. */
+        override suspend fun moveLearningRecordToCustomDictionary(record: LearningRecord) {
+            moveCalls += record
+            writeFailure?.let { throw it }
+            rows = rows.filterNot { it.id == record.id }
         }
     }
 
@@ -475,6 +484,47 @@ class LearningRecordsViewModelTest {
                 model.state.value.message,
             )
             assertEquals(2, client.listCalls.size)
+        }
+
+    @Test
+    fun `a moved learned phrase is said and leaves the reloaded list`() =
+        runTest(dispatcher) {
+            val client = FakeLearningRecords(listOf(record(7, "台灣", phrase), record(8, "食飯", phrase)))
+            val model = viewModel(client, phrase)
+            advanceUntilIdle()
+            val listed = model.state.value.records[0]
+
+            model.moveToCustomDictionary(listed)
+            advanceUntilIdle()
+
+            assertEquals(listOf(listed), client.moveCalls)
+            assertEquals(LearningRecordsMessage.Moved, model.state.value.message)
+            assertEquals(2, client.listCalls.size)
+            assertEquals(
+                listOf(8L),
+                model.state.value.records
+                    .map { it.id },
+            )
+        }
+
+    @Test
+    fun `a refused move carries the engine's words and keeps the row`() =
+        runTest(dispatcher) {
+            val client = FakeLearningRecords(listOf(record(7, "台灣", phrase)))
+            val model = viewModel(client, phrase)
+            advanceUntilIdle()
+            client.writeFailure = UserDataException.Refused(CustomDictionaryRefusal.CUSTOM_DICTIONARY_REFUSAL_FULL, "the custom dictionary is full")
+
+            model.moveToCustomDictionary(model.state.value.records[0])
+            advanceUntilIdle()
+
+            assertEquals(LearningRecordsMessage.WriteFailed("the custom dictionary is full"), model.state.value.message)
+            assertEquals(2, client.listCalls.size)
+            assertEquals(
+                listOf(7L),
+                model.state.value.records
+                    .map { it.id },
+            )
         }
 
     @Test

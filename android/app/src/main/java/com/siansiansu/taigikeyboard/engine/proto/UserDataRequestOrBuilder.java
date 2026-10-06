@@ -164,5 +164,16 @@ public interface UserDataRequestOrBuilder extends
    */
   com.siansiansu.taigikeyboard.engine.proto.DeleteLearningRecord getDeleteLearningRecord();
 
+  /**
+   * <code>.taigi.engine.MoveLearningRecordToCustomDictionary move_learning_record_to_custom_dictionary = 15;</code>
+   * @return Whether the moveLearningRecordToCustomDictionary field is set.
+   */
+  boolean hasMoveLearningRecordToCustomDictionary();
+  /**
+   * <code>.taigi.engine.MoveLearningRecordToCustomDictionary move_learning_record_to_custom_dictionary = 15;</code>
+   * @return The moveLearningRecordToCustomDictionary.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.MoveLearningRecordToCustomDictionary getMoveLearningRecordToCustomDictionary();
+
   public com.siansiansu.taigikeyboard.engine.proto.UserDataRequest.MethodCase getMethodCase();
 }

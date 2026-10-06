@@ -179,6 +179,20 @@ extension RustEngineBridge {
         return deleted
     }
 
+    /// Files the listed learned phrase as a custom word, then forgets it; a
+    /// refusal keeps the phrase.
+    static func learningRecordMoveToCustomDictionary(
+        _ record: Taigi_Engine_LearningRecord,
+    ) -> Taigi_Engine_LearningRecordMoved? {
+        var move = Taigi_Engine_MoveLearningRecordToCustomDictionary()
+        move.record = record
+        guard case let .learningRecordMoved(moved)? = userDataResult(
+            .moveLearningRecordToCustomDictionary(move),
+            op: "learningRecordMoveToCustomDictionary",
+        ) else { return nil }
+        return moved
+    }
+
     // MARK: - Backup
 
     /// The `.taigi` backup of what the engine holds, written by `ios` `appVersion`.

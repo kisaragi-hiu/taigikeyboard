@@ -76,6 +76,11 @@ protocol UserDataClient: Sendable {
     func setLearningRecordCount(_ record: Taigi_Engine_LearningRecord, count: Int) throws -> Bool
     /// False when the row is gone, as for `setLearningRecordCount`.
     func deleteLearningRecord(_ record: Taigi_Engine_LearningRecord) throws -> Bool
+    /// Adds a learned phrase to the custom dictionary — unless the word is
+    /// stored there already — and forgets it. A refusal (a full dictionary,
+    /// a reading that cannot be searched) keeps the row and is thrown as
+    /// `UserDataClientError.refused`.
+    func moveLearningRecordToCustomDictionary(_ record: Taigi_Engine_LearningRecord) throws
 }
 
 /// The shipped client: the engine's user-data ops.
@@ -182,6 +187,13 @@ struct EngineUserDataClient: UserDataClient {
             throw UserDataClientError.engineUnavailable(op: "learningRecordDelete")
         }
         return removed
+    }
+
+    func moveLearningRecordToCustomDictionary(_ record: Taigi_Engine_LearningRecord) throws {
+        guard let moved = RustEngineBridge.learningRecordMoveToCustomDictionary(record) else {
+            throw UserDataClientError.engineUnavailable(op: "learningRecordMoveToCustomDictionary")
+        }
+        guard moved.refusal == .none else { throw UserDataClientError.refused(detail: moved.detail) }
     }
 
     /// Empties the stores `select` names; every one is attempted, and the

@@ -30,6 +30,7 @@ message UserDataRequest {
     ListLearningRecords list_learning_records = 12;
     SetLearningRecordCount set_learning_record_count = 13;
     DeleteLearningRecord delete_learning_record = 14;
+    MoveLearningRecordToCustomDictionary move_learning_record_to_custom_dictionary = 15;
   }
 }
 
@@ -49,6 +50,7 @@ message UserDataResponse {
     LearningRecords learning_records = 12;
     LearningRecordSaved learning_record_saved = 13;
     LearningRecordDeleted learning_record_deleted = 14;
+    LearningRecordMoved learning_record_moved = 15;
   }
 }
 
@@ -295,9 +297,10 @@ message BackupImported {
 // ---- The Learning Records pages (learning-records-page-roadmap) ----
 //
 // Every platform's Learning Records page lists what the keyboard learned,
-// corrects one row's count and deletes one row through these; "delete
-// everything" stays `ResetUserData`. Nothing here adds a row: a word the
-// user wants is a custom word.
+// corrects one row's count, deletes one row and moves one learned phrase
+// into the custom dictionary through these; "delete everything" stays
+// `ResetUserData`. Nothing here adds a learning row: a word the user wants
+// is a custom word.
 
 enum LearningRecordKind {
   // How often each `(word, TL)` was committed — what ranking boosts.
@@ -372,3 +375,22 @@ message LearningRecordSaved { optional LearningRecord record = 1; }
 message DeleteLearningRecord { LearningRecord record = 1; }
 
 message LearningRecordDeleted { bool removed = 1; }
+
+// Moves one learned phrase into the custom dictionary: adds it as a custom
+// word (roman = `record.tl`, hanji = `record.text`) unless the dictionary
+// already holds that word — the same Hanji with the same canonical TL,
+// however its roman is spelled — then forgets the learned phrase as
+// `DeleteLearningRecord` does (a row already gone is not a failure). The
+// custom word offers the whole phrase from then on, as the learned phrase
+// did, so nothing is lost. Refused as `SaveCustomEntry` is (FULL, or
+// UNSEARCHABLE for a TL that derives no search key), and a refused move
+// keeps the phrase. Learned phrases only:
+// a frequency row keeps weighting the word it counts, and an association is
+// not a word (`FAIL_INVARIANT`).
+message MoveLearningRecordToCustomDictionary { LearningRecord record = 1; }
+
+message LearningRecordMoved {
+  CustomDictionaryRefusal refusal = 1;
+  // The refusal in English, for an alert's diagnostic line; empty when moved.
+  string detail = 2;
+}

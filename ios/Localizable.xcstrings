@@ -1585,6 +1585,42 @@
         }
       }
     },
+    "i18n_dictionary_learningRecordsMoveToCustomDictionary": {
+      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). Action on one learned phrase (Phrases only): adds it to the custom dictionary and removes it from the list (row menu / swipe / button tooltip).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add to Custom Dictionary"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カスタム辞書に追加"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_learningRecordsMovedToCustomDictionary": {
+      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). Notice after a learned phrase was added to the custom dictionary (or found there already) and left the list.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Added to Custom Dictionary"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カスタム辞書に追加しました"
+          }
+        }
+      }
+    },
     "i18n_dictionary_learningRecordsOrder": {
       "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). Label of the sort-order picker.",
       "extractionState": "manual",
