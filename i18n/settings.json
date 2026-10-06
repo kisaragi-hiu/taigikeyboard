@@ -232,14 +232,14 @@
       "values": { "hanji": "開啟時 or 顯示做 ㄜ，關閉時顯示做 ㄛ。袂影響揣詞結果。", "tailo": "Phah-khui sî or hián-sī tsò ㄜ, kuainn--khí-lâi sî hián-sī tsò ㄛ. Buē íng-hióng tshuē sû kiat-kó.", "poj": "Phah-khui sî or hián-sī chò ㄜ, koaiⁿ--khí-lâi sî hián-sī chò ㄛ. Bōe éng-hióng chhōe sû kiat-kó.", "en": "When on, 'or' appears as ㄜ; when off, as ㄛ. Search results are unaffected.", "ja": "オンでは「or」を ㄜ、オフでは ㄛ と表示します。検索結果には影響しません。" }
     },
     "resetSettings": {
-      "comment": "Destructive action row + dialog title: reset all settings and delete the learning records (frequency, association, learned phrases); custom words are preserved.",
+      "comment": "Destructive action row + dialog title: reset all settings to their defaults. Settings only — learning records and custom words are untouched.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "恢復設定佮學習紀錄", "tailo": "Hue-ho̍k siat-tīng kah ha̍k-si̍p kì-lio̍k", "poj": "Hoe-ho̍k siat-tēng kah ha̍k-si̍p kì-lio̍k", "en": "Reset Settings and Learning Records", "ja": "設定と学習記録をリセット" }
+      "values": { "hanji": "恢復設定", "tailo": "Hue-ho̍k siat-tīng", "poj": "Hoe-ho̍k siat-tēng", "en": "Reset Settings", "ja": "設定をリセット" }
     },
     "resetSettingsMessage": {
-      "comment": "Confirmation-dialog body for resetting settings and deleting the learning records; explicitly states that custom words are preserved.",
+      "comment": "Confirmation-dialog body for resetting settings; explicitly states that learning records and custom words are kept.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "這會恢復所有設定，嘛會刪除學習紀錄。自訂詞會保留。敢欲繼續？", "tailo": "Tse ē hue-ho̍k sóo-iú siat-tīng, mā ē san-tû ha̍k-si̍p kì-lio̍k. Tsū-tīng-sû ē pó-liû. Kám beh kè-sio̍k?", "poj": "Che ē hoe-ho̍k só͘-iú siat-tēng, mā ē san-tû ha̍k-si̍p kì-lio̍k. Chū-tēng-sû ē pó-liû. Kám beh kè-sio̍k?", "en": "This resets all settings and deletes the learning records. Custom words are kept. Continue?", "ja": "すべての設定をリセットし、学習記録を削除します。カスタム単語は保持されます。続けますか？" }
+      "values": { "hanji": "這會恢復所有設定。學習紀錄佮自訂詞攏會保留。敢欲繼續？", "tailo": "Tse ē hue-ho̍k sóo-iú siat-tīng. Ha̍k-si̍p kì-lio̍k kah tsū-tīng-sû lóng ē pó-liû. Kám beh kè-sio̍k?", "poj": "Che ē hoe-ho̍k só͘-iú siat-tēng. Ha̍k-si̍p kì-lio̍k kah chū-tēng-sû lóng ē pó-liû. Kám beh kè-sio̍k?", "en": "This resets all settings. Learning records and custom words are kept. Continue?", "ja": "すべての設定をリセットします。学習記録とカスタム単語は保持されます。続けますか？" }
     },
     "resetSuccess": {
       "comment": "Toast shown after settings were reset successfully.",
@@ -248,7 +248,7 @@
     },
     "resetFailed": {
       "comment": "Toast shown when resetting settings fails.",
-      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "scope": { "platforms": ["android"], "surfaces": ["host"] },
       "values": { "hanji": "恢復設定失敗，請重試", "tailo": "Hue-ho̍k siat-tīng sit-pāi, tshiánn tîng-tshì", "poj": "Hoe-ho̍k siat-tēng sit-pāi, chhiáⁿ tîng-chhì", "en": "Failed to reset settings. Please try again.", "ja": "設定のリセットに失敗しました。もう一度お試しください。" }
     },
     "noEmailApp": {

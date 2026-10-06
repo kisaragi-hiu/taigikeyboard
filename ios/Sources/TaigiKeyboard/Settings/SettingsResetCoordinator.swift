@@ -1,18 +1,15 @@
 import Foundation
 import KeyboardKit
 
-/// Resets settings and user-owned data stores.
+/// Resets every setting to its default (Settings tab "Reset Settings").
 ///
-/// Two surfaces, intentionally separate:
-/// - `resetAll()` — pure settings reset (SharedSettings + KeyboardKit defaults).
-/// - `resetAllUserData()` — destructive: wipes user frequency, next-word and learned-phrase data.
+/// Settings only: learning records and the custom dictionary are user data, cleared from their own
+/// Dictionary-tab pages, never from here.
 ///
 /// `SharedSettings.resetToDefaults()` can't touch the KeyboardKit store
 /// directly without importing KeyboardKit in the (soon-to-be engine-only)
 /// settings module. The coordinator is the composition point.
 enum SettingsResetCoordinator {
-    private static let logger = DebugLogger(category: "SettingsResetCoordinator")
-
     /// Reset the three KeyboardKit-owned user defaults that SharedSettings
     /// does not own. Keep these in sync with `SettingsTab` "reset all" UX.
     static func resetKeyboardKitDefaults() {
@@ -22,23 +19,8 @@ enum SettingsResetCoordinator {
     }
 
     /// Reset every setting to its default — SharedSettings + KeyboardKit.
-    /// Does NOT touch user-owned databases; call `resetAllUserData()` for that.
     static func resetAll() {
         SharedSettings.shared.resetToDefaults()
         resetKeyboardKitDefaults()
-    }
-
-    /// Empty user-owned learning data (frequency + next-word association +
-    /// learned phrases) in place — the engine's stores (roadmap P7b). The
-    /// engine attempts every store even when one fails, so a partial failure
-    /// still clears what it can; one that could not be emptied is logged and
-    /// thrown for the caller to report.
-    static func resetAllUserData() async throws {
-        do {
-            try await CompositionRoot.userData.clearLearningRecords()
-        } catch {
-            logger.error("Failed to clear learning records: \(error)")
-            throw error
-        }
     }
 }

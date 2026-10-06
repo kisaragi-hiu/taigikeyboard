@@ -223,8 +223,8 @@
     <string name="i18n_settings_nasalMarkerUppercaseSmall">ⁿ（SIÂⁿ）</string>
     <string name="i18n_settings_tpsOrMapsToER">or を ㄜ に対応</string>
     <string name="i18n_settings_tpsOrMapsToERInfo">オンでは「or」を ㄜ、オフでは ㄛ と表示します。検索結果には影響しません。</string>
-    <string name="i18n_settings_resetSettings">設定と学習記録をリセット</string>
-    <string name="i18n_settings_resetSettingsMessage">すべての設定をリセットし、学習記録を削除します。カスタム単語は保持されます。続けますか？</string>
+    <string name="i18n_settings_resetSettings">設定をリセット</string>
+    <string name="i18n_settings_resetSettingsMessage">すべての設定をリセットします。学習記録とカスタム単語は保持されます。続けますか？</string>
     <string name="i18n_settings_resetSuccess">設定をリセットしました</string>
     <string name="i18n_settings_resetFailed">設定のリセットに失敗しました。もう一度お試しください。</string>
     <string name="i18n_settings_noEmailApp">メールアプリが見つかりません</string>
