@@ -446,7 +446,7 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
 |---|---|---|---|---|
 | Candidate window | own `NSPanel`, 3 layouts | own D2D popup, 3 layouts | daemon lookup table, orientation from layout | platform-adapted presentation |
 | Appearance rows Candidate Text Size / Candidate Window Size / Font | yes | yes | hidden (panel-owned) | unsupported host capability |
-| Manage Typefaces pane | selects the candidate typeface | selects the candidate typeface | hidden (panel-owned; font set in Fcitx5 / IBus) | unsupported host capability |
+| Manage Fonts pane | selects the candidate typeface | selects the candidate typeface | hidden (panel-owned; font set in Fcitx5 / IBus) | unsupported host capability |
 | Focus loss mid-composition | client commits | text stays as host left it | daemon commits (`PREEDIT_COMMIT`) | platform-adapted |
 | Chinese/English Shift tap | none (OS switches sources) | yes | none (IBus switches engines) | identical to macOS |
 | Global chords | Carbon hotkeys, session-scoped | preserved keys + fallback | matched in `ProcessKeyEvent` while active | identical semantics |

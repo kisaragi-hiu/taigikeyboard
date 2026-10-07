@@ -165,7 +165,6 @@
     <string name="i18n_home_accentDictCredit">Compiled and provided by 實齋</string>
     <string name="i18n_home_devSupplementCredit">Compiled and provided by 建中</string>
     <string name="i18n_keyboard_expandCandidates">Expand or collapse the candidate list</string>
-    <string name="i18n_keyboard_morePopupHint">Long-press for more characters</string>
     <string name="i18n_keyboard_toggleToolbar">Expand or collapse the toolbar</string>
     <string name="i18n_keyboard_symbolPanel">Symbol panel</string>
     <string name="i18n_keyboard_switchLayout">Switch layout</string>
@@ -225,9 +224,6 @@
     <string name="i18n_settings_tpsOrMapsToERInfo">When on, \'or\' appears as ㄜ; when off, as ㄛ. Search results are unaffected.</string>
     <string name="i18n_settings_resetSettings">Reset to Defaults</string>
     <string name="i18n_settings_resetSettingsMessage">This resets all settings. Learning records and custom words are kept. Continue?</string>
-    <string name="i18n_settings_resetSuccess">Settings reset</string>
-    <string name="i18n_settings_resetFailed">Failed to reset settings. Please try again.</string>
-    <string name="i18n_settings_noEmailApp">No email app found</string>
     <string name="i18n_settings_diagnosticSectionTitle">Device Info</string>
     <string name="i18n_settings_diagnosticCopy">Copy Device Info</string>
     <string name="i18n_settings_diagnosticCopied">Copied</string>

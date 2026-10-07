@@ -74,7 +74,7 @@ pub fn inspect(path: &Path) -> Result<FontFaceInfo, FontFileError> {
 /// DirectWrite's order. Read fresh each call — `check_for_updates` is on, so a
 /// font installed or removed since the last call is reflected.
 ///
-/// What the Manage Typefaces pane lists after the bundled and imported rows (and sorts,
+/// What the Manage Fonts pane lists after the bundled and imported rows (and sorts,
 /// by the same fold it searches with); nothing is loaded for a family until
 /// the candidate window asks the system collection for it.
 pub fn system_families() -> Result<Vec<String>, FontFileError> {
@@ -88,7 +88,7 @@ pub fn system_families() -> Result<Vec<String>, FontFileError> {
     }
 }
 
-/// One weight of an installed family, as the Manage Typefaces pane offers it
+/// One weight of an installed family, as the Manage Fonts pane offers it
 /// and the candidate window draws it.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FamilyFace {
@@ -137,7 +137,7 @@ impl FamilyFaces {
 /// The weights of `family` the OS has installed (`FamilyFaces`); empty when
 /// the OS has no such family.
 ///
-/// What the Manage Typefaces pane offers for the selected installed family;
+/// What the Manage Fonts pane offers for the selected installed family;
 /// the candidate window reads the same list out of its own collection
 /// (`faces_in`), so the two agree on what a stored name means.
 pub fn system_family_faces(family: &str) -> Result<FamilyFaces, FontFileError> {

@@ -11,7 +11,7 @@ import SwiftUI
 /// Three rows are deliberately absent, each argued where it lives: no
 /// accent-colour swatch (see `CandidateAccentColor`), no chrome-generation
 /// picker (see `CandidateWindowStyle`) — both follow the system — and no
-/// typeface. The typeface moved to Manage Typefaces (`FontManagementPage`, USER
+/// typeface. The typeface moved to Manage Fonts (`FontManagementPage`, USER
 /// 2026-09-08): the roster grows with what the user installs, so choosing one
 /// and managing the list is one table there rather than a pop-up here beside
 /// a list of files.

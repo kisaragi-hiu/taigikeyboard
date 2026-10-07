@@ -84,7 +84,7 @@ Index (S7 intentionally absent). Every one-line item below passed device dogfood
 - **S73** Typed hyphen renders inside a dictionary word (all four platforms) — 2026-09-22 · §55 · #5517
 - **S74** Linux first machine — Fcitx5 on KDE Plasma, then IBus on GNOME (Ubuntu 24.04 VM) — 2026-09-23
 - **S75** One size pop-up for the candidate window, Standard a step smaller (macOS + Windows) — 2026-09-23
-- **S76** Linux bundled typefaces are system fonts; no Manage Typefaces pane (Ubuntu VM, both shells) — 2026-09-24
+- **S76** Linux bundled typefaces are system fonts; no Manage Fonts pane (Ubuntu VM, both shells) — 2026-09-24
 - **S77** Identical desktop menus; no update check on Linux (Ubuntu VM, KDE + Fcitx5 then GNOME + IBus; macOS; Windows) — 2026-09-25 · #193
 - **S78** Custom theme: one Key Fill row, white by default (iOS + Android) — 2026-09-26
 - **S79** Custom theme card: background only, no sample key (iOS + Android) — 2026-09-26

@@ -290,7 +290,7 @@ enum UserDataListMetrics {
 }
 
 /// The `n / N` readout and the two arrows a paged list puts at the trailing
-/// end of its `UserDataListControls` (Custom Dictionary, Manage Typefaces).
+/// end of its `UserDataListControls` (Custom Dictionary, Manage Fonts).
 ///
 /// A list is paged rather than scrolled because a fixed-height `Table` inside
 /// a `Form` is one scroll view inside another, and the inner one does not

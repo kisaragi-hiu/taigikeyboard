@@ -330,8 +330,6 @@ object L10n {
         @Composable get() = stringRes(StringKey.HOME_DEV_SUPPLEMENT_CREDIT)
     val keyboardExpandCandidates: String
         @Composable get() = stringRes(StringKey.KEYBOARD_EXPAND_CANDIDATES)
-    val keyboardMorePopupHint: String
-        @Composable get() = stringRes(StringKey.KEYBOARD_MORE_POPUP_HINT)
     val keyboardToggleToolbar: String
         @Composable get() = stringRes(StringKey.KEYBOARD_TOGGLE_TOOLBAR)
     val keyboardSymbolPanel: String
@@ -450,12 +448,6 @@ object L10n {
         @Composable get() = stringRes(StringKey.SETTINGS_RESET_SETTINGS)
     val settingsResetSettingsMessage: String
         @Composable get() = stringRes(StringKey.SETTINGS_RESET_SETTINGS_MESSAGE)
-    val settingsResetSuccess: String
-        @Composable get() = stringRes(StringKey.SETTINGS_RESET_SUCCESS)
-    val settingsResetFailed: String
-        @Composable get() = stringRes(StringKey.SETTINGS_RESET_FAILED)
-    val settingsNoEmailApp: String
-        @Composable get() = stringRes(StringKey.SETTINGS_NO_EMAIL_APP)
     val settingsDiagnosticSectionTitle: String
         @Composable get() = stringRes(StringKey.SETTINGS_DIAGNOSTIC_SECTION_TITLE)
     val settingsDiagnosticCopy: String

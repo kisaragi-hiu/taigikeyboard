@@ -1,5 +1,5 @@
 //! The bar under a paged list: its verbs (`+` / `−` …) leading, the `n / N`
-//! readout and the two page arrows trailing (Custom Dictionary, Manage Typefaces). Port of
+//! readout and the two page arrows trailing (Custom Dictionary, Manage Fonts). Port of
 //! `UserDataListPager` beside `UserDataListControls`.
 //!
 //! A list is paged rather than scrolled because a fixed-height list inside the

@@ -296,7 +296,7 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertNil(userDefaults.object(forKey: SettingsStore.Keys.candidateSize.name), "removed, not written")
     }
 
-    /// The typeface is Manage Typefaces', not Appearance's: a pane's reset restores the rows
+    /// The typeface is Manage Fonts', not Appearance's: a pane's reset restores the rows
     /// that pane shows, and Appearance no longer shows the typeface.
     @MainActor
     func testResetAppearanceSettings_leavesTheTypefaceAlone() {

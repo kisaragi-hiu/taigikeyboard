@@ -1,4 +1,4 @@
-//! The Manage Typefaces pane: every typeface the candidate window can be set in — the
+//! The Manage Fonts pane: every typeface the candidate window can be set in — the
 //! bundled roster, the ones the user added, and the families this Windows has
 //! installed — as one list whose SELECTION is the typeface in use. Port of
 //! `FontManagementPage.swift`.

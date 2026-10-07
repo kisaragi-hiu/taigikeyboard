@@ -347,7 +347,7 @@ final class SettingsWindowTests: XCTestCase {
             SettingsPane.allCases.map { english.string($0.labelKey) },
             [
                 "General", "Appearance", "Shortcuts", "Manage Dictionaries", "Custom Dictionary",
-                "Learning Records", "Manage Typefaces", "About the Keyboard",
+                "Learning Records", "Manage Fonts", "About the Keyboard",
             ],
         )
     }

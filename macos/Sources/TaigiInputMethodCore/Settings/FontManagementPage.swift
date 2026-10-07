@@ -1,4 +1,4 @@
-// Manage Typefaces: which typeface the candidate window is set in — bundled, added by the user, or installed on this Mac.
+// Manage Fonts: which typeface the candidate window is set in — bundled, added by the user, or installed on this Mac.
 
 import SwiftUI
 import UniformTypeIdentifiers

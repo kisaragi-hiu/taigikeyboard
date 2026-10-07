@@ -359,7 +359,7 @@ impl SettingsWindow {
         );
     }
 
-    /// Puts `pane` on screen; a pane this crate has no page for (Manage Typefaces,
+    /// Puts `pane` on screen; a pane this crate has no page for (Manage Fonts,
     /// a stored value from another desktop) lands on General, as on Windows.
     /// Answers the pane shown.
     pub fn show_pane(&self, pane: SettingsPane) -> SettingsPane {

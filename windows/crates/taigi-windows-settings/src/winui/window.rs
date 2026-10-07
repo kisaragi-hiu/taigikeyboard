@@ -363,10 +363,10 @@ impl SettingsWindow {
     }
 
     /// What a pane needs the first time it is shown: Custom Dictionary and
-    /// Learning Records fetch their first page, Manage Typefaces reads the
+    /// Learning Records fetch their first page, Manage Fonts reads the
     /// user's font folder. Each once.
     ///
-    /// Manage Typefaces reads even in a read-only launch: the folder is the user's
+    /// Manage Fonts reads even in a read-only launch: the folder is the user's
     /// own, and a window that cannot WRITE the selection can still say which
     /// typefaces are there.
     fn enter_pane(&mut self, context: &ComponentContext<Self>) {

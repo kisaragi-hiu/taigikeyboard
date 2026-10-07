@@ -2,7 +2,7 @@
 //! regression net for the pages (roadmap L12, the Windows `pane_planning`):
 //! every built pane is in the stack; a row's switch writes its key; an
 //! outside write shows on the next tick without bumping the revision; a
-//! display language picked in the window rebuilds the sidebar; Manage Typefaces and
+//! display language picked in the window rebuilds the sidebar; Manage Fonts and
 //! About are not listed; the read-only window writes nothing; a reset
 //! keeps the display language.
 //!
@@ -149,8 +149,8 @@ fn a_language_picked_here_rebuilds_the_sidebar(window: &Rc<SettingsWindow>) {
     eprintln!("panes: language rebuild");
 }
 
-/// Manage Typefaces has no page on Linux (the panel's font is the framework's), so
-/// a stored Manage Typefaces lands on General; About is shown without a sidebar row.
+/// Manage Fonts has no page on Linux (the panel's font is the framework's), so
+/// a stored Manage Fonts lands on General; About is shown without a sidebar row.
 fn the_font_pane_routes_to_general_and_about_is_unlisted(window: &Rc<SettingsWindow>) {
     assert!(!SIDEBAR.contains(&SettingsPane::FontManagement));
     assert_eq!(
