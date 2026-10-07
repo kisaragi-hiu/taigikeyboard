@@ -1271,7 +1271,7 @@ pub(crate) fn assemble_candidates(
             // overlaps; span results stay first.
             if let Some(ctx) = lex_ctx.as_ref() {
                 let literal_glyph_in_inventory = inv.is_some_and(|inv| {
-                    inv.contains_in(phonetics::InputMode::Tps, &raw.to_lowercase())
+                    inv.contains_in(phonetics::InputMode::Tps, &crate::shadow::lookup_form(raw))
                 });
                 let bare_expanded_only = mode == phonetics::InputMode::Tps
                     && raw.chars().count() == 1

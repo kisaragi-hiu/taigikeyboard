@@ -244,12 +244,29 @@ pub fn is_tps_tone_mark(ch: char) -> bool {
     )
 }
 
-/// Canonicalize a single TPS tone-8 scalar: platform keyboards type the
-/// standalone modifier-letter dot `U+02D9` (˙), but the build pipeline
+/// Fold a duplicate-encoded TPS glyph onto the one the tables use: `U+31B3`
+/// ㆳ (BOPOMOFO LETTER INNN) is the same symbol as `U+31AA` ㆪ (`inn`) —
+/// Unicode encodes nasalized `i` twice, once per writing direction
+/// (L2/18-052; `docs/phonetics/tps-auto-correct-rules.md`). The tables and
+/// the build pipeline emit only ㆪ, so any raw TPS text a lookup reads must
+/// fold ㆳ first. Both are 3 bytes in UTF-8, so the fold is byte-length
+/// preserving and offset maps over the raw buffer stay valid. Every other
+/// char passes through.
+pub fn fold_tps_glyph_alias(ch: char) -> char {
+    if ch == '\u{31b3}' {
+        '\u{31aa}'
+    } else {
+        ch
+    }
+}
+
+/// Canonicalize a single raw-input TPS scalar for a `tps:` key:
+/// [`fold_tps_glyph_alias`], plus the tone-8 dot — platform keyboards type
+/// the standalone modifier-letter dot `U+02D9` (˙), but the build pipeline
 /// stores tone-8 as the combining dot above `U+0307` in every `tps:<tps_num>`
-/// FST key (see [`ZHUYIN_TONES`] vs [`ZHUYIN_TONES_ENCODE_SAFE`]). Map
-/// `U+02D9 → U+0307` so a raw-buffer TPS span matches the stored toned key;
-/// every other char (including the already-combining `U+0307`) passes through.
+/// FST key (see [`ZHUYIN_TONES`] vs [`ZHUYIN_TONES_ENCODE_SAFE`]), so map
+/// `U+02D9 → U+0307`. Every other char (including the already-combining
+/// `U+0307`) passes through.
 ///
 /// Char-level shared source for the key-shaping sites that build a `tps:` key
 /// from raw buffer input: `KeyFamily::search_key` (Tab3 search),
@@ -258,12 +275,13 @@ pub fn is_tps_tone_mark(ch: char) -> bool {
 /// (`composing::syllabifier::tps`) applies the same `U+02D9 → U+0307`
 /// substitution inline at the string level (allocating only when the buffer
 /// contains `U+02D9`) — same mapping, kept separate for that hot-path's
-/// allocation tuning.
-pub fn normalize_tps_tone8_scalar(ch: char) -> char {
+/// allocation tuning; the glyph alias reaches it already folded by the
+/// composing shadow.
+pub fn normalize_tps_lookup_scalar(ch: char) -> char {
     if ch == '\u{02d9}' {
         '\u{0307}'
     } else {
-        ch
+        fold_tps_glyph_alias(ch)
     }
 }
 
@@ -695,7 +713,7 @@ pub fn from_zhuyin(text: &str) -> String {
         ("\u{ff1f}", "?"),
         ("\u{ff0e}", "\u{00b7}"),
     ];
-    let mut input = text.to_string();
+    let mut input: String = text.chars().map(fold_tps_glyph_alias).collect();
     for (tps, ascii) in rev_punct {
         input = input.replace(tps, ascii);
     }
@@ -876,6 +894,17 @@ mod tests {
     }
 
     use super::*;
+
+    #[test]
+    fn innn_glyph_folds_onto_inn_for_every_lookup() {
+        assert_eq!(fold_tps_glyph_alias('ㆳ'), 'ㆪ');
+        assert_eq!('ㆳ'.len_utf8(), 'ㆪ'.len_utf8());
+        assert_eq!(normalize_tps_lookup_scalar('ㆳ'), 'ㆪ');
+        for inn in ["ㄒㆪ", "ㄒㆪˋ", "ㄏㆪㄍㄚ"] {
+            let innn = inn.replace('ㆪ', "ㆳ");
+            assert_eq!(from_zhuyin(&innn), from_zhuyin(inn), "{innn}");
+        }
+    }
 
     /// Exact-output pin for the `phonetics::tps_to_tl` re-export — guards
     /// the literal romanization.

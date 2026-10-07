@@ -13,7 +13,7 @@
 //! (`{ㄗ, ㄘ, ㄙ, ㆡ}`) are disjoint by `lastChar`, so the `?:` short-circuit
 //! is observationally equivalent to running both checks unconditionally.
 
-use crate::tps::{ZHUYIN_TONES, ZHUYIN_TONES_ENCODE_SAFE};
+use crate::tps::{fold_tps_glyph_alias, ZHUYIN_TONES, ZHUYIN_TONES_ENCODE_SAFE};
 use once_cell::sync::Lazy;
 use std::collections::HashSet;
 
@@ -113,6 +113,12 @@ static SYLLABLE_BOUNDARY_CHARS: Lazy<HashSet<char>> = Lazy::new(|| {
     set
 });
 
+/// Whether `c` closes a syllable ([`SYLLABLE_BOUNDARY_CHARS`]), reading the ㆳ
+/// glyph alias as ㆪ ([`fold_tps_glyph_alias`]).
+fn is_syllable_boundary(c: char) -> bool {
+    SYLLABLE_BOUNDARY_CHARS.contains(&fold_tps_glyph_alias(c))
+}
+
 // =========================================================================
 // Per-function adjustments (one per former `TPSInputAdjuster` step)
 // =========================================================================
@@ -131,7 +137,7 @@ fn adjust_initial_key(char_str: &str, raw_input: &str) -> String {
         return char_str.to_string();
     }
     let last = raw_input.chars().last().unwrap();
-    if last == ' ' || SYLLABLE_BOUNDARY_CHARS.contains(&last) {
+    if last == ' ' || is_syllable_boundary(last) {
         return char_str.to_string();
     }
     // Phonotactic gate (all dual-form finals — STOPS ㄅㄉㄍㄏ → ㆴㆵㆻㆷ AND
@@ -241,7 +247,7 @@ pub fn defold_coda_to_initial(coda: char) -> Option<char> {
 fn pending_open_syllable(raw_input: &str) -> &str {
     let mut start = 0;
     for (idx, ch) in raw_input.char_indices() {
-        if ch == ' ' || SYLLABLE_BOUNDARY_CHARS.contains(&ch) {
+        if ch == ' ' || is_syllable_boundary(ch) {
             start = idx + ch.len_utf8();
         }
     }
@@ -318,7 +324,7 @@ fn syllabic_nasal_replacement(incoming: &str, last_raw_char: Option<char>) -> Op
 fn palatalization_replacement(incoming: &str, last_raw_char: Option<char>) -> Option<String> {
     let last = last_raw_char?;
     let first = incoming.chars().next()?;
-    if !matches!(first, 'ㄧ' | 'ㆪ') {
+    if !matches!(fold_tps_glyph_alias(first), 'ㄧ' | 'ㆪ') {
         return None;
     }
     match last {
@@ -565,6 +571,18 @@ mod tests {
         let (adjusted, replace_last) = super::adjust("9", "ㄍㄨㄇ");
         assert_eq!(adjusted, "\u{02c6}");
         assert_eq!(replace_last.as_deref(), Some("ㆬ"));
+    }
+
+    #[test]
+    fn innn_glyph_acts_as_inn() {
+        // ㆳ is ㆪ encoded twice: it palatalizes a preceding ㄙ (typed as is)
+        // and closes its syllable, so a following stop stays an initial.
+        assert_eq!(
+            super::adjust("ㆳ", "ㄙ"),
+            ("ㆳ".to_string(), Some("ㄒ".to_string()))
+        );
+        assert_eq!(adjust_initial_key("ㄉ", "ㄊㆪ"), "ㄉ");
+        assert_eq!(adjust_initial_key("ㄉ", "ㄊㆳ"), "ㄉ");
     }
 
     #[test]
