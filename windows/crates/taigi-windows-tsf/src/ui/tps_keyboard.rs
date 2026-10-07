@@ -71,6 +71,9 @@ const GLYPH_FONT: CandidateFontChoice = CandidateFontChoice::Iansui;
 /// `TpsKeyboardPanel.flashDuration` on macOS.
 const FLASH_MILLISECONDS: u32 = 150;
 const FLASH_TIMER_ID: usize = 1;
+/// One system timer tick (~15.6 ms): a `WM_TIMER` due at the flash's end can
+/// arrive that much before it by `Instant`, and still ends it.
+const TIMER_TICK_SLACK: Duration = Duration::from_millis(16);
 
 /// The appearance to draw the panel in as focus and the settings stand now,
 /// or `None` when it should not be up (`SettingsDocument::is_tps_keyboard_wanted`).
@@ -505,7 +508,9 @@ impl WindowHandler for PanelContent {
     /// before a newer key restarted the timer — is let pass: the timer
     /// repeats, and the next tick ends it.
     fn timer(&mut self, window: &WindowRef, id: usize) {
-        let is_over = self.flash.is_none_or(|(_, ends)| Instant::now() >= ends);
+        let is_over = self
+            .flash
+            .is_none_or(|(_, ends)| Instant::now() + TIMER_TICK_SLACK >= ends);
         if id == FLASH_TIMER_ID && is_over {
             self.end_flash(window);
         }

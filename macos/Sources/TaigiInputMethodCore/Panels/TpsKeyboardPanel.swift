@@ -100,8 +100,10 @@ final class TpsKeyboardPanel {
     /// changes, and AppKit re-colours it for the appearance.
     func show(ownedBy owner: ComposingSessionToken, target: any TpsKeyboardTarget, generation: Int) {
         // A flash or a press belongs to the session it lit for; a handover
-        // puts both out.
-        putOutLights()
+        // puts both out. A re-show for the same tenure keeps a held cap lit.
+        if self.owner != owner || self.generation != generation {
+            putOutLights()
+        }
         self.owner = owner
         self.target = target
         self.generation = generation

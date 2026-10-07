@@ -529,6 +529,9 @@ fn handle_message(hwnd: HWND, message: u32, wparam: WPARAM, lparam: LPARAM) -> O
             Some(LRESULT(0))
         }
         WM_LBUTTONDOWN => {
+            // A content busy here (a re-entered session) misses the press,
+            // and so its release types nothing — a click lost, never a
+            // wrong one.
             let handler = handler_of(hwnd)?;
             let point = client_point(&window, lparam);
             if let Ok(mut handler) = handler.try_borrow_mut() {
