@@ -23,6 +23,7 @@ final class TaigiInputControllerTpsKeyboardTests: XCTestCase {
     }
 
     override func tearDown() {
+        TpsKeyboardPanel.shared.flashDuration = .milliseconds(150)
         TpsKeyboardPanel.shared.hideNow()
         userDefaults.removePersistentDomain(forName: suiteName)
         super.tearDown()
@@ -199,6 +200,85 @@ final class TaigiInputControllerTpsKeyboardTests: XCTestCase {
         XCTAssertEqual(TpsKeyboardPanel.pressedGlyph(of: capE, isShiftLayer: false), "ㄍ")
         XCTAssertEqual(TpsKeyboardPanel.pressedGlyph(of: capE, isShiftLayer: true), "ㆣ")
         XCTAssertEqual(TpsKeyboardPanel.pressedGlyph(of: capQ, isShiftLayer: true), "ㄆ")
+    }
+
+    // MARK: - Flash
+
+    /// A key the engine takes lights its cap; the next key moves the light.
+    /// trace: `tps_keyboard_rows` — `e` (ㄍ) is row 1 cap 2, `8` (ㄚ) row 0 cap 7.
+    func testAKeyTypingAGlyph_flashesItsCap() throws {
+        let session = try makeSession(under: .tps)
+        session.controller.performShortcutAction(.showTpsKeyboard)
+
+        _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "e"), client: session.client)
+        XCTAssertEqual(TpsKeyboardPanel.shared.flashedCapIndex?.row, 1)
+        XCTAssertEqual(TpsKeyboardPanel.shared.flashedCapIndex?.cap, 2)
+
+        _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "8"), client: session.client)
+        XCTAssertEqual(TpsKeyboardPanel.shared.flashedCapIndex?.row, 0)
+        XCTAssertEqual(TpsKeyboardPanel.shared.flashedCapIndex?.cap, 7)
+    }
+
+    /// A click runs the same key, so its cap lights too; the light goes out
+    /// on its own.
+    func testAPress_flashesItsCap_untilTheFlashEnds() async throws {
+        let session = try makeSession(under: .tps)
+        session.controller.performShortcutAction(.showTpsKeyboard)
+
+        TpsKeyboardPanel.shared.press("ㆣ")
+        // trace: ㆣ is `E` with Shift — the same cap as ㄍ, row 1 cap 2.
+        XCTAssertEqual(TpsKeyboardPanel.shared.flashedCapIndex?.row, 1)
+        XCTAssertEqual(TpsKeyboardPanel.shared.flashedCapIndex?.cap, 2)
+
+        try await Task.sleep(for: .milliseconds(400))
+        XCTAssertNil(TpsKeyboardPanel.shared.flashedCapIndex)
+    }
+
+    /// A key typed mid-flash restarts the light on its own cap: the first
+    /// flash's end, when its time comes, does not put out the second.
+    /// trace: 300 ms flashes — `e` at 0, `8` at 200 (lit until 500); at 400
+    /// the `e` flash's end (300) has passed.
+    func testAFlash_endingLate_leavesTheNewerFlashLit() async throws {
+        TpsKeyboardPanel.shared.flashDuration = .milliseconds(300)
+        let session = try makeSession(under: .tps)
+        session.controller.performShortcutAction(.showTpsKeyboard)
+
+        _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "e"), client: session.client)
+        try await Task.sleep(for: .milliseconds(200))
+        _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "8"), client: session.client)
+        try await Task.sleep(for: .milliseconds(200))
+
+        XCTAssertEqual(TpsKeyboardPanel.shared.flashedCapIndex?.cap, 7, "the `8` cap is still lit")
+    }
+
+    /// A handover puts the leaving session's light out; the leaving
+    /// session's teardown leaves the arriving one's alone.
+    func testAHandover_endsTheLeavingFlash_andTheTeardownKeepsTheArrivingOne() throws {
+        userDefaults.set(true, forKey: SettingsStore.Keys.isTpsKeyboardShown.name)
+        let leaving = try makeSession(under: .tps)
+        _ = try leaving.controller.handle(TestFixtures.keyDownEvent(characters: "e"), client: leaving.client)
+        XCTAssertNotNil(TpsKeyboardPanel.shared.flashedCapIndex)
+
+        let arriving = try makeSession(under: .tps)
+        XCTAssertNil(TpsKeyboardPanel.shared.flashedCapIndex, "the handover ended the flash")
+
+        _ = try arriving.controller.handle(TestFixtures.keyDownEvent(characters: "8"), client: arriving.client)
+        leaving.controller.deactivateServer(leaving.client)
+        XCTAssertEqual(TpsKeyboardPanel.shared.flashedCapIndex?.cap, 7)
+    }
+
+    /// Nothing lights while the panel is down, and taking it down ends a flash.
+    func testAFlash_needsThePanelUp_andEndsWithIt() throws {
+        let session = try makeSession(under: .tps)
+        _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "e"), client: session.client)
+        XCTAssertNil(TpsKeyboardPanel.shared.flashedCapIndex, "no panel, no flash")
+
+        session.controller.performShortcutAction(.showTpsKeyboard)
+        _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "8"), client: session.client)
+        XCTAssertNotNil(TpsKeyboardPanel.shared.flashedCapIndex)
+
+        session.controller.performShortcutAction(.showTpsKeyboard)
+        XCTAssertNil(TpsKeyboardPanel.shared.flashedCapIndex)
     }
 
     // MARK: - Harness

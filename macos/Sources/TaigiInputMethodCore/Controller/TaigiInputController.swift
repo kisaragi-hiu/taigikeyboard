@@ -1006,6 +1006,8 @@ public final class TaigiInputController: IMKInputController {
                 // The window interprets the direction for its layout and
                 // repaints itself — it is authoritative for the selection.
                 candidatePresenter.navigate(direction, ownedBy: sessionToken)
+            case let .tpsKeyboardKeyTyped(row, cap):
+                TpsKeyboardPanel.shared.flash(row: row, cap: cap, ownedBy: sessionToken)
             }
         }
     }

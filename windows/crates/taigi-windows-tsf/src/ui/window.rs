@@ -32,13 +32,13 @@ use windows::Win32::UI::HiDpi::{
     DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2, MDT_EFFECTIVE_DPI,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
-    CreateWindowExW, DefWindowProcW, DestroyWindow, GetWindowLongPtrW, KillTimer, LoadCursorW,
-    PostMessageW, RegisterClassExW, SetTimer, SetWindowLongPtrW, SetWindowPos, ShowWindow,
-    CREATESTRUCTW, CS_HREDRAW, CS_VREDRAW, GWLP_USERDATA, HWND_TOPMOST, IDC_ARROW, MA_NOACTIVATE,
-    SWP_NOACTIVATE, SW_HIDE, SW_SHOWNA, WM_APP, WM_DPICHANGED, WM_DWMCOLORIZATIONCOLORCHANGED,
-    WM_ERASEBKGND, WM_LBUTTONUP, WM_MOUSEACTIVATE, WM_MOUSEWHEEL, WM_NCCREATE, WM_NCDESTROY,
-    WM_PAINT, WM_SETTINGCHANGE, WM_THEMECHANGED, WM_TIMER, WNDCLASSEXW, WS_EX_NOACTIVATE,
-    WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_POPUP,
+    CreateWindowExW, DefWindowProcW, DestroyWindow, GetWindowLongPtrW, IsWindowVisible, KillTimer,
+    LoadCursorW, PostMessageW, RegisterClassExW, SetTimer, SetWindowLongPtrW, SetWindowPos,
+    ShowWindow, CREATESTRUCTW, CS_HREDRAW, CS_VREDRAW, GWLP_USERDATA, HWND_TOPMOST, IDC_ARROW,
+    MA_NOACTIVATE, SWP_NOACTIVATE, SW_HIDE, SW_SHOWNA, WM_APP, WM_DPICHANGED,
+    WM_DWMCOLORIZATIONCOLORCHANGED, WM_ERASEBKGND, WM_LBUTTONUP, WM_MOUSEACTIVATE, WM_MOUSEWHEEL,
+    WM_NCCREATE, WM_NCDESTROY, WM_PAINT, WM_SETTINGCHANGE, WM_THEMECHANGED, WM_TIMER, WNDCLASSEXW,
+    WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_POPUP,
 };
 
 /// 96 DPI = one DIP per pixel.
@@ -141,6 +141,11 @@ impl WindowRef {
     pub fn set_timer(&self, id: usize, milliseconds: u32) {
         // SAFETY: a WM_TIMER on our own window.
         unsafe { SetTimer(Some(self.hwnd), id, milliseconds, None) };
+    }
+
+    pub fn is_visible(&self) -> bool {
+        // SAFETY: a plain query of our own window.
+        unsafe { IsWindowVisible(self.hwnd) }.as_bool()
     }
 
     pub fn kill_timer(&self, id: usize) {

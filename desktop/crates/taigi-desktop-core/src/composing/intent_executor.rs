@@ -9,7 +9,9 @@ use super::{
     ComposingManager, TpsKeyOutcome,
 };
 use crate::engine;
-use crate::keys::{CandidateNavigation, ComposingKeyIntent, KeyEventSnapshot};
+use crate::keys::{
+    tps_keyboard_cap_of, CandidateNavigation, ComposingKeyIntent, KeyEventSnapshot, TpsKeyCapIndex,
+};
 use crate::policies;
 use crate::settings::{keys, InputMode, SettingsDocument};
 
@@ -45,6 +47,12 @@ pub trait IntentSurface: ComposingEffectExecutor {
     fn index_for_key_slot(&self, slot: usize) -> Option<usize>;
 
     fn navigate(&mut self, direction: CandidateNavigation);
+
+    /// The engine took a TPS glyph typed by the key at `cap`: the on-screen
+    /// key panel flashes that cap. A click on the panel arrives here too, as
+    /// the same key; the separator Space, which has no cap, does not.
+    /// Desktop TPS roadmap D6.
+    fn tps_keyboard_cap_typed(&mut self, cap: TpsKeyCapIndex);
 }
 
 /// Runs `intent` for the key `snapshot`. Answers whether the key was
@@ -78,7 +86,12 @@ pub fn perform_intent(
                 // Typing TPS fetches nothing: the window opens on demand
                 // (roadmap § D7), and a key typed over it takes it down. The
                 // engine's answer already carries the converted preedit.
-                TpsKeyOutcome::Taken => close_open_list(list, surface),
+                TpsKeyOutcome::Taken => {
+                    if let Some(cap) = tps_keyboard_cap_of(key) {
+                        surface.tps_keyboard_cap_typed(cap);
+                    }
+                    close_open_list(list, surface);
+                }
                 // A Space after the closed last syllable (O1, revised by D7):
                 // it opens the window for the last word, as Zhuyin input
                 // methods do — a window already up took the Space as its

@@ -72,6 +72,34 @@ pub fn tps_keyboard_rows() -> Vec<TpsKeyboardRow> {
         .collect()
 }
 
+/// Where a cap sits on the panel, both counted from 0: its row (top to
+/// bottom) and its place in the row (left to right), as
+/// [`tps_keyboard_rows`] lists them.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct TpsKeyCapIndex {
+    pub row: usize,
+    pub cap: usize,
+}
+
+/// The cap that types `glyph`, bare or with Shift — what the panels flash
+/// when a key typed it. `None` for anything no cap types, the separator
+/// Space included. Glyphs are unique across the layout
+/// (`tps_layout::no_key_and_no_glyph_is_assigned_twice`), so one cap answers.
+pub fn tps_keyboard_cap_of(glyph: &str) -> Option<TpsKeyCapIndex> {
+    tps_keyboard_rows()
+        .iter()
+        .enumerate()
+        .find_map(|(row_index, row)| {
+            row.caps
+                .iter()
+                .position(|cap| cap.glyph == glyph || cap.shift_glyph == Some(glyph))
+                .map(|cap_index| TpsKeyCapIndex {
+                    row: row_index,
+                    cap: cap_index,
+                })
+        })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -158,6 +186,26 @@ mod tests {
         assert_eq!(cap('E').pressed_glyph(false), "ㄍ");
         assert_eq!(cap('E').pressed_glyph(true), "ㆣ");
         assert_eq!(cap('Q').pressed_glyph(true), "ㄆ");
+    }
+
+    #[test]
+    fn a_glyph_names_its_cap_on_either_layer() {
+        // trace: ROWS — `1` is row 0 cap 0 (ㄅ bare, ㆠ on `!`); `e` is row 1
+        // cap 2 (q w e; ㄍ bare, ㆣ on `E`); `'` is row 2 cap 10 (a s d f g h
+        // j k l ; '), typing the hyphen.
+        let index = |row, cap| Some(TpsKeyCapIndex { row, cap });
+        assert_eq!(tps_keyboard_cap_of("ㄅ"), index(0, 0));
+        assert_eq!(tps_keyboard_cap_of("ㆠ"), index(0, 0));
+        assert_eq!(tps_keyboard_cap_of("ㄍ"), index(1, 2));
+        assert_eq!(tps_keyboard_cap_of("ㆣ"), index(1, 2));
+        assert_eq!(tps_keyboard_cap_of("-"), index(2, 10));
+    }
+
+    #[test]
+    fn the_separator_and_text_no_cap_types_name_no_cap() {
+        for text in [" ", "e", "ㄅㄚ", ""] {
+            assert_eq!(tps_keyboard_cap_of(text), None, "{text:?}");
+        }
     }
 
     #[test]

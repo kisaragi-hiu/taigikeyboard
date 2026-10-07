@@ -7,7 +7,8 @@ import AppKit
 /// following whichever session is typing. A click on a cap types its glyph
 /// through the session that shows the panel (`TpsKeyboardTarget`): the
 /// Shift glyph from the cap's top half or with Shift held, the bare glyph
-/// otherwise. Non-activating, so the click leaves the app being typed in
+/// otherwise. A key the engine took — a click included — flashes its cap
+/// (`flash`). Non-activating, so the click leaves the app being typed in
 /// active and its text view focused — the way vChewing's candidate window
 /// takes clicks (`CtlCandidateTDK4AppKit.swift:23`, `VwrCandidateTDK4AppKit.swift:169`).
 ///
@@ -27,6 +28,19 @@ final class TpsKeyboardPanel {
     static let shared = TpsKeyboardPanel()
 
     private var panel: NSPanel?
+
+    /// The caps the panel draws, row by row, as the core lists them.
+    private var capViews: [[TpsKeyCapView]] = []
+
+    /// Where the cap flashing now sits, row then cap, and the task that
+    /// ends its flash.
+    private(set) var flashedCapIndex: (row: Int, cap: Int)?
+    private var flashTask: Task<Void, Never>?
+
+    /// How long a typed key's cap stays lit. Mirrors the Windows panel's
+    /// `FLASH_MILLISECONDS` (`ui/tps_keyboard.rs`); a test stretches it to
+    /// time two flashes apart.
+    var flashDuration: Duration = .milliseconds(150)
 
     /// The session the panel is showing for, or nil when nothing is showing.
     private(set) var owner: ComposingSessionToken?
@@ -85,12 +99,13 @@ final class TpsKeyboardPanel {
     /// still up at every handover). Built once and reused — its content never
     /// changes, and AppKit re-colours it for the appearance.
     func show(ownedBy owner: ComposingSessionToken, target: any TpsKeyboardTarget, generation: Int) {
+        // A flash belongs to the session that typed it; a handover ends it.
+        endFlash()
         self.owner = owner
         self.target = target
         self.generation = generation
         guard !rows.isEmpty else { return }
-        let panel = panel ?? Self.makePanel(rows: rows) { [weak self] glyph in self?.press(glyph) }
-        self.panel = panel
+        let panel = panel ?? makePanel()
         if let frame = Self.typingScreenFrame {
             let size = panel.frame.size
             panel.setFrameOrigin(NSPoint(
@@ -113,9 +128,37 @@ final class TpsKeyboardPanel {
 
     /// Takes the panel down whatever session raised it.
     func hideNow() {
+        endFlash()
         owner = nil
         target = nil
         panel?.orderOut(nil)
+    }
+
+    /// Lights the cap at `row`, `cap` for `flashDuration` — the key `owner`
+    /// just typed. One cap at a time: a new key moves the light. Nothing
+    /// while the panel is down or shown for another session.
+    func flash(row: Int, cap: Int, ownedBy owner: ComposingSessionToken) {
+        guard isShowing, self.owner == owner,
+              capViews.indices.contains(row), capViews[row].indices.contains(cap)
+        else { return }
+        endFlash()
+        capViews[row][cap].isFlashed = true
+        flashedCapIndex = (row, cap)
+        let duration = flashDuration
+        flashTask = Task { [weak self] in
+            try? await Task.sleep(for: duration)
+            guard !Task.isCancelled else { return }
+            self?.endFlash()
+        }
+    }
+
+    private func endFlash() {
+        flashTask?.cancel()
+        flashTask = nil
+        if let (row, cap) = flashedCapIndex {
+            capViews[row][cap].isFlashed = false
+        }
+        flashedCapIndex = nil
     }
 
     /// A click on a cap typing `glyph`: handed to the session showing the
@@ -132,10 +175,18 @@ final class TpsKeyboardPanel {
         return screen?.visibleFrame
     }
 
+    /// Builds the panel once, keeping its caps for `flash`.
+    private func makePanel() -> NSPanel {
+        let (panel, capViews) = Self.makePanel(rows: rows) { [weak self] glyph in self?.press(glyph) }
+        self.panel = panel
+        self.capViews = capViews
+        return panel
+    }
+
     private static func makePanel(
         rows: [Taigi_DesktopShell_TpsKeyboardRow],
         onPress: @escaping @MainActor (String) -> Void,
-    ) -> NSPanel {
+    ) -> (NSPanel, [[TpsKeyCapView]]) {
         let pitch = capSize + capGap
         let width = rows
             .map { (CGFloat($0.indent) + CGFloat($0.caps.count)) * pitch - capGap }
@@ -143,15 +194,17 @@ final class TpsKeyboardPanel {
         let height = CGFloat(rows.count) * pitch - capGap
         let size = NSSize(width: width + 2 * padding, height: height + 2 * padding)
         let background = HUDPanel.makeBackground(size: size)
-        for (rowIndex, row) in rows.enumerated() {
+        let capViews = rows.enumerated().map { rowIndex, row in
             // AppKit's y runs up: the first row is the top one.
             let y = size.height - padding - CGFloat(rowIndex + 1) * pitch + capGap
-            for (capIndex, cap) in row.caps.enumerated() {
+            return row.caps.enumerated().map { capIndex, cap in
                 let x = padding + (CGFloat(row.indent) + CGFloat(capIndex)) * pitch
-                background.addSubview(makeCap(cap, origin: NSPoint(x: x, y: y), onPress: onPress))
+                let capView = makeCap(cap, origin: NSPoint(x: x, y: y), onPress: onPress)
+                background.addSubview(capView)
+                return capView
             }
         }
-        return HUDPanel.makePanel(background: background, acceptsClicks: true)
+        return (HUDPanel.makePanel(background: background, acceptsClicks: true), capViews)
     }
 
     /// One cap: its outline, the key's label top left, the Shift glyph top
@@ -161,20 +214,21 @@ final class TpsKeyboardPanel {
         _ cap: Taigi_DesktopShell_TpsKeyCap,
         origin: NSPoint,
         onPress: @escaping @MainActor (String) -> Void,
-    ) -> NSView {
+    ) -> TpsKeyCapView {
         let frame = NSRect(origin: origin, size: NSSize(width: capSize, height: capSize))
         let view = TpsKeyCapView(frame: frame, cap: cap, onPress: onPress)
         view.wantsLayer = true
         view.layer?.cornerRadius = 6
         view.layer?.borderWidth = 1
         view.layer?.borderColor = NSColor.separatorColor.cgColor
+        view.layer?.masksToBounds = true
 
         let label = NSTextField(labelWithString: cap.label)
         label.font = .systemFont(ofSize: labelFontSize)
         label.textColor = .tertiaryLabelColor
         label.sizeToFit()
         label.setFrameOrigin(NSPoint(x: 4, y: capSize - 4 - label.frame.height))
-        view.addSubview(label)
+        view.addLabel(label)
 
         if cap.hasShiftGlyph {
             let shift = NSTextField(labelWithString: cap.shiftGlyph)
@@ -185,7 +239,7 @@ final class TpsKeyboardPanel {
                 x: capSize - 4 - shift.frame.width,
                 y: capSize - 4 - shift.frame.height,
             ))
-            view.addSubview(shift)
+            view.addLabel(shift)
         }
 
         let glyph = NSTextField(labelWithString: cap.glyph)
@@ -193,7 +247,7 @@ final class TpsKeyboardPanel {
         glyph.alignment = .center
         glyph.sizeToFit()
         glyph.frame = NSRect(x: 0, y: 4, width: capSize, height: glyph.frame.height)
-        view.addSubview(glyph)
+        view.addLabel(glyph)
         return view
     }
 }
@@ -211,6 +265,38 @@ protocol TpsKeyboardTarget: AnyObject {
 private final class TpsKeyCapView: NSView {
     private let cap: Taigi_DesktopShell_TpsKeyCap
     private let onPress: @MainActor (String) -> Void
+
+    /// The cap's texts and the colour each rests in, restored when a flash
+    /// ends.
+    private var labels: [(field: NSTextField, restingColor: NSColor)] = []
+
+    /// Lit in the system accent (not the candidate window's per-app
+    /// highlight: the panel belongs to no app), the texts in the
+    /// selected-text colour.
+    var isFlashed = false {
+        didSet {
+            guard isFlashed != oldValue else { return }
+            for label in labels {
+                label.field.textColor = isFlashed ? .alternateSelectedControlTextColor : label.restingColor
+            }
+            guard isFlashed else {
+                layer?.backgroundColor = nil
+                return
+            }
+            // Resolved under the panel's own appearance, as
+            // `CandidateItemView` does: `cgColor` snapshots a dynamic colour
+            // against the current drawing appearance.
+            effectiveAppearance.performAsCurrentDrawingAppearance {
+                layer?.backgroundColor = NSColor.selectedContentBackgroundColor.cgColor
+            }
+        }
+    }
+
+    /// Adds `field` with the colour it rests in now.
+    func addLabel(_ field: NSTextField) {
+        addSubview(field)
+        labels.append((field, field.textColor ?? .labelColor))
+    }
 
     init(frame: NSRect, cap: Taigi_DesktopShell_TpsKeyCap, onPress: @escaping @MainActor (String) -> Void) {
         self.cap = cap

@@ -1229,6 +1229,14 @@ public nonisolated struct Taigi_DesktopShell_Effect: Sendable {
     set {effect = .navigate(newValue)}
   }
 
+  public var tpsKeyboardKeyTyped: Taigi_DesktopShell_TpsKeyboardKeyTyped {
+    get {
+      if case .tpsKeyboardKeyTyped(let v)? = effect {return v}
+      return Taigi_DesktopShell_TpsKeyboardKeyTyped()
+    }
+    set {effect = .tpsKeyboardKeyTyped(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public nonisolated enum OneOf_Effect: Equatable, Sendable {
@@ -1240,6 +1248,7 @@ public nonisolated struct Taigi_DesktopShell_Effect: Sendable {
     case candidatesChanged(Taigi_DesktopShell_CandidatesChanged)
     case candidatesClosed(Taigi_DesktopShell_CandidatesClosed)
     case navigate(Taigi_DesktopShell_Navigate)
+    case tpsKeyboardKeyTyped(Taigi_DesktopShell_TpsKeyboardKeyTyped)
 
   }
 
@@ -1374,6 +1383,23 @@ public nonisolated struct Taigi_DesktopShell_Navigate: Sendable {
   // methods supported on all messages.
 
   public var direction: Taigi_DesktopShell_CandidateNavigation = .unspecified
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// The engine took a TPS key: the on-screen key panel flashes the cap that
+/// types it (desktop TPS roadmap D6). Both counted from 0, as
+/// `TpsKeyboardRowsReply` lists the rows and their caps.
+public nonisolated struct Taigi_DesktopShell_TpsKeyboardKeyTyped: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var row: UInt32 = 0
+
+  public var cap: UInt32 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -3312,7 +3338,7 @@ nonisolated extension Taigi_DesktopShell_SessionReply: SwiftProtobuf.Message, Sw
 
 nonisolated extension Taigi_DesktopShell_Effect: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Effect"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}set_marked_text\0\u{3}clear_marked_text\0\u{3}insert_text\0\u{3}swap_preceding_space\0\u{3}arm_swap\0\u{3}candidates_changed\0\u{3}candidates_closed\0\u{1}navigate\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}set_marked_text\0\u{3}clear_marked_text\0\u{3}insert_text\0\u{3}swap_preceding_space\0\u{3}arm_swap\0\u{3}candidates_changed\0\u{3}candidates_closed\0\u{1}navigate\0\u{3}tps_keyboard_key_typed\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -3424,6 +3450,19 @@ nonisolated extension Taigi_DesktopShell_Effect: SwiftProtobuf.Message, SwiftPro
           self.effect = .navigate(v)
         }
       }()
+      case 9: try {
+        var v: Taigi_DesktopShell_TpsKeyboardKeyTyped?
+        var hadOneofValue = false
+        if let current = self.effect {
+          hadOneofValue = true
+          if case .tpsKeyboardKeyTyped(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.effect = .tpsKeyboardKeyTyped(v)
+        }
+      }()
       default: break
       }
     }
@@ -3466,6 +3505,10 @@ nonisolated extension Taigi_DesktopShell_Effect: SwiftProtobuf.Message, SwiftPro
     case .navigate?: try {
       guard case .navigate(let v)? = self.effect else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 8)
+    }()
+    case .tpsKeyboardKeyTyped?: try {
+      guard case .tpsKeyboardKeyTyped(let v)? = self.effect else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
     }()
     case nil: break
     }
@@ -3735,6 +3778,41 @@ nonisolated extension Taigi_DesktopShell_Navigate: SwiftProtobuf.Message, SwiftP
 
   public static func ==(lhs: Taigi_DesktopShell_Navigate, rhs: Taigi_DesktopShell_Navigate) -> Bool {
     if lhs.direction != rhs.direction {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_DesktopShell_TpsKeyboardKeyTyped: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".TpsKeyboardKeyTyped"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}row\0\u{1}cap\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularUInt32Field(value: &self.row) }()
+      case 2: try { try decoder.decodeSingularUInt32Field(value: &self.cap) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.row != 0 {
+      try visitor.visitSingularUInt32Field(value: self.row, fieldNumber: 1)
+    }
+    if self.cap != 0 {
+      try visitor.visitSingularUInt32Field(value: self.cap, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_DesktopShell_TpsKeyboardKeyTyped, rhs: Taigi_DesktopShell_TpsKeyboardKeyTyped) -> Bool {
+    if lhs.row != rhs.row {return false}
+    if lhs.cap != rhs.cap {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

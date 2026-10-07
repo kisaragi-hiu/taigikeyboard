@@ -67,6 +67,10 @@ enum ComposingEffect: Equatable {
     case candidatesClosed
 
     case navigate(CandidateNavigation)
+
+    /// The engine took a TPS key: the key panel flashes the cap at `row`,
+    /// `cap` (both counted from 0, as `KeyRules.tpsKeyboardRows` lists them).
+    case tpsKeyboardKeyTyped(row: Int, cap: Int)
 }
 
 /// What a represent did to the list on screen — repainted in place, never
