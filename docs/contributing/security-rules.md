@@ -51,7 +51,6 @@ All logging must be guarded so that **no log output appears in production/releas
   - iOS: App Group shared container
   - Android: `context.getDatabasePath()` / `context.filesDir`
 - No `MODE_WORLD_READABLE` / `MODE_WORLD_WRITABLE` (Android)
-- Consider `FileProtection` attributes on sensitive database files (iOS)
 - Backup files (`.taigi`) contain user data — document as sensitive
 
 ## Permissions
