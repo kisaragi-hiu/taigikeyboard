@@ -9,7 +9,7 @@
 //! the slot keys make. A letter is read lowercased with the Shift modifier
 //! choosing the layer, so Caps Lock never selects it; a digit or punctuation
 //! key is read as typed, because Windows and Linux hand over the shifted
-//! character (`!`, `^`, `<`) rather than the key's base one.
+//! character (`!`, `^`, `)`) rather than the key's base one.
 
 use super::chord::is_keypad_key_code;
 use super::snapshot::{KeyEventSnapshot, KeyModifiers};
