@@ -125,7 +125,9 @@ jobs:
       # The daemon smoke: install the engine into a throwaway prefix, point
       # ibus-daemon at that component directory, and ask it to list and
       # select the engine. `ibus engine taigikeyboard` returns only once the
-      # daemon has spawned the binary and CreateEngine has answered.
+      # daemon has spawned the binary and CreateEngine has answered; its exit
+      # status is not the check — with `<layout>default</layout>` it has no
+      # layout to hand setxkbmap and exits 1 after switching — the read-back is.
       - name: ibus-daemon smoke
         working-directory: linux
         run: |
@@ -165,7 +167,7 @@ jobs:
             for i in $(seq 1 40); do ibus list-engine > /dev/null 2>&1 && break; sleep 0.5; done
             ibus list-engine | tee "$RUNNER_TEMP/engines.txt"
             grep -q taigikeyboard "$RUNNER_TEMP/engines.txt"
-            ibus engine taigikeyboard
+            ibus engine taigikeyboard || true
             sleep 2
             ibus engine | tee "$RUNNER_TEMP/current.txt"
             grep -q taigikeyboard "$RUNNER_TEMP/current.txt"
@@ -412,8 +414,8 @@ jobs:
         run: ${{ matrix.install }}
 
       # What every desktop has and a bare container lacks: a machine id (IBus
-      # names its bus address file after it) and a display (`ibus engine`
-      # runs setxkbmap on it). Xvfb stays up for the later steps.
+      # names its bus address file after it) and a display (the IBus and
+      # Fcitx5 steps below run on it). Xvfb stays up for the later steps.
       - name: Machine id + virtual display
         shell: bash
         run: |
@@ -452,7 +454,8 @@ jobs:
 
       # The build job's daemon smoke, against the INSTALLED component: the
       # daemon lists the engine and `ibus engine` returns only once it has
-      # spawned the binary and CreateEngine answered.
+      # spawned the binary and CreateEngine answered (exit status ignored, as
+      # in the build job: the read-back is the check).
       - name: IBus spawns the engine
         shell: bash
         env:
@@ -466,7 +469,7 @@ jobs:
             ibus-daemon --verbose --panel disable --config disable > "$RUNNER_TEMP/ibus-daemon.log" 2>&1 &
             for i in $(seq 1 40); do ibus list-engine > /dev/null 2>&1 && break; sleep 0.5; done
             ibus list-engine | grep -q taigikeyboard
-            ibus engine taigikeyboard
+            ibus engine taigikeyboard || true
             sleep 2
             ibus engine | grep -q taigikeyboard
           ' || { cat "$RUNNER_TEMP/ibus-daemon.log"; exit 1; }

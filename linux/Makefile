@@ -282,7 +282,9 @@ arch:
 # The dev loop on a Linux box with ibus-daemon up: the engine from this tree,
 # reading the repo's dictionaries, logging every key. `ibus engine
 # taigikeyboard` from another terminal selects it (the component XML must
-# already be installed once so the daemon knows the name).
+# already be installed once so the daemon knows the name; it exits 1 because
+# the engine's layout is `default`, which setxkbmap is never given — `ibus
+# engine` with no argument confirms the switch).
 run-engine:
 	TAIGIKEYBOARD_DATA_DIR=$(CURDIR)/../assets RUST_LOG=debug cargo run -p taigikeyboard-ibus -- --ibus
 

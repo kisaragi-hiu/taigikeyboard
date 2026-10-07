@@ -204,7 +204,8 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
     was `us`: GNOME applies an engine's layout on activation, so `us` forced QWERTY on
     Dvorak / Colemak users; `default` keeps the active layout, as Fcitx5 keeps the group
     layout — switching away from a non-Latin layout, or TPS on a non-US layout, is the
-    user's), `<symbol>台</symbol>`,
+    user's; `ibus engine taigikeyboard` now exits 1 after switching, since it has no
+    layout to hand setxkbmap — CI reads the engine back instead), `<symbol>台</symbol>`,
     `<setup>${prefix}/bin/taigikeyboard-settings</setup>`, `<rank>0</rank>`). `ibus-daemon`
     reads the directory at start (or after `ibus write-cache`), spawns the exec on demand,
     and the daemon — not the engine — owns activation, so no `RegisterComponent` call.
