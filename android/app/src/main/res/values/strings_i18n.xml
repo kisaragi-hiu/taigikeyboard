@@ -165,6 +165,7 @@
     <string name="i18n_home_accentDictCredit">實齋整理、提供</string>
     <string name="i18n_home_devSupplementCredit">建中整理、提供</string>
     <string name="i18n_keyboard_expandCandidates">展開抑是收合候選詞列</string>
+    <string name="i18n_keyboard_morePopupHint">長揤有較濟字</string>
     <string name="i18n_keyboard_toggleToolbar">展開抑是收合工具列</string>
     <string name="i18n_keyboard_symbolPanel">符號面板</string>
     <string name="i18n_keyboard_switchLayout">切換佈局</string>
@@ -224,6 +225,9 @@
     <string name="i18n_settings_tpsOrMapsToERInfo">開啟時 or 顯示做 ㄜ，關閉時顯示做 ㄛ。袂影響揣詞結果。</string>
     <string name="i18n_settings_resetSettings">恢復預設設定</string>
     <string name="i18n_settings_resetSettingsMessage">這會恢復所有設定。學習紀錄佮自訂詞攏會保留。敢欲繼續？</string>
+    <string name="i18n_settings_resetSuccess">設定已恢復</string>
+    <string name="i18n_settings_resetFailed">恢復設定失敗，請重試</string>
+    <string name="i18n_settings_noEmailApp">揣無 Email App</string>
     <string name="i18n_settings_diagnosticSectionTitle">裝置資訊</string>
     <string name="i18n_settings_diagnosticCopy">Khó͘-phih 裝置資訊</string>
     <string name="i18n_settings_diagnosticCopied">已 khó͘-phih</string>

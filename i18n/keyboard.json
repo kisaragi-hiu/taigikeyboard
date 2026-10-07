@@ -6,6 +6,11 @@
       "scope": { "platforms": ["android", "ios"], "surfaces": ["extension"] },
       "values": { "hanji": "展開抑是收合候選詞列", "tailo": "Tián-khui ah-sī siu-ha̍p hāu-suán sû lia̍t", "poj": "Tián-khui ah-sī siu-ha̍p hāu-soán sû lia̍t", "en": "Expand or collapse the candidate list", "ja": "候補リストを展開または折りたたむ" }
     },
+    "morePopupHint": {
+      "comment": "Key-preview popup three-dots-indicator a11y contentDescription (long-press reveals more glyphs). Android extension popup only.",
+      "scope": { "platforms": ["android"], "surfaces": ["extension"] },
+      "values": { "hanji": "長揤有較濟字", "tailo": "Tn̂g tshi̍h ū khah-tsē jī", "poj": "Tn̂g chhi̍h ū khah-chē jī", "en": "Long-press for more characters", "ja": "長押しでさらに文字を入力できます" }
+    },
     "toggleToolbar": {
       "comment": "Smartbar toolbar-toggle button a11y label (the +-icon expands/collapses the toolbar row); bidirectional wording. Android via InputView.applyAccessibilityStrings; iOS via DisplayLanguageStore in ToolShortcutsToolbar.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["extension"] },
