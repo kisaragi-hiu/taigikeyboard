@@ -46,7 +46,7 @@ final class ModeFlashPanel {
         NSAnimationContext.runAnimationGroup { context in
             context.duration = Self.fadeDuration
             panel.animator().alphaValue = 0
-        } completionHandler: {
+        } completionHandler: { [weak self] in
             Task { @MainActor [weak self] in
                 panel.orderOut(nil)
                 if self?.panel === panel {
