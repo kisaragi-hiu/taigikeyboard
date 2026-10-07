@@ -140,16 +140,6 @@ pub(super) fn assigned_keys() -> impl Iterator<Item = char> {
     KEYS.iter().map(|(key, _)| *key)
 }
 
-/// Whether `characters` is what a TPS layout key types bare or with Shift —
-/// the character its Ctrl chord reports (`ComposingKeyIntent::width_flip_character`).
-pub fn types_a_tps_glyph(characters: &str) -> bool {
-    let mut scalars = characters.chars();
-    match (scalars.next(), scalars.next()) {
-        (Some(typed), None) => glyph_for_key(typed).is_some(),
-        _ => false,
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

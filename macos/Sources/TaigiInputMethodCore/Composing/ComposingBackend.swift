@@ -342,12 +342,13 @@ final class ComposingBackend {
     }
 
     /// What a pass-through `key` would attach to the armed space: the
-    /// character it types — or, under the width-flip chord, the punctuation
-    /// it maps to, which is what the swap writes then.
+    /// character it types — or, under the width-flip chord or TPS, the
+    /// punctuation it maps to, which is what the swap writes then.
     private static func swapCandidate(for key: KeyEventSnapshot, settings: SettingsStore) -> String? {
         guard let typed = key.documentText else { return nil }
-        guard key.widthFlipCharacter != nil else { return typed }
-        return FullWidthPunctuation.documentPunctuation(typed, isWidthFlip: true, settings: settings) ?? typed
+        let isWidthFlip = key.widthFlipCharacter != nil
+        guard isWidthFlip || settings.inputMode == .tps else { return typed }
+        return FullWidthPunctuation.documentPunctuation(typed, isWidthFlip: isWidthFlip, settings: settings) ?? typed
     }
 
     // MARK: - Effects

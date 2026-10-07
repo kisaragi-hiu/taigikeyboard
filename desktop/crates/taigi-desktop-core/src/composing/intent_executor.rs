@@ -9,7 +9,7 @@ use super::{
     ComposingManager, TpsKeyOutcome,
 };
 use crate::engine;
-use crate::keys::{types_a_tps_glyph, CandidateNavigation, ComposingKeyIntent, KeyEventSnapshot};
+use crate::keys::{CandidateNavigation, ComposingKeyIntent, KeyEventSnapshot};
 use crate::policies;
 use crate::settings::{keys, InputMode, SettingsDocument};
 
@@ -165,11 +165,11 @@ pub fn perform_intent(
             };
             // The swap is read before the width for a bare key (the word in
             // front of the caret is romanization, which keeps Latin marks);
-            // the width-flip chord named its width, so the swap attaches the
-            // glyph the user asked for.
+            // the width-flip chord named its width, and TPS has only the full
+            // one, so there the swap attaches the glyph that is written.
             let is_width_flip = ComposingKeyIntent::width_flip_character(snapshot).is_some();
             let punctuation = document_punctuation(settings, &typed, is_width_flip);
-            let swapping = if is_width_flip {
+            let swapping = if is_width_flip || is_tps(settings) {
                 punctuation.as_deref().unwrap_or(&typed)
             } else {
                 &typed
@@ -460,20 +460,17 @@ fn raw_preedit_wrote_romanization(settings: &SettingsDocument) -> bool {
 }
 
 /// `policies::document_punctuation` under the DERIVED width, so roman-only
-/// stays half-width and combined follows the stored swap. Under TPS a key
-/// whose bare press types a glyph (`,` `.` `;` …) has its Ctrl chord as the
-/// punctuation key, full width as always under TPS; any other key's chord
-/// still flips, so half-width punctuation stays reachable.
+/// stays half-width and combined follows the stored swap. TPS is full width
+/// only (USER 2026-10-07): the Ctrl chord flips nothing there.
 fn document_punctuation(
     settings: &SettingsDocument,
     text: &str,
     is_width_flip: bool,
 ) -> Option<String> {
     let engine_settings = settings.engine_settings();
-    let is_layout_key = engine_settings.input_mode == InputMode::Tps && types_a_tps_glyph(text);
     policies::document_punctuation(
         text,
         engine_settings.is_full_width_punctuation,
-        is_width_flip && !is_layout_key,
+        is_width_flip && !is_tps(settings),
     )
 }

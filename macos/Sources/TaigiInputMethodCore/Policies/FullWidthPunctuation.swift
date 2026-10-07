@@ -23,7 +23,9 @@ import Foundation
 /// and the mode is a DEFAULT, not a wall: ⌃ on any key of this map types the
 /// other width once (`KeyEventSnapshot.widthFlipCharacter`) — the 新注音 /
 /// Microsoft IME gesture, made symmetric because the case that hurt was a
-/// half-width comma inside hanji-first text (USER 2026-09-20).
+/// half-width comma inside hanji-first text (USER 2026-09-20). TPS is the
+/// wall: full width only, the chord flips nothing and the swap attaches the
+/// full-width glyph (USER 2026-10-07).
 enum FullWidthPunctuation {
     /// The MOE manual's symbol shortcut table (符號快捷鍵對照表), minus what this input method must
     /// keep half-width: digits are TL/POJ tone markers, the hyphen is the
@@ -87,9 +89,13 @@ enum FullWidthPunctuation {
     /// stored swap: a romanization-only display writes romanization, and
     /// romanization takes half-width marks; under Hanji with Romanization the
     /// stored swap still picks the width even though the candidate projection
-    /// is forced hanji-first.
+    /// is forced hanji-first. Under TPS the chord flips nothing (type note).
     @MainActor
     static func documentPunctuation(_ text: String, isWidthFlip: Bool, settings: SettingsStore) -> String? {
-        documentPunctuation(text, isFullWidthMode: settings.isFullWidthPunctuation, isWidthFlip: isWidthFlip)
+        documentPunctuation(
+            text,
+            isFullWidthMode: settings.isFullWidthPunctuation,
+            isWidthFlip: isWidthFlip && settings.inputMode != .tps,
+        )
     }
 }
