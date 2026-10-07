@@ -200,7 +200,11 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
   - Registration is by component XML at `${prefix}/share/ibus/component/taigikeyboard.xml`
     (`<component>` with `<name>org.freedesktop.IBus.TaigiKeyboard</name>`,
     `<exec>${prefix}/libexec/ibus-engine-taigikeyboard --ibus</exec>`, one `<engine>` named
-    `taigikeyboard`, `<language>nan</language>`, `<layout>us</layout>`, `<symbol>台</symbol>`,
+    `taigikeyboard`, `<language>nan</language>`, `<layout>default</layout>` (2026-10-07,
+    was `us`: GNOME applies an engine's layout on activation, so `us` forced QWERTY on
+    Dvorak / Colemak users; `default` keeps the active layout, as Fcitx5 keeps the group
+    layout — switching away from a non-Latin layout, or TPS on a non-US layout, is the
+    user's), `<symbol>台</symbol>`,
     `<setup>${prefix}/bin/taigikeyboard-settings</setup>`, `<rank>0</rank>`). `ibus-daemon`
     reads the directory at start (or after `ibus write-cache`), spawns the exec on demand,
     and the daemon — not the engine — owns activation, so no `RegisterComponent` call.

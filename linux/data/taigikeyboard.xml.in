@@ -23,7 +23,11 @@
       <license>Apache-2.0</license>
       <author>TaigiKeyboard</author>
       <icon>taigikeyboard</icon>
-      <layout>us</layout>
+      <!-- default = keep the user's keyboard layout (Dvorak, Colemak, …);
+           `us` made GNOME switch to US QWERTY whenever this engine was
+           selected. Same policy as the Fcitx5 addon, which follows the
+           group layout. -->
+      <layout>default</layout>
       <longname>台語齒盤</longname>
       <description>Taiwanese (Tâi-gí) — TL / POJ romanization, Hanji candidates</description>
       <symbol>台</symbol>
