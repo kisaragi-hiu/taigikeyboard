@@ -3116,7 +3116,7 @@
       }
     },
     "i18n_layout_moe1Layout": {
-      "comment": "Layout name: MOE Taiwanese phonetic-symbol key arrangement, variant 1.",
+      "comment": "Layout name: MOE Taiwanese romanization key arrangement, variant 1.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -3134,7 +3134,7 @@
       }
     },
     "i18n_layout_moe2Layout": {
-      "comment": "Layout name: MOE Taiwanese phonetic-symbol key arrangement, variant 2.",
+      "comment": "Layout name: MOE Taiwanese romanization key arrangement, variant 2.",
       "extractionState": "manual",
       "localizations": {
         "en": {

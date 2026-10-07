@@ -180,8 +180,8 @@
     <string name="i18n_layout_standardLayout">Lohankha</string>
     <string name="i18n_layout_phahTaigiLayout">PhahTaigi</string>
     <string name="i18n_layout_tpsLayout">方音符號齒盤</string>
-    <string name="i18n_layout_moe1Layout">教育部排列 1</string>
-    <string name="i18n_layout_moe2Layout">教育部排列 2</string>
+    <string name="i18n_layout_moe1Layout">教育部佈局 1</string>
+    <string name="i18n_layout_moe2Layout">教育部佈局 2</string>
     <string name="i18n_nav_tabHome">頭頁</string>
     <string name="i18n_nav_tabTheme">主題</string>
     <string name="i18n_nav_tabLayout">佈局</string>
