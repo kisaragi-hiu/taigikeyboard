@@ -43,7 +43,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * (proto3 `optional` distinguishes "TAILO candidate — no hanji
  * exists" from "wire-frame defect"). See
  * `docs/engine/continuous-candidate-display.md` §4 for the full
- * rationale; the companion `(roman, hanji, consumed_span)` dedupe is
+ * rationale; the companion `(canonical_tl, hanji, consumed_span)` dedupe is
  * `lexicon::continuous::candidate::dedupe_by_roman_hanji_span`.
  * </pre>
  *
@@ -642,7 +642,7 @@ public  final class CandidateMessage extends
    * (proto3 `optional` distinguishes "TAILO candidate — no hanji
    * exists" from "wire-frame defect"). See
    * `docs/engine/continuous-candidate-display.md` §4 for the full
-   * rationale; the companion `(roman, hanji, consumed_span)` dedupe is
+   * rationale; the companion `(canonical_tl, hanji, consumed_span)` dedupe is
    * `lexicon::continuous::candidate::dedupe_by_roman_hanji_span`.
    * </pre>
    *

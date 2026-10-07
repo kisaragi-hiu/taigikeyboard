@@ -25,7 +25,7 @@
 //!    `consumed_span`; presentation `roman` only —`display_text` / `hanji`
 //!    untouched).
 //! 4. `fetch_walker_slot0_inner(..) → Some(slot0)`: span-aware
-//!    retain-dedupe on `(roman, hanji, consumed_span)` then `insert(0,
+//!    retain-dedupe on `(hanji, consumed_span)` + identity or recased roman, then `insert(0,
 //!    raw_to_proto_slot0(slot0))`. The walker returns a [`WalkerSlot0`] —
 //!    **D3 honest type** — and the seam converts to `RawCandidate` with
 //!    `score = -(slot0.cost as f32)` (the negated-cost bridge IS the wire
@@ -46,7 +46,7 @@
 //!    exact++prefix merge); the empty-keys branch above already
 //!    covers this for inputs with no valid syllable, Step 4b extends
 //!    it to already-syllabified inputs. Cross-batch
-//!    `(roman, hanji, consumed_span)` dedupe drops extension hits
+//!    `(canonical_tl | roman, hanji, consumed_span)` dedupe drops extension hits
 //!    already present in the FULL block. `CandidateSortKey`'s leading
 //!    `coverage_kind` dim pins the result strictly below the FULL
 //!    block, so no global re-sort is needed.
@@ -240,16 +240,17 @@ fn recase_tl_as_poj_display(roman: &str) -> String {
 }
 
 /// v3.5.8 — collapse continuous candidates that became identical only
-/// after the POJ render. The pre-render `(roman, hanji, consumed_span)`
-/// dedupe (`lexicon::dedupe_by_roman_hanji_span`) keys on the **raw**
-/// stored romanization without canonicalization, so a hanji-bearing
-/// custom entry stored in POJ display form (`roman = "gô͘"`,
-/// `hanji = Some("吳")`) and a `dict.bin` entry in TL (`roman = "gôo"`,
-/// `hanji = Some("吳")`) sharing one consumed span both survive it,
-/// then [`recase_tl_as_poj_display`] rewrites both `roman` fields to
-/// the POJ display form (`gô͘`) and produces a visible duplicate.
-/// `dedupe_rendered_continuous` collapses that visible duplicate; the
-/// `HashSet::retain` first-wins rule keeps whichever row sits earlier
+/// after a render pass (POJ render, Syllable Separator, typed separators).
+/// The pre-render dedupe (`lexicon::dedupe_by_roman_hanji_span`) collapses
+/// `(hanji, consumed_span)` + (`roman` or the word identity `canonical_tl`)
+/// (2026-10-07),
+/// so a hanji-bearing custom entry stored in POJ display form
+/// (`roman = "gô͘"`) and a `dict.bin` entry in TL (`roman = "gôo"`) for
+/// the same 吳 at one span already collapse there. Two DIFFERENT
+/// identities can still render to one visible string — e.g. two
+/// separator forms of one reading that a Syllable Separator setting
+/// draws identically — and this pass collapses that visible duplicate.
+/// The `HashSet::retain` first-wins rule keeps whichever row sits earlier
 /// in the **current candidate vector** at the moment this fn runs
 /// (post-sort, post whole-sentence prepend), so the prepended
 /// best-walk-path candidate at index 0 is never dropped. It is
@@ -259,26 +260,19 @@ fn recase_tl_as_poj_display(roman: &str) -> String {
 /// `dict.bin` candidate, so which row survives cannot change what
 /// commits.
 ///
-/// **v3.5.9 B-4 closed the romanization-only (hanji-absent) freq-key
-/// asymmetry but NOT this hanji-bearing visible-duplicate axis.**
-/// Pre-B-4 the hanji-absent custom-after-dict collision could leave the
-/// `display_text` as the dict-TL row's form while the custom row's raw
-/// `entry.roman` was still POJ — a frequency-key granularity nuance
-/// that `lexicon::custom_entry_to_candidate` now closes by folding the
-/// fallback through `phonetics::api::canonical_tl_form`. B-4
-/// deliberately leaves `entry.roman` raw (the walker / `custom_toneless_key`
-/// need it in the user's native form so POJ-family lattice keys match
-/// against POJ-form custom roman per `composing::shadow::custom_toneless_key`),
-/// which means the hanji-bearing custom-vs-dict-POJ-form collision
-/// still slips past pre-render dedupe and lands here. This dedupe is
-/// load-bearing in steady state, not transitional. Called in the POJ
-/// branch only — for TL/English the render is identity so the
-/// pre-render dedupe already settled every key. TPS has its own
-/// post-render visual collapse via [`dedupe_display_hanji_for_tps`]
-/// because the TPS UI hides romanization entirely (hanji-only display),
-/// so two `dict.bin` rows differing only on `roman` (e.g. `灣 / uan`
-/// vs `灣 / uân` at the same TPS-toneless key `ㄨㄢ`) survive the
-/// pre-render `(roman, hanji, span)` dedupe yet render identically.
+/// B-4 deliberately leaves `entry.roman` raw (the walker /
+/// `custom_toneless_key` need it in the user's native form so POJ-family
+/// lattice keys match against POJ-form custom roman per
+/// `composing::shadow::custom_toneless_key`); the identity sidechannel
+/// `canonical_tl` is what the pre-render dedupe compares instead. Called
+/// when a render pass can make two identities look alike: POJ mode, a
+/// Syllable Separator joiner, or rendered typed separators — for plain
+/// TL/English the render is identity so the pre-render dedupe already
+/// settled every key. TPS has its own post-render visual collapse via
+/// [`dedupe_display_hanji_for_tps`] because the TPS UI hides romanization
+/// entirely (hanji-only display), so two `dict.bin` rows differing only
+/// in tone (e.g. `灣 / uan` vs `灣 / uân` at the same TPS-toneless key
+/// `ㄨㄢ`) survive the pre-render dedupe yet render identically.
 fn dedupe_rendered_continuous(candidates: &mut Vec<RawCandidate>) {
     retain_first_by_key(candidates, |c| {
         Some((c.roman.clone(), c.hanji.clone(), c.consumed_span))
@@ -297,23 +291,37 @@ pub(crate) fn retain_first_by_key<K: std::hash::Hash + Eq>(
     candidates.retain(|c| key(c).is_none_or(|k| seen.insert(k)));
 }
 
-/// Cross-batch exclude: drop from `batch` every candidate whose
-/// `(roman, hanji, consumed_span)` triple is already in `existing`. The
-/// per-fetch `dedupe_by_roman_hanji_span` inside the lexicon does not span
-/// batches, so a dict row reachable through two fetches of the same buffer
-/// (Step 4b extension vs the FULL block, Step 4c abbreviation vs a partial
-/// hit) would otherwise show twice. Borrowed keys — `existing` is not
-/// mutated during the retain, so the set holds `&str` slices into it and
-/// costs no per-keystroke String allocs.
+/// Cross-batch exclude: drop from `batch` every candidate already in
+/// `existing` — the same word identity `(canonical_tl, hanji,
+/// consumed_span)` (Core Principle #6), or the same recased `(roman,
+/// hanji, consumed_span)`. The per-fetch `dedupe_by_roman_hanji_span`
+/// inside the lexicon does not span batches, so a dict row reachable
+/// through two fetches of the same buffer (Step 4b extension vs the FULL
+/// block, Step 4c abbreviation vs a partial hit) would otherwise show
+/// twice. Identity catches a custom row whose stored roman differs from
+/// the dict row's only in form (NFD import, POJ spelling); the recased
+/// roman still catches a walker slot 0, whose `canonical_tl` is folded
+/// from its recased roman while a dict row's is not. Borrowed keys —
+/// `existing` is not mutated during the retain, so the set holds `&str`
+/// slices into it and costs no per-keystroke String allocs.
 fn retain_absent_from(existing: &[RawCandidate], batch: &mut Vec<RawCandidate>) {
     if batch.is_empty() {
         return;
     }
+    // One set holds both spellings of every existing row: a canonical TL
+    // equal to another row's recased roman, at the same hanji and span, is
+    // the same word either way.
     let seen: std::collections::HashSet<(&str, Option<&str>, ConsumedSpan)> = existing
         .iter()
-        .map(|x| (x.roman.as_str(), x.hanji.as_deref(), x.consumed_span))
+        .flat_map(|x| {
+            [x.canonical_tl.as_str(), x.roman.as_str()]
+                .map(|reading| (reading, x.hanji.as_deref(), x.consumed_span))
+        })
         .collect();
-    batch.retain(|x| !seen.contains(&(x.roman.as_str(), x.hanji.as_deref(), x.consumed_span)));
+    batch.retain(|x| {
+        !seen.contains(&(x.canonical_tl.as_str(), x.hanji.as_deref(), x.consumed_span))
+            && !seen.contains(&(x.roman.as_str(), x.hanji.as_deref(), x.consumed_span))
+    });
 }
 
 /// Two romanizations are the **same reading** when they differ only in
@@ -350,8 +358,8 @@ pub(crate) fn roman_reading_eq(a: &str, b: &str) -> bool {
 /// Two `dict.bin` rows like `灣 / uan` (tone 1) and `灣 / uân` (tone 5)
 /// both index under `tps:ㄨㄢ`, so the build pipeline legitimately
 /// emits both rowids at the same FST key. The pre-sort
-/// `lexicon::dedupe_by_roman_hanji_span` keys on `(roman, hanji, span)`
-/// and preserves romanization variants; that is correct for TL/POJ
+/// `lexicon::dedupe_by_roman_hanji_span` keys on `(hanji, span)` + (`roman`
+/// or `canonical_tl`) and preserves tone variants; that is correct for TL/POJ
 /// (the UI shows distinct `uan / 灣` vs `uân / 灣` rows) but produces
 /// a visible duplicate in TPS mode where only `灣` is rendered.
 ///
@@ -364,8 +372,8 @@ pub(crate) fn roman_reading_eq(a: &str, b: &str) -> bool {
 /// `lexicon::dedupe_by_roman_hanji_span`. `hanji = None` or empty
 /// hanji passes through (roman-only rows are unique by roman); upstream
 /// `lexicon::dedupe_by_roman_hanji_span` already collapses exact
-/// `(roman, hanji, span)` duplicates so this branch never reaches a
-/// truly identical pair.
+/// `(hanji, span)` + (`roman` or `canonical_tl`) duplicates so this branch
+/// never reaches a truly identical pair.
 fn dedupe_display_hanji_for_tps(candidates: &mut Vec<RawCandidate>) {
     retain_first_by_key(candidates, |c| {
         c.hanji
@@ -1267,7 +1275,7 @@ pub(crate) fn assemble_candidates(
             // (bare `ㄇ` → the syllabic `ㆬ` span) must not silently drop
             // the partial-prefix continuation list the literal glyph used
             // to reach — the user is mid-word at least as often as done.
-            // Run BOTH and let the (roman, hanji, span) dedupe collapse
+            // Run BOTH and let the (canonical_tl, hanji, span) dedupe collapse
             // overlaps; span results stay first.
             if let Some(ctx) = lex_ctx.as_ref() {
                 let literal_glyph_in_inventory = inv.is_some_and(|inv| {
@@ -1304,7 +1312,8 @@ pub(crate) fn assemble_candidates(
             // (Codex pre-impl S2 Q1 — the 8-dim `CandidateSortKey` cannot
             // guarantee slot 0 on its own). Span-aware de-dup against
             // the synth (Codex pre-impl S2 Q1d): drop any span-local
-            // candidate identical on `(roman, hanji, consumed_span)` so
+            // candidate with the synth's `(hanji, consumed_span)` and
+            // either its `canonical_tl` identity or its recased roman, so
             // slot 0 is unique (e.g. a real left-anchored full-buffer
             // dict word equal to the walker path — keep the walker's
             // at slot 0, not a duplicate slot N).
@@ -1369,9 +1378,9 @@ pub(crate) fn assemble_candidates(
                         // own separator form (`-` hyphen / `--` neutral tone), the
                         // space-join is a malformed rendering of that word
                         // (`予我` synth `hōo guá` vs dict `hōo--guá`). The
-                        // existing `(roman, hanji, span)` dedupe below
-                        // can't collapse the pair because `roman` differs
-                        // ONLY in the separator, so the malformed synth
+                        // existing identity / roman dedupe below can't
+                        // collapse the pair because `roman` and
+                        // `canonical_tl` differ ONLY in the separator, so the malformed synth
                         // wins slot 0 and the canonical dict row sinks.
                         //
                         // Fix (display layer, NOT the cost/segmentation
@@ -1415,16 +1424,22 @@ pub(crate) fn assemble_candidates(
                         };
                         // Slot 0 is either the promoted canonical dict row
                         // (removed from its current position) or the synth.
-                        // Both then run the SAME exact-`(roman, hanji, span)`
-                        // dedupe + `insert(0, …)` so slot 0 stays unique.
+                        // Both then run the SAME dedupe — same word identity
+                        // or same recased roman, as [`retain_absent_from`] —
+                        // + `insert(0, …)` so slot 0 stays unique. The
+                        // identity half is a defensive mirror here: the
+                        // walker takes a custom edge over the dictionary one
+                        // and the lexicon dedupe already dropped the custom
+                        // row's dictionary twin, so today slot 0 and its
+                        // leftover twin always share the recased roman.
                         let slot0 = match promote_idx {
                             Some(i) => c.remove(i),
                             None => slot0_cand,
                         };
                         c.retain(|x| {
-                            !(x.roman == slot0.roman
-                                && x.hanji == slot0.hanji
-                                && x.consumed_span == slot0.consumed_span)
+                            !(x.hanji == slot0.hanji
+                                && x.consumed_span == slot0.consumed_span
+                                && (x.canonical_tl == slot0.canonical_tl || x.roman == slot0.roman))
                         });
                         c.insert(0, slot0);
                     }
@@ -1494,7 +1509,8 @@ pub(crate) fn assemble_candidates(
             // already present in the FULL block (walker slot-0 recases
             // edge-by-edge in `fetch_walker_slot0_inner`; span-local
             // recases here at Step 3) normalizes to the same `(roman,
-            // hanji, consumed_span)` triple and collapses.
+            // hanji, consumed_span)` triple, or carries the same
+            // `(canonical_tl, hanji, consumed_span)` identity, and collapses.
             if let (Some(continuous_keys), Some(ctx)) = (continuous_keys.as_ref(), lex_ctx.as_ref())
             {
                 if synth_consumed_span(
