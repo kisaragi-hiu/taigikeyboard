@@ -237,9 +237,9 @@
       "values": { "hanji": "開啟時 or 顯示做 ㄜ，關閉時顯示做 ㄛ。袂影響揣詞結果。", "tailo": "Phah-khui sî or hián-sī tsò ㄜ, kuainn--khí-lâi sî hián-sī tsò ㄛ. Buē íng-hióng tshuē sû kiat-kó.", "poj": "Phah-khui sî or hián-sī chò ㄜ, koaiⁿ--khí-lâi sî hián-sī chò ㄛ. Bōe éng-hióng chhōe sû kiat-kó.", "en": "When on, 'or' appears as ㄜ; when off, as ㄛ. Search results are unaffected.", "ja": "オンでは「or」を ㄜ、オフでは ㄛ と表示します。検索結果には影響しません。" }
     },
     "resetSettings": {
-      "comment": "Destructive action row + dialog title: reset all settings to their defaults. Settings only — learning records and custom words are untouched.",
+      "comment": "Destructive action row + dialog title: reset all settings to their defaults. Settings only — learning records and custom words are untouched. Same wording as theme.editorResetAll, the desktop panes' reset row.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "恢復設定", "tailo": "Hue-ho̍k siat-tīng", "poj": "Hoe-ho̍k siat-tēng", "en": "Reset Settings", "ja": "設定をリセット" }
+      "values": { "hanji": "恢復預設設定", "tailo": "Hue-ho̍k ī-siat siat-tīng", "poj": "Hoe-ho̍k ī-siat siat-tēng", "en": "Reset to Defaults", "ja": "既定値に戻す" }
     },
     "resetSettingsMessage": {
       "comment": "Confirmation-dialog body for resetting settings; explicitly states that learning records and custom words are kept.",

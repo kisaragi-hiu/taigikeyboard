@@ -223,7 +223,7 @@
     <string name="i18n_settings_nasalMarkerUppercaseSmall">ⁿ (SIÂⁿ)</string>
     <string name="i18n_settings_tpsOrMapsToER">Map or → ㄜ</string>
     <string name="i18n_settings_tpsOrMapsToERInfo">When on, \'or\' appears as ㄜ; when off, as ㄛ. Search results are unaffected.</string>
-    <string name="i18n_settings_resetSettings">Reset Settings</string>
+    <string name="i18n_settings_resetSettings">Reset to Defaults</string>
     <string name="i18n_settings_resetSettingsMessage">This resets all settings. Learning records and custom words are kept. Continue?</string>
     <string name="i18n_settings_resetSuccess">Settings reset</string>
     <string name="i18n_settings_resetFailed">Failed to reset settings. Please try again.</string>

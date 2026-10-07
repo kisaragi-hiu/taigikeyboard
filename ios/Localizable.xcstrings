@@ -3836,19 +3836,19 @@
       }
     },
     "i18n_settings_resetSettings": {
-      "comment": "Destructive action row + dialog title: reset all settings to their defaults. Settings only — learning records and custom words are untouched.",
+      "comment": "Destructive action row + dialog title: reset all settings to their defaults. Settings only — learning records and custom words are untouched. Same wording as theme.editorResetAll, the desktop panes' reset row.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Reset Settings"
+            "value": "Reset to Defaults"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "設定をリセット"
+            "value": "既定値に戻す"
           }
         }
       }
@@ -4520,7 +4520,7 @@
       }
     },
     "i18n_theme_editorResetAll": {
-      "comment": "Reset-to-defaults button. Theme editor on Android and iOS; the macOS shortcuts pane reuses it for the same action.",
+      "comment": "Reset-to-defaults button. Theme editor on Android and iOS; every desktop settings pane (macOS, Windows, Linux) reuses it for its own reset row. Mobile settings.resetSettings carries the same wording.",
       "extractionState": "manual",
       "localizations": {
         "en": {
