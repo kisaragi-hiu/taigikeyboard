@@ -243,3 +243,21 @@ fn what_the_engine_writes_keeps_tl_special_finals_through_a_restore() {
         pair("蔣經國", "tsiúnn-keng-kok", "德國簫", "tek-kok-siau")
     );
 }
+
+#[test]
+fn a_restored_decomposed_roman_is_stored_and_exported_in_nfc() {
+    // A backup written before romans were normalised (2026-10-07) restores
+    // as NFC; the next export carries NFC.
+    let directory = scratch();
+    let stores = stores(&directory);
+    let backup =
+        r#"{ "version": 3, "customDictionary": [{ "roman": "li\u0301", "hanzi": "李" }] }"#;
+    let imported = import_backup(&stores, backup.as_bytes()).unwrap();
+    assert_eq!(imported.custom_dictionary, 1);
+    let rows = stores.custom_dictionary.all_rows().unwrap();
+    assert_eq!(rows[0].roman, "l\u{ed}");
+    let exported =
+        String::from_utf8(export_backup(&stores, "macos", "3.6.13", 1_800_000_000).unwrap())
+            .unwrap();
+    assert!(exported.contains("l\u{ed}") && !exported.contains("li\u{301}"));
+}
