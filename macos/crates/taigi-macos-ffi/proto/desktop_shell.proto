@@ -286,6 +286,7 @@ message Effect {
     CandidatesChanged candidates_changed = 6;
     CandidatesClosed candidates_closed = 7;
     Navigate navigate = 8;
+    TpsKeyboardKeyTyped tps_keyboard_key_typed = 9;
   }
 }
 
@@ -348,6 +349,14 @@ enum CandidateNavigation {
   CANDIDATE_NAVIGATION_PAGE_DOWN = 6;
   CANDIDATE_NAVIGATION_NEXT_CANDIDATE = 7;
   CANDIDATE_NAVIGATION_PREVIOUS_CANDIDATE = 8;
+}
+
+// The engine took a TPS key: the on-screen key panel flashes the cap that
+// types it (desktop TPS roadmap D6). Both counted from 0, as
+// `TpsKeyboardRowsReply` lists the rows and their caps.
+message TpsKeyboardKeyTyped {
+  uint32 row = 1;
+  uint32 cap = 2;
 }
 
 // ---- The key rules of the Shortcuts pane and the symbol picker (P14) ----

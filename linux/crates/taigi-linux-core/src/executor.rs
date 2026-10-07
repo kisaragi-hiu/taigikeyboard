@@ -12,7 +12,7 @@ use crate::selection::LookupSelection;
 use crate::session::PAGE_SIZE;
 use taigi_desktop_core::composing::{CandidateSource, ComposingEffectExecutor, IntentSurface};
 use taigi_desktop_core::engine::Effect;
-use taigi_desktop_core::keys::CandidateNavigation;
+use taigi_desktop_core::keys::{CandidateNavigation, TpsKeyCapIndex};
 
 /// One signal to send the daemon, in order.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -182,6 +182,11 @@ impl IntentSurface for KeySurface<'_> {
     fn navigate(&mut self, direction: CandidateNavigation) {
         self.selection.navigate(direction, self.is_vertical);
     }
+
+    /// Nothing flashes: the Linux key panel is a window of the settings app
+    /// (`taigikeyboard-settings/src/tps_keyboard.rs`), another process this
+    /// side has no channel to (desktop TPS roadmap D6).
+    fn tps_keyboard_cap_typed(&mut self, _cap: TpsKeyCapIndex) {}
 }
 
 /// The engine measures the caret in UTF-16 units (the iOS / macOS / Windows

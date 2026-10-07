@@ -26,7 +26,7 @@ use crate::text_service::TextService_Impl;
 use crate::ui::candidate_window::CandidateWindowContent;
 use crate::ui::presenter::CandidatePresenter;
 use crate::ui::telex_guide::TelexGuideContent;
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::sync::MutexGuard;
 use taigi_desktop_core::composing::CandidateCellContent;
@@ -38,7 +38,7 @@ use taigi_desktop_core::composing::{
 use taigi_desktop_core::engine::Effect;
 use taigi_desktop_core::keys::{
     telex_guide_rows, CandidateNavigation, ComposingKeyBindings, ComposingKeyIntent,
-    KeyEventSnapshot, ShortcutAction, SymbolPickerIntent,
+    KeyEventSnapshot, ShortcutAction, SymbolPickerIntent, TpsKeyCapIndex,
 };
 use taigi_desktop_core::settings::{
     keys, AppearanceMode, InputMode, InputModeRequest, SettingsDocument,
@@ -452,6 +452,7 @@ impl TextService_Impl {
             slot_key_set: ComposingKeyBindings::from_document(settings, DESKTOP_PLATFORM)
                 .slot_key_set(),
             actions: RefCell::new(Vec::new()),
+            typed_tps_cap: Cell::new(None),
         };
 
         let session = edit_session::read_write(context, client_id, |ec| {
@@ -476,6 +477,8 @@ impl TextService_Impl {
                 editor.abandon();
                 list.clear();
                 surface.hide();
+                // The glyph never reached the document: nothing to flash.
+                surface.typed_tps_cap.take();
                 return Ok((KeyOutcome::Consumed, None));
             }
             armed_after = editor.armed.take();
@@ -487,6 +490,11 @@ impl TextService_Impl {
         // `SetWindowPos` finds neither held.
         if let Some(caret) = surface.apply(settings) {
             self.record_focused_caret(caret);
+        }
+        if let Some(cap) = surface.typed_tps_cap.take() {
+            if let Some(tps_keyboard) = self.tps_keyboard() {
+                tps_keyboard.borrow().flash(cap);
+            }
         }
 
         let (outcome, composition_after) = match session {
@@ -1402,6 +1410,9 @@ struct Surface {
     token: ContextToken,
     slot_key_set: taigi_desktop_core::keys::CandidateSlotKeySet,
     actions: RefCell<Vec<SurfaceAction>>,
+    /// The cap of the TPS glyph the engine took, for the key panel to flash
+    /// once the session is over (`TpsKeyboard::flash`).
+    typed_tps_cap: Cell<Option<TpsKeyCapIndex>>,
 }
 
 impl Surface {
@@ -1582,5 +1593,11 @@ impl IntentSurface for TsfIntentSurface<'_, '_> {
 
     fn navigate(&mut self, direction: CandidateNavigation) {
         self.surface.navigate(direction);
+    }
+
+    /// Kept for after the session: the panel is a window, touched only once
+    /// the engine lock and the edit session are released, as the list is.
+    fn tps_keyboard_cap_typed(&mut self, cap: TpsKeyCapIndex) {
+        self.surface.typed_tps_cap.set(Some(cap));
     }
 }

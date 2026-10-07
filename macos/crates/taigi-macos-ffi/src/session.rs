@@ -20,7 +20,7 @@ use taigi_desktop_core::composing::{
 };
 use taigi_desktop_core::engine::Effect as EngineEffect;
 use taigi_desktop_core::keys::{
-    CandidateNavigation, ComposingKeyBindings, ComposingKeyIntent, KeyEventSnapshot,
+    CandidateNavigation, ComposingKeyBindings, ComposingKeyIntent, KeyEventSnapshot, TpsKeyCapIndex,
 };
 use taigi_desktop_core::runtime::DesktopRuntime;
 use taigi_desktop_core::settings::keys;
@@ -506,6 +506,16 @@ impl IntentSurface for RecordingSurface<'_> {
             direction: navigation(direction) as i32,
         }));
     }
+
+    /// Swift's key panel flashes the cap.
+    fn tps_keyboard_cap_typed(&mut self, cap: TpsKeyCapIndex) {
+        self.record(effect::Effect::TpsKeyboardKeyTyped(
+            proto::TpsKeyboardKeyTyped {
+                row: cap.row as u32,
+                cap: cap.cap as u32,
+            },
+        ));
+    }
 }
 
 pub(crate) fn navigation(direction: CandidateNavigation) -> proto::CandidateNavigation {
@@ -585,6 +595,11 @@ mod tests {
 
     fn closed() -> effect::Effect {
         effect::Effect::CandidatesClosed(proto::CandidatesClosed {})
+    }
+
+    /// The key panel's flash of the cap at `row`, `cap` (counted from 0).
+    fn flashed(row: u32, cap: u32) -> effect::Effect {
+        effect::Effect::TpsKeyboardKeyTyped(proto::TpsKeyboardKeyTyped { row, cap })
     }
 
     fn arm() -> effect::Effect {
@@ -1364,9 +1379,10 @@ mod tests {
         let typist = Typist::activated(shell, vec![text("inputMode", "tps")]);
         typist.key(typed("e"), no_list());
         let reply = typist.key(typed("8"), no_list());
+        // trace: `8` is the number row's eighth cap (row 0, cap 7).
         assert_eq!(
             effects(&reply),
-            vec![marked("ㄍㄚ", 2)],
+            vec![marked("ㄍㄚ", 2), flashed(0, 7)],
             "no list while typing"
         );
         let down = chord("\u{F701}", FUNCTION | NUMERIC_PAD, Some(0xF701));
@@ -1385,6 +1401,7 @@ mod tests {
         };
         let picked = typist.key(two, list(Some(0)));
         assert!(picked.handled && picked.is_composing);
+        // A pick types no glyph, so no cap flashes.
         assert_eq!(effects(&picked), vec![marked(&second, 1), closed()]);
         let enter = typist.key(chord("\r", 0, Some(CARRIAGE_RETURN)), no_list());
         assert!(enter.handled && !enter.is_composing);
@@ -1401,7 +1418,7 @@ mod tests {
         typist.key(typed("e"), no_list());
         typist.key(typed("8"), no_list());
         let reply = typist.key(typed("4"), no_list());
-        assert_eq!(effects(&reply), vec![marked("假", 1)]);
+        assert_eq!(effects(&reply), vec![marked("假", 1), flashed(0, 3)]);
         let left = chord("\u{F702}", FUNCTION | NUMERIC_PAD, Some(LEFT_ARROW));
         let stepped = typist.key(left, no_list());
         assert!(stepped.handled && stepped.is_composing);
@@ -1515,7 +1532,8 @@ mod tests {
         let typist = Typist::activated(shell, vec![text("inputMode", "tps")]);
         let first = typist.tps_keyboard_press("ㄍ", no_list());
         assert!(first.handled && first.is_composing);
-        assert_eq!(effects(&first), vec![marked("ㄍ", 1)]);
+        // trace: ㄍ is `e`, row 1 cap 2 — the clicked cap flashes as a key's.
+        assert_eq!(effects(&first), vec![marked("ㄍ", 1), flashed(1, 2)]);
         typist.tps_keyboard_press("ㄚ", no_list());
         let down = chord("\u{F701}", FUNCTION | NUMERIC_PAD, Some(0xF701));
         assert!(!shown_list(&typist.key(down, no_list())).cells.is_empty());
@@ -1523,7 +1541,11 @@ mod tests {
         // and the closed reading shows converted (read by running: 假).
         let over_list = typist.tps_keyboard_press("\u{02cb}", list(Some(0)));
         assert!(over_list.handled && over_list.is_composing);
-        assert_eq!(effects(&over_list), vec![marked("假", 1), closed()]);
+        // The flash comes before the window goes, as the executor runs them.
+        assert_eq!(
+            effects(&over_list),
+            vec![marked("假", 1), flashed(0, 3), closed()]
+        );
     }
 
     /// A press is not handled outside TPS — a click that raced a switch —

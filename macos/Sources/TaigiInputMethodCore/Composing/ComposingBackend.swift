@@ -377,6 +377,8 @@ final class ComposingBackend {
             .candidatesClosed
         case let .navigate(navigate):
             CandidateNavigation(navigate.direction).map(ComposingEffect.navigate)
+        case let .tpsKeyboardKeyTyped(typed):
+            .tpsKeyboardKeyTyped(row: Int(typed.row), cap: Int(typed.cap))
         case nil:
             nil
         }

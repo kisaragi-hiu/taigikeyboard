@@ -31,14 +31,15 @@ use windows::Win32::UI::HiDpi::{
     GetDpiForMonitor, GetDpiForWindow, SetThreadDpiAwarenessContext, DPI_AWARENESS_CONTEXT,
     DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2, MDT_EFFECTIVE_DPI,
 };
+use windows::Win32::UI::Input::KeyboardAndMouse::{GetCapture, ReleaseCapture, SetCapture};
 use windows::Win32::UI::WindowsAndMessaging::{
-    CreateWindowExW, DefWindowProcW, DestroyWindow, GetWindowLongPtrW, KillTimer, LoadCursorW,
-    PostMessageW, RegisterClassExW, SetTimer, SetWindowLongPtrW, SetWindowPos, ShowWindow,
-    CREATESTRUCTW, CS_HREDRAW, CS_VREDRAW, GWLP_USERDATA, HWND_TOPMOST, IDC_ARROW, MA_NOACTIVATE,
-    SWP_NOACTIVATE, SW_HIDE, SW_SHOWNA, WM_APP, WM_DPICHANGED, WM_DWMCOLORIZATIONCOLORCHANGED,
-    WM_ERASEBKGND, WM_LBUTTONUP, WM_MOUSEACTIVATE, WM_MOUSEWHEEL, WM_NCCREATE, WM_NCDESTROY,
-    WM_PAINT, WM_SETTINGCHANGE, WM_THEMECHANGED, WM_TIMER, WNDCLASSEXW, WS_EX_NOACTIVATE,
-    WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_POPUP,
+    CreateWindowExW, DefWindowProcW, DestroyWindow, GetWindowLongPtrW, IsWindowVisible, KillTimer,
+    LoadCursorW, PostMessageW, RegisterClassExW, SetTimer, SetWindowLongPtrW, SetWindowPos,
+    ShowWindow, CREATESTRUCTW, CS_HREDRAW, CS_VREDRAW, GWLP_USERDATA, HWND_TOPMOST, IDC_ARROW,
+    MA_NOACTIVATE, SWP_NOACTIVATE, SW_HIDE, SW_SHOWNA, WM_APP, WM_CAPTURECHANGED, WM_DPICHANGED,
+    WM_DWMCOLORIZATIONCOLORCHANGED, WM_ERASEBKGND, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MOUSEACTIVATE,
+    WM_MOUSEWHEEL, WM_NCCREATE, WM_NCDESTROY, WM_PAINT, WM_SETTINGCHANGE, WM_THEMECHANGED,
+    WM_TIMER, WNDCLASSEXW, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_POPUP,
 };
 
 /// 96 DPI = one DIP per pixel.
@@ -56,8 +57,13 @@ const WM_SYNC_REQUEST: u32 = WM_APP + 2;
 pub trait WindowHandler {
     /// Draw everything (inside `BeginPaint` / `EndPaint`).
     fn paint(&mut self, window: &WindowRef);
+    /// A left-button press at `point` (client DIPs). Only the TPS key panel
+    /// answers one; every other popup acts on the release alone.
+    fn press(&mut self, _window: &WindowRef, _point: (f32, f32)) {}
     /// A left-button release at `point` (client DIPs).
     fn click(&mut self, window: &WindowRef, point: (f32, f32));
+    /// The mouse this window captured went to another (`WM_CAPTURECHANGED`).
+    fn press_cancelled(&mut self, _window: &WindowRef) {}
     /// Wheel `delta` in notches (positive = away from the user).
     fn wheel(&mut self, window: &WindowRef, delta: f32);
     /// The window's DPI changed (it moved to another monitor, or the
@@ -141,6 +147,17 @@ impl WindowRef {
     pub fn set_timer(&self, id: usize, milliseconds: u32) {
         // SAFETY: a WM_TIMER on our own window.
         unsafe { SetTimer(Some(self.hwnd), id, milliseconds, None) };
+    }
+
+    /// Takes the mouse until the button comes up (`WM_LBUTTONUP` lets it go).
+    pub fn capture_mouse(&self) {
+        // SAFETY: our own window, on its own thread.
+        unsafe { SetCapture(self.hwnd) };
+    }
+
+    pub fn is_visible(&self) -> bool {
+        // SAFETY: a plain query of our own window.
+        unsafe { IsWindowVisible(self.hwnd) }.as_bool()
     }
 
     pub fn kill_timer(&self, id: usize) {
@@ -439,6 +456,14 @@ unsafe extern "system" fn window_procedure(
     }
 }
 
+/// A mouse message's client point, in DIPs.
+fn client_point(window: &WindowRef, lparam: LPARAM) -> (f32, f32) {
+    let scale = window.dpi() / BASE_DPI;
+    let x = (lparam.0 & 0xFFFF) as i16 as f32 / scale;
+    let y = ((lparam.0 >> 16) & 0xFFFF) as i16 as f32 / scale;
+    (x, y)
+}
+
 fn handle_message(hwnd: HWND, message: u32, wparam: WPARAM, lparam: LPARAM) -> Option<LRESULT> {
     let window = WindowRef { hwnd };
     match message {
@@ -503,13 +528,35 @@ fn handle_message(hwnd: HWND, message: u32, wparam: WPARAM, lparam: LPARAM) -> O
             }
             Some(LRESULT(0))
         }
+        WM_LBUTTONDOWN => {
+            // A content busy here (a re-entered session) misses the press,
+            // and so its release types nothing — a click lost, never a
+            // wrong one.
+            let handler = handler_of(hwnd)?;
+            let point = client_point(&window, lparam);
+            if let Ok(mut handler) = handler.try_borrow_mut() {
+                handler.press(&window, point);
+            }
+            Some(LRESULT(0))
+        }
         WM_LBUTTONUP => {
             let handler = handler_of(hwnd)?;
-            let scale = window.dpi() / BASE_DPI;
-            let x = (lparam.0 & 0xFFFF) as i16 as f32 / scale;
-            let y = ((lparam.0 >> 16) & 0xFFFF) as i16 as f32 / scale;
+            let point = client_point(&window, lparam);
             if let Ok(mut handler) = handler.try_borrow_mut() {
-                handler.click(&window, (x, y));
+                handler.click(&window, point);
+            }
+            // After the click, with no borrow held: the release sends
+            // WM_CAPTURECHANGED, which finds the press already ended.
+            // SAFETY: a plain query and release on this thread.
+            if unsafe { GetCapture() } == hwnd {
+                let _ = unsafe { ReleaseCapture() };
+            }
+            Some(LRESULT(0))
+        }
+        WM_CAPTURECHANGED => {
+            let handler = handler_of(hwnd)?;
+            if let Ok(mut handler) = handler.try_borrow_mut() {
+                handler.press_cancelled(&window);
             }
             Some(LRESULT(0))
         }

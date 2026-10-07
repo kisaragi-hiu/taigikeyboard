@@ -15,6 +15,7 @@ use taigi_desktop_core::dictionary_artifacts::DictionaryArtifacts;
 use taigi_desktop_core::engine::{self, Effect};
 use taigi_desktop_core::keys::{
     CandidateNavigation, CaretDirection, ComposingKeyIntent, KeyEventSnapshot, KeyModifiers,
+    TpsKeyCapIndex,
 };
 use taigi_desktop_core::platform::DesktopPlatform;
 use taigi_desktop_core::settings::{keys, InputMode, SettingsDocument, StaticSettingsProvider};
@@ -47,6 +48,9 @@ struct Surface {
     can_swap: bool,
     has_failed: bool,
     selected: Option<usize>,
+    /// The caps of the TPS keys the engine took, in order
+    /// (`tps_keyboard_cap_typed`).
+    typed_tps_caps: Vec<TpsKeyCapIndex>,
 }
 
 impl ComposingEffectExecutor for Surface {
@@ -94,6 +98,10 @@ impl IntentSurface for Surface {
 
     fn navigate(&mut self, direction: CandidateNavigation) {
         self.calls.push(format!("navigate {direction:?}"));
+    }
+
+    fn tps_keyboard_cap_typed(&mut self, cap: TpsKeyCapIndex) {
+        self.typed_tps_caps.push(cap);
     }
 }
 
@@ -723,6 +731,47 @@ fn tps_a_settings_change_closes_the_open_list() {
         assert!(rig.list.is_empty());
         rig.open_window();
     }
+}
+
+/// D6 flash: the surface hears the cap of every TPS glyph the engine took,
+/// and nothing else: not the separator (no cap), not a refused Space, not a
+/// slot key picking.
+#[test]
+fn tps_the_surface_hears_the_cap_of_each_glyph_the_engine_took() {
+    let mut rig = new_tps_rig();
+    for key in ["ㄏ", "ㄛ", " "] {
+        assert!(rig.run(ComposingKeyIntent::TpsKey(key.to_owned()), &no_key()));
+    }
+    // trace: KEYS `c` = ㄏ (row 3 cap 2: z x c), `k` = ㄛ (row 2 cap 7:
+    // a s d f g h j k); the separator Space took, but has no cap.
+    assert_eq!(
+        rig.surface.typed_tps_caps,
+        [
+            TpsKeyCapIndex { row: 3, cap: 2 },
+            TpsKeyCapIndex { row: 2, cap: 7 }
+        ]
+    );
+    drop(rig);
+
+    // trace: `ㄏㄛˋ` closes the syllable, so the Space is refused and opens
+    // the window (O1 revised by D7); slot 0 then picks from it.
+    let mut rig = new_tps_rig();
+    rig.type_tps("ㄏㄛˋ");
+    rig.surface.typed_tps_caps.clear();
+    assert!(rig.run(ComposingKeyIntent::TpsKey(" ".to_owned()), &no_key()));
+    assert!(!rig.list.is_empty(), "the refused Space opened the window");
+    assert!(rig.run(
+        ComposingKeyIntent::SelectCandidateSlot {
+            slot: 0,
+            flip: false
+        },
+        &no_key()
+    ));
+    assert!(
+        rig.surface.typed_tps_caps.is_empty(),
+        "{:?}",
+        rig.surface.typed_tps_caps
+    );
 }
 
 #[test]
