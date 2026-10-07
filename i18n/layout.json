@@ -24,12 +24,12 @@
     "moe1Layout": {
       "comment": "Layout name: MOE Taiwanese phonetic-symbol key arrangement, variant 1.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
-      "values": { "hanji": "教育部排列 1", "tailo": "Kàu-io̍k-pōo pâi-lia̍t 1", "poj": "Kàu-io̍k-pō͘ pâi-lia̍t 1", "en": "MOE Layout 1", "ja": "教育部配列 1" }
+      "values": { "hanji": "教育部佈局 1", "tailo": "Kàu-io̍k-pōo pòo-kio̍k 1", "poj": "Kàu-io̍k-pō͘ pò͘-kio̍k 1", "en": "MOE Layout 1", "ja": "教育部配列 1" }
     },
     "moe2Layout": {
       "comment": "Layout name: MOE Taiwanese phonetic-symbol key arrangement, variant 2.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
-      "values": { "hanji": "教育部排列 2", "tailo": "Kàu-io̍k-pōo pâi-lia̍t 2", "poj": "Kàu-io̍k-pō͘ pâi-lia̍t 2", "en": "MOE Layout 2", "ja": "教育部配列 2" }
+      "values": { "hanji": "教育部佈局 2", "tailo": "Kàu-io̍k-pōo pòo-kio̍k 2", "poj": "Kàu-io̍k-pō͘ pò͘-kio̍k 2", "en": "MOE Layout 2", "ja": "教育部配列 2" }
     }
   }
 }
