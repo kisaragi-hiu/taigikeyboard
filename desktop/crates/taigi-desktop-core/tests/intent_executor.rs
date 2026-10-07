@@ -792,13 +792,13 @@ fn tps_the_surface_hears_the_cap_of_each_glyph_the_engine_took() {
     for key in ["ㄏ", "ㄛ", " "] {
         assert!(rig.run(ComposingKeyIntent::TpsKey(key.to_owned()), &no_key()));
     }
-    // trace: KEYS `c` = ㄏ (row 3 cap 2: z x c), `k` = ㄛ (row 2 cap 7:
-    // a s d f g h j k); the separator Space took, but has no cap.
+    // trace: KEYS `c` = ㄏ (row 3 cap 2: z x c), `i` = ㄛ (row 1 cap 7:
+    // q w e r t y u i); the separator Space took, but has no cap.
     assert_eq!(
         rig.surface.typed_tps_caps,
         [
             TpsKeyCapIndex { row: 3, cap: 2 },
-            TpsKeyCapIndex { row: 2, cap: 7 }
+            TpsKeyCapIndex { row: 1, cap: 7 }
         ]
     );
     drop(rig);

@@ -66,40 +66,40 @@ One new variant, wire and stored spelling `"tps"`, label `SettingsTpsMode` (`tps
 
 ### D2 — Physical layout (U4)
 
-A table in the core, new file `keys/tps_layout.rs`, keyed on the character the key types on a US layout — the same assumption the slot keys make. Letters are read lowercased with the Shift modifier deciding the layer, so Caps Lock does not select it; digits and punctuation are read as typed (`!` `*` `(` `<` `>` `:` `^`), since Windows and Linux hand over the shifted character.
+A table in the core, new file `keys/tps_layout.rs`, keyed on the character the key types on a US layout — the same assumption the slot keys make. Letters are read lowercased with the Shift modifier deciding the layer, so Caps Lock does not select it; digits and punctuation are read as typed (`!` `#` `*` `(` `)` `:` `^`), since Windows and Linux hand over the shifted character.
 
-Base rows — the Dachen positions as `rime-moetaigi` adapts them (`moetaigi-tsuim.schema.yaml:87`):
+Base rows — the Dachen positions: every symbol Mandarin Zhuyin shares with TPS keeps its Dachen key, so a Zhuyin typist's finger memory never lands on a different Taiwanese phoneme (2026-10-07; the `rime-moetaigi` positions this replaced put ㆦ on `i`, so a hand trained on ㄛ there typed `oo`, a different word the engine does not fold). The TPS-only glyphs take the keys Dachen leaves free under TPS (ㄈ `z`, ㄓ `5`, ㄔ `t`, ㄕ `g`, ㄖ `b`, ㄩ `m`, ㄟ `o`, ㄡ `.`, ㄦ `-`) and the Shift layer, where Shift is the key's sister sound: the voiced initial (ㄅ ㆠ, ㄍ ㆣ, ㄐ ㆢ, ㄗ ㆡ), the syllabic nasal (ㄇ ㆬ, ㄣ ㆭ), the nasalized vowel (ㄚ ㆩ, ㆤ ㆥ, ㄧ ㆪ, ㆦ ㆧ, ㄨ ㆫ, ㄞ ㆮ, ㄠ ㆯ) or the labial / rounded twin of a final (ㄢ ㆰ, ㄤ ㆲ):
 
 | Key | Glyph | Shift | | Key | Glyph | Shift |
 |---|---|---|---|---|---|---|
 | `1` | ㄅ | ㆠ | | `8` | ㄚ | ㆩ |
-| `q` | ㄆ | | | `i` | ㆦ | ㆧ |
-| `a` | ㄇ | | | `k` | ㄛ | ㄜ ‡ |
+| `q` | ㄆ | | | `i` | ㄛ | |
+| `a` | ㄇ | ㆬ | | `k` | ㄜ | |
 | `2` | ㄉ | | | `o` | ㆤ | ㆥ |
-| `w` | ㄊ | | | `9` | ㄞ | ㆮ |
-| `s` | ㄋ | | | `l` | ㄠ | ㆯ |
-| `x` | ㄌ | | | `,` | ㆰ | ㆱ |
-| `e` | ㄍ | ㆣ | | `0` | ㄢ | |
+| `w` | ㄊ | | | `m` | ㆦ | ㆧ |
+| `s` | ㄋ | | | `9` | ㄞ | ㆮ |
+| `x` | ㄌ | | | `l` | ㄠ | ㆯ |
+| `e` | ㄍ | ㆣ | | `0` | ㄢ | ㆰ |
 | `d` | ㄎ | ㄫ | | `;` | ㄤ | ㆲ |
 | `c` | ㄏ | | | `u` | ㄧ | ㆪ |
 | `r` | ㄐ | ㆢ | | `j` | ㄨ | ㆫ |
-| `f` | ㄑ | | | `m` | ㆬ | |
-| `v` | ㄒ | | | `p` | ㄣ | |
-| `y` | ㄗ | ㆡ | | `/` | ㄥ | |
-| `h` | ㄘ | | | `-` | ㆭ | |
-| `n` | ㄙ | | | `.` | ㆨ † | ㄝ † |
+| `f` | ㄑ | | | `p` | ㄣ | ㆭ |
+| `v` | ㄒ | | | `/` | ㄥ | |
+| `y` | ㄗ | ㆡ | | `,` | ㄝ | |
+| `h` | ㄘ | | | `.` | ㆨ † | |
+| `n` | ㄙ | | | `=` | ㆱ † | |
 
-Stop codas `b` ㆴ, `t` ㆵ, `g` ㆻ, `z` ㆷ. Tones `4` ˋ (2), `3` ˪ (3), `6` ˊ (5), `=` ˇ (6) †, `5` ˫ (7), `7` ˙ (8, typed as U+02D9 as on mobile; the engine folds it for lookup, `engine/phonetics/src/tps.rs:262`), Shift+`6` ˆ (9) †; tone 1 and the unmarked tone 4 are Space. `'` types the hyphen † — `-` is taken by ㆭ, and the hyphen is how 輕聲 `--` is written (`engine/phonetics/src/tps.rs:132-134`).
+Stop codas `b` ㆴ, `t` ㆵ, `g` ㆻ, `z` ㆷ. Tones `4` ˋ (2), `3` ˪ (3) ‡, `6` ˊ (5), Shift+`3` ˇ (6) ‡, `5` ˫ (7), `7` ˙ (8, typed as U+02D9 as on mobile; the engine folds it for lookup, `engine/phonetics/src/tps.rs:262`), Shift+`6` ˆ (9) †; tone 1 and the unmarked tone 4 are Space. `-` types the hyphen, how 輕聲 `--` is written (`engine/phonetics/src/tps.rs:132-134`).
 
-A key or Shift layer the table leaves out (`?`, `@`, a capital) and every keypad key are not TPS keys: they are document text — passed through when idle, committing the glyphs ahead of themselves while composing (D3) — so punctuation with no glyph still reaches the document, full width.
+A key or Shift layer the table leaves out (`'`, `?`, `@`, a capital) and every keypad key are not TPS keys: they are document text — passed through when idle, committing the glyphs ahead of themselves while composing (D3) — so punctuation with no glyph still reaches the document, full width.
 
-† = not in `rime-moetaigi`. Mobile types ㄝ ㆨ ˇ from its grid and tone 9 as the digit `9`, which the adjuster turns into ˆ (`ios/Sources/TaigiKeyboard/Layout/TaigiLayouts.swift:83-98`; `engine/phonetics/src/tps_adjust.rs:268-302`); here ˆ has its own key. ㄝ is `ee`, a phoneme of its own, not a spelling of ㆤ `e` (`engine/phonetics/src/tps_ambiguity.rs:23-27`).
+† = no Dachen position to inherit (Mandarin Zhuyin has no ㆨ ㆱ ˆ): ㆨ and ㆱ take free keys, ˆ the Shift cell of a tone key. Mobile types ㆨ ˇ from its grid and tone 9 as the digit `9`, which the adjuster turns into ˆ (`ios/Sources/TaigiKeyboard/Layout/TaigiLayouts.swift:83-98`; `engine/phonetics/src/tps_adjust.rs:268-302`); here ˆ has its own key. ㄝ is `ee`, a phoneme of its own, not a spelling of ㆤ `e` (`engine/phonetics/src/tps_ambiguity.rs:23-27`).
 
-‡ = differs from `rime-moetaigi`, which spells TL `o` as ㄜ on `k`. This engine spells `o` as ㄛ and keeps ㄜ for `er` / `or` (`engine/phonetics/src/tps.rs:53-56,67`); a typed ㄛ finds both, a typed ㄜ finds only `er` / `or` words, so ㄛ takes the unshifted key.
+‡ = the one deliberate Dachen deviation: `3` types ˪, tone 3 (11% of syllables, `dictionary/output/dictionary.csv` weighted by frequency), not Dachen's ˇ, which is tone 6 (0.4%); ˇ moves to Shift+`3`, the cell beside its Dachen key. ㄛ and ㄜ are both bare keys as on Dachen: the engine spells TL `o` as ㄛ and keeps ㄜ for `er` / `or` (`engine/phonetics/src/tps.rs:53-56,67`), so a typed ㄛ finds both and a typed ㄜ only `er` / `or` words.
 
 ㆳ (U+31B3) gets no key: it is ㆪ encoded a second time, and the engine folds it onto ㆪ before any lookup (`phonetics::fold_tps_glyph_alias`), so the ㆪ key already types the symbol.
 
-The table was checked glyph by glyph against `engine/phonetics/src/tps.rs:17-130` and `taigi-converter/src/tables.js:75-98` (2026-10-03): every glyph the engine spells has a key, and every key types a glyph the engine accepts. The palatal keys `r` `f` `v` are optional — ㄗ ㄘ ㄙ ㆡ before ㄧ or ㆪ are rewritten by `tps_adjust.rs:319-332`. The explicit coda keys do not force a final reading: §35 lookup reads every member of a key's family in both directions, and a user who never learns `b t g z m p / -` types the same words through the fold (§32, §33). Only a tone mark or Space pins the boundary.
+The table was checked glyph by glyph against `engine/phonetics/src/tps.rs:17-130` and `taigi-converter/src/tables.js:75-98` (2026-10-03, again after the Dachen realignment 2026-10-07; `engine_roundtrip.rs::every_layout_glyph_begins_a_composition_the_engine_takes` keeps it so): every glyph the engine spells has a key, and every key types a glyph the engine accepts. The palatal keys `r` `f` `v` are optional — ㄗ ㄘ ㄙ ㆡ before ㄧ or ㆪ are rewritten by `tps_adjust.rs:319-332`. The explicit coda keys do not force a final reading: §35 lookup reads every member of a key's family in both directions, and a user who never learns `b t g z`, `p` `/` or the Shift nasals types the same words through the fold (§32, §33). Only a tone mark or Space pins the boundary.
 
 ### D3 — Classifier under TPS
 
