@@ -922,3 +922,188 @@ fn a_restore_fills_the_room_left_past_duplicates() {
         "a CSV over the cap is still refused whole"
     );
 }
+
+// Unicode form of the stored roman (2026-10-07: an imported dictionary held
+// `li` + U+0301 while `dictionary.bin` holds `lí`, and 李 listed twice).
+
+const DECOMPOSED_LI: &str = "li\u{301}";
+const PRECOMPOSED_LI: &str = "l\u{ed}";
+
+/// Writes a row the way a build before the NFC boundary did: straight into
+/// the table, bypassing the store.
+fn insert_raw_row(directory: &tempfile::TempDir, id: &str, roman: &str, hanji: &str) {
+    let connection =
+        rusqlite::Connection::open(directory.path().join("custom_dictionary.db")).unwrap();
+    connection
+        .execute(
+            "INSERT INTO custom_dictionary (id, roman, hanzi, created_at, updated_at) VALUES (?, ?, ?, '2026-08-26 07:28:12', '2026-08-26 07:28:12');",
+            rusqlite::params![id, roman, hanji],
+        )
+        .unwrap();
+}
+
+fn stored_row(store: &CustomDictionaryStore, id: &str) -> CustomDictionaryRow {
+    store.row(id).unwrap().expect("row is stored")
+}
+
+#[test]
+fn every_write_path_stores_the_roman_in_nfc() {
+    let directory = scratch();
+    let store = custom_store(
+        &directory,
+        stub_deriver(""),
+        CustomDictionaryStore::MAX_ENTRIES,
+    );
+    let upserted = CustomDictionaryRow::new(DECOMPOSED_LI, "李");
+    store.upsert(&upserted).unwrap();
+    assert_eq!(stored_row(&store, &upserted.id).roman, PRECOMPOSED_LI);
+    // The keys come from the NFC roman too.
+    assert_eq!(
+        hanji_of(&store.rows_matching(&query_key(PRECOMPOSED_LI, "tl"), 20)),
+        ["李"]
+    );
+
+    let added = CustomDictionaryRow::new("ta\u{302}i", "台");
+    store.add_unless_stored(&added).unwrap();
+    assert_eq!(stored_row(&store, &added.id).roman, "t\u{e2}i");
+
+    // In one file, the NFD and NFC spellings of one word are one row.
+    let result = store
+        .batch_import(&[
+            CustomDictionaryRow::new("gi\u{301}", "語"),
+            CustomDictionaryRow::new("g\u{ed}", "語"),
+        ])
+        .unwrap();
+    assert_eq!((result.imported, result.skipped), (1, 1));
+    // And a file row that matches a stored word once normalised is skipped.
+    let result = store
+        .batch_import(&[CustomDictionaryRow::new(DECOMPOSED_LI, "李")])
+        .unwrap();
+    assert_eq!((result.imported, result.skipped), (0, 1));
+    assert_eq!(store.count().unwrap(), 3);
+}
+
+#[test]
+fn the_hanji_keeps_a_compatibility_ideograph() {
+    // NFC would fold U+F900 豈 onto U+8C48 豈; the Hanji is stored as chosen.
+    let directory = scratch();
+    let store = custom_store(
+        &directory,
+        stub_deriver(""),
+        CustomDictionaryStore::MAX_ENTRIES,
+    );
+    let row = CustomDictionaryRow::new("khi\u{301}", "\u{f900}");
+    store.upsert(&row).unwrap();
+    let stored = stored_row(&store, &row.id);
+    assert_eq!(stored.hanji, "\u{f900}");
+    assert_eq!(stored.roman, "kh\u{ed}");
+}
+
+#[test]
+fn the_list_filter_finds_a_word_typed_in_either_form() {
+    let directory = scratch();
+    let store = custom_store(
+        &directory,
+        stub_deriver(""),
+        CustomDictionaryStore::MAX_ENTRIES,
+    );
+    store
+        .upsert(&CustomDictionaryRow::new(PRECOMPOSED_LI, "李"))
+        .unwrap();
+    for filter in [PRECOMPOSED_LI, DECOMPOSED_LI] {
+        assert_eq!(store.count_matching(filter).unwrap(), 1, "{filter:?}");
+        assert_eq!(hanji_of(&store.rows(filter, 10, 0).unwrap()), ["李"]);
+    }
+}
+
+#[test]
+fn a_launch_rewrites_stored_nfd_romans_and_keeps_everything_else() {
+    // trace: `CustomDictionaryStore::normalize_stored_romans_if_needed`.
+    let directory = scratch();
+    drop(custom_store(
+        &directory,
+        stub_deriver(""),
+        CustomDictionaryStore::MAX_ENTRIES,
+    ));
+    insert_raw_row(&directory, "A", DECOMPOSED_LI, "李");
+    // Becomes identical to "C" once normalised: both stay.
+    insert_raw_row(&directory, "B", DECOMPOSED_LI, "你");
+    insert_raw_row(&directory, "C", PRECOMPOSED_LI, "你");
+    // Its NFC roman derives no keys: it keeps its roman.
+    insert_raw_row(&directory, "D", "bo\u{302}", "無");
+
+    let calls = Arc::new(Mutex::new(Vec::<String>::new()));
+    let recording = {
+        let calls = Arc::clone(&calls);
+        let inner = stub_deriver("");
+        Arc::new(move |roman: &str| {
+            calls.lock().unwrap().push(roman.to_owned());
+            if roman == "b\u{f4}" {
+                return None;
+            }
+            inner(roman)
+        }) as SearchKeyDeriver
+    };
+    let store = custom_store(&directory, recording, CustomDictionaryStore::MAX_ENTRIES);
+    store.normalize_stored_romans_if_needed().unwrap();
+
+    let a = stored_row(&store, "A");
+    assert_eq!(a.roman, PRECOMPOSED_LI);
+    assert_eq!(a.hanji, "李");
+    assert_eq!(
+        (a.created_at.as_str(), a.updated_at.as_str()),
+        ("2026-08-26 07:28:12", "2026-08-26 07:28:12"),
+        "a repair is not an edit"
+    );
+    assert_eq!(stored_row(&store, "B").roman, PRECOMPOSED_LI);
+    assert_eq!(store.count().unwrap(), 4, "no row is deleted");
+    assert_eq!(stored_row(&store, "D").roman, "bo\u{302}");
+    // The two rewritten rows got keys from their NFC roman ("C", written
+    // raw, never had any).
+    let mut found = hanji_of(&store.rows_matching(&query_key(PRECOMPOSED_LI, "tl"), 20))
+        .into_iter()
+        .map(str::to_owned)
+        .collect::<Vec<_>>();
+    found.sort();
+    assert_eq!(found, ["你", "李"]);
+
+    // Only "D" is left to retry; nothing else is derived again.
+    calls.lock().unwrap().clear();
+    store.normalize_stored_romans_if_needed().unwrap();
+    assert_eq!(calls.lock().unwrap().as_slice(), ["b\u{f4}"]);
+}
+
+#[test]
+fn the_launch_repair_never_overwrites_an_edit_made_while_it_derived() {
+    // The derivation runs between the snapshot and the write: an edit that
+    // lands there (here, from a second connection, as the settings app's
+    // process would) keeps its roman. Driven through the launch entry point.
+    let directory = scratch();
+    drop(custom_store(
+        &directory,
+        stub_deriver(""),
+        CustomDictionaryStore::MAX_ENTRIES,
+    ));
+    insert_raw_row(&directory, "A", DECOMPOSED_LI, "李");
+    insert_raw_row(&directory, "B", "gi\u{301}", "語");
+    let database = directory.path().join("custom_dictionary.db");
+    let editing = {
+        let inner = stub_deriver("");
+        Arc::new(move |roman: &str| {
+            if roman == PRECOMPOSED_LI {
+                rusqlite::Connection::open(&database)
+                    .unwrap()
+                    .execute(
+                        "UPDATE custom_dictionary SET roman = 'lí-á' WHERE id = 'A';",
+                        [],
+                    )
+                    .unwrap();
+            }
+            inner(roman)
+        }) as SearchKeyDeriver
+    };
+    let store = custom_store(&directory, editing, CustomDictionaryStore::MAX_ENTRIES);
+    store.finish_takeover();
+    assert_eq!(stored_row(&store, "A").roman, "lí-á", "the edit wins");
+    assert_eq!(stored_row(&store, "B").roman, "g\u{ed}");
+}
