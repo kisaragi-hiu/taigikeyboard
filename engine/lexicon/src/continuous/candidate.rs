@@ -1,5 +1,5 @@
 //! Continuous candidate construction: dictionary / custom / learned rows to
-//! [`RawCandidate`], plus the `(canonical_tl, hanji, span)` dedupe.
+//! [`RawCandidate`], plus the `(hanji, span)` + (`roman` or `canonical_tl`) dedupe.
 
 use ranking::{
     calculate_continuous_score, sort_by_candidate_key, source_tier_rank, ContextRanks, FrequencyMap,
@@ -12,8 +12,8 @@ use super::{
 use crate::dictionary_reader::DictionaryRecord;
 
 /// Shared tail of every continuous fetch: merge `custom_dictionary.db`
-/// hits into the dictionary candidates `out`, collapse `(canonical_tl,
-/// hanji, span)` duplicates (word identity), then apply the nine-dimension [`CandidateSortKey`](ranking::CandidateSortKey) sort.
+/// hits into the dictionary candidates `out`, collapse duplicates equal on
+/// `(hanji, span)` and on `roman` or `canonical_tl` (word identity), then apply the nine-dimension [`CandidateSortKey`](ranking::CandidateSortKey) sort.
 /// `coverage_kind` is stamped on the custom synths — `COVERAGE_KIND_FULL`
 /// on the exact path, `COVERAGE_KIND_PARTIAL_PREFIX` on the partial-prefix
 /// path so §15.5's "partial-prefix ranks strictly below full-syllable" rule
@@ -43,7 +43,7 @@ use crate::dictionary_reader::DictionaryRecord;
 /// **Dedupe** (Item 12): `dict.bin` is already collapsed by
 /// `dictionary/build/merge_csv.py:107`'s `groupby(["hanzi", "_tl_key"])`,
 /// so the only realistic duplicate is custom-vs-`dict.bin` sharing a
-/// `(canonical_tl, hanji)` identity. MUST run BEFORE the `CandidateSortKey` sort: the winner is
+/// hanji and a roman or `canonical_tl` identity. MUST run BEFORE the `CandidateSortKey` sort: the winner is
 /// the lowest `source_tier_rank` survivor (custom rank 0 beats any
 /// `dict.bin` tier), which is NOT what the full 9-dim sort would pick (it
 /// weighs `score`/`freq` ahead of `source_rank`, so a high-freq `dict.bin`
@@ -311,8 +311,8 @@ pub(super) fn learned_entry_to_candidate(
 /// v3.5.8 Phase 9 Item 12 — `(roman, hanji)` dedupe (Codex pre-impl
 /// D1 + D2, 2026-05-15). **v3.5.8 S2: key extended to
 /// `(roman, hanji, consumed_span)`** (Codex pre-impl S2 Q1d,
-/// 2026-05-16). **2026-10-07: `roman` → `canonical_tl`** (the word
-/// identity). Runs on the merged `dict.bin` + custom candidate
+/// 2026-05-16). **2026-10-07: + `canonical_tl`** (the word identity,
+/// a second pass after the raw `roman`). Runs on the merged `dict.bin` + custom candidate
 /// vector BEFORE the `CandidateSortKey` sort.
 ///
 /// - **Key**: two candidates are one when they share `(hanji,
@@ -348,7 +348,12 @@ pub(super) fn learned_entry_to_candidate(
 ///   `CandidateSortKey.stable_idx` stays deterministic.
 pub(super) fn dedupe_by_roman_hanji_span(out: &mut Vec<RawCandidate>) {
     dedupe_by_reading(out, |c| c.roman.as_str());
-    dedupe_by_reading(out, |c| c.canonical_tl.as_str());
+    // Only a custom row's `canonical_tl` can differ from its roman here
+    // (dictionary and learned rows carry their TL as both), so without one
+    // the identity pass cannot drop anything.
+    if out.iter().any(|c| c.is_custom) {
+        dedupe_by_reading(out, |c| c.canonical_tl.as_str());
+    }
 }
 
 /// One pass of [`dedupe_by_roman_hanji_span`]: collapse candidates equal on

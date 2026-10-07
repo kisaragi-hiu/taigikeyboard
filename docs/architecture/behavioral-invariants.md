@@ -165,7 +165,7 @@
 
 **Invariant**: two distinct dedup passes exist and must run in the documented order:
 
-1. **Engine dedup** runs *before* sorting — the Continuous pre-sort `(canonical_tl, hanji, consumed_span)` dedupe (word identity, Core Principle #6). Removes true duplicates, including a custom row whose stored roman differs from the dictionary's only in form (NFD import, POJ or digit-tone spelling; 2026-10-07 `li2` → 李 twice).
+1. **Engine dedup** runs *before* sorting — the Continuous pre-sort dedupe on `(hanji, consumed_span)` + (`roman` or the word identity `canonical_tl`, Core Principle #6). Removes true duplicates, including a custom row whose stored roman differs from the dictionary's only in form (NFD import, POJ or digit-tone spelling; 2026-10-07 `li2` → 李 twice).
 2. **Display dedup** runs *after* sorting, only in TPS mode. Key = `(hanzi, consumed_span)` to preserve legitimate distinct partial vs full-buffer surfaces. Keeps the highest-ranked entry per hanzi (entries without hanzi are always kept).
 
 Reversing or merging these two passes changes ordering. Running display dedup before sort drops higher-ranked entries.

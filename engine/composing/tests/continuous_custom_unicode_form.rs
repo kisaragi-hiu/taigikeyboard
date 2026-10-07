@@ -130,10 +130,10 @@ fn decomposed_custom_roman_collapses_under_caps_and_poj() {
 }
 
 #[test]
-fn decomposed_custom_roman_collapses_on_the_abbreviation_and_partial_paths() {
-    // The abbreviation block (Step 4c) and the no-key partial-prefix branch
-    // do not merge custom rows again; their dictionary hit meets the custom
-    // row only through `retain_absent_from`'s identity half.
+fn decomposed_custom_roman_collapses_on_the_abbreviation_path() {
+    // The abbreviation block (Step 4c) does not merge custom rows again;
+    // its dictionary hit meets the custom row only through
+    // `retain_absent_from`'s identity half.
     let _lock = engine_install_lock();
     install();
     let custom = || with_custom("so\u{301}-si\u{302}", "鎖匙");
@@ -141,6 +141,12 @@ fn decomposed_custom_roman_collapses_on_the_abbreviation_and_partial_paths() {
         let (n, all) = count_in("tl", raw, custom(), "鎖匙");
         assert_eq!(n, 1, "{raw}: NFD custom 鎖匙 listed once; got {all:?}");
     }
+}
+
+#[test]
+fn decomposed_custom_roman_collapses_on_the_no_key_partial_path() {
+    let _lock = engine_install_lock();
+    install();
     for raw in ["l", "L"] {
         let (n, all) = count_in("tl", raw, with_custom("li\u{301}", "李"), "李");
         assert_eq!(n, 1, "{raw}: NFD custom 李 listed once; got {all:?}");

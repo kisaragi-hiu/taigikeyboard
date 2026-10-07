@@ -241,8 +241,9 @@ fn recase_tl_as_poj_display(roman: &str) -> String {
 
 /// v3.5.8 — collapse continuous candidates that became identical only
 /// after a render pass (POJ render, Syllable Separator, typed separators).
-/// The pre-render dedupe (`lexicon::dedupe_by_roman_hanji_span`) keys on
-/// the word identity `(canonical_tl, hanji, consumed_span)` (2026-10-07),
+/// The pre-render dedupe (`lexicon::dedupe_by_roman_hanji_span`) collapses
+/// `(hanji, consumed_span)` + (`roman` or the word identity `canonical_tl`)
+/// (2026-10-07),
 /// so a hanji-bearing custom entry stored in POJ display form
 /// (`roman = "gô͘"`) and a `dict.bin` entry in TL (`roman = "gôo"`) for
 /// the same 吳 at one span already collapse there. Two DIFFERENT
@@ -357,8 +358,8 @@ pub(crate) fn roman_reading_eq(a: &str, b: &str) -> bool {
 /// Two `dict.bin` rows like `灣 / uan` (tone 1) and `灣 / uân` (tone 5)
 /// both index under `tps:ㄨㄢ`, so the build pipeline legitimately
 /// emits both rowids at the same FST key. The pre-sort
-/// `lexicon::dedupe_by_roman_hanji_span` keys on `(canonical_tl, hanji,
-/// span)` and preserves tone variants; that is correct for TL/POJ
+/// `lexicon::dedupe_by_roman_hanji_span` keys on `(hanji, span)` + (`roman`
+/// or `canonical_tl`) and preserves tone variants; that is correct for TL/POJ
 /// (the UI shows distinct `uan / 灣` vs `uân / 灣` rows) but produces
 /// a visible duplicate in TPS mode where only `灣` is rendered.
 ///
@@ -371,8 +372,8 @@ pub(crate) fn roman_reading_eq(a: &str, b: &str) -> bool {
 /// `lexicon::dedupe_by_roman_hanji_span`. `hanji = None` or empty
 /// hanji passes through (roman-only rows are unique by roman); upstream
 /// `lexicon::dedupe_by_roman_hanji_span` already collapses exact
-/// `(canonical_tl, hanji, span)` duplicates so this branch never reaches a
-/// truly identical pair.
+/// `(hanji, span)` + (`roman` or `canonical_tl`) duplicates so this branch
+/// never reaches a truly identical pair.
 fn dedupe_display_hanji_for_tps(candidates: &mut Vec<RawCandidate>) {
     retain_first_by_key(candidates, |c| {
         c.hanji
