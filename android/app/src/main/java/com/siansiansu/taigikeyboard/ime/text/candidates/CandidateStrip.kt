@@ -9,7 +9,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -118,7 +117,6 @@ fun TaigiCandidateStrip(
     LazyRow(
         state = listState,
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(end = 48.dp),
     ) {
         // No explicit `key` lambda: candidate ids are not unique (e.g.
         // custom-dictionary markers collide on `TaigiWord(id = -2, …)`) and
