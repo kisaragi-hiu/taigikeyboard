@@ -1117,3 +1117,24 @@ fn the_search_keys_of_a_roman_do_not_depend_on_its_unicode_form() {
         assert_eq!(keys(&nfd), keys(&nfc), "{roman}");
     }
 }
+
+#[test]
+fn a_repaired_poj_roman_with_reordered_marks_stays_findable() {
+    // `so` + U+0358 + U+030D (tone 8 typed after the dot) is not NFC — NFC
+    // puts U+030D (class 230) before U+0358 (class 232). The repair keeps the
+    // keys the row was stored under; the real derivation finds it after.
+    let directory = scratch();
+    let stores = UserDataStores::new(directory.path().to_path_buf());
+    stores.custom_dictionary.open_blocking();
+    drop(stores);
+    insert_raw_row(&directory, "A", "so\u{358}\u{30d}", "嗽");
+    let store = custom_store(
+        &directory,
+        Arc::new(derive_custom_search_keys),
+        CustomDictionaryStore::MAX_ENTRIES,
+    );
+    store.finish_takeover();
+    assert_eq!(stored_row(&store, "A").roman, "so\u{30d}\u{358}");
+    let query = derive_custom_query_key("soo", "tl").expect("a query key");
+    assert_eq!(hanji_of(&store.rows_matching(&query, 20)), ["嗽"]);
+}

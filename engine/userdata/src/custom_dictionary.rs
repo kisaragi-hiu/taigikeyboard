@@ -412,8 +412,8 @@ impl CustomDictionaryStore {
     }
 
     /// What every launch runs once the file is open: the takeover's key
-    /// re-derivation, then the NFC repair of stored romans. Blocks (it goes through `perform`), so never on a UI
-    /// thread or a store worker. A failure is logged and the store stays
+    /// re-derivation, then the NFC repair of stored romans. Blocks (it goes
+    /// through `perform`), so never on a UI thread or a store worker. A failure is logged and the store stays
     /// usable.
     pub fn finish_takeover(&self) {
         // The re-derivation is part of the takeover: another process taking
@@ -462,23 +462,31 @@ impl CustomDictionaryStore {
         if rewrites.is_empty() {
             return Ok(());
         }
-        let rewritten = self
-            .database
-            .perform::<_, CustomDictionaryError>(move |connection| {
-                immediate_transaction(connection, |connection| {
-                    let mut rewritten = 0;
-                    for (id, roman) in &rewrites {
-                        let normalized: String = roman.nfc().collect();
-                        rewritten += connection.execute(
-                            &format!(
-                                "UPDATE {TABLE_NAME} SET roman = ? WHERE id = ? AND roman = ?;"
-                            ),
-                            params![normalized, id, roman],
-                        )?;
-                    }
-                    Ok(rewritten)
-                })
-            })?;
+        // One transaction per chunk, as an import: the write lock is never
+        // held for the whole repair (a rollback-journal file blocks the
+        // keystroke reader while it commits), and a process killed partway
+        // keeps the chunks it finished — each UPDATE is idempotent.
+        let mut rewritten = 0;
+        for chunk in rewrites.chunks(IMPORT_CHUNK_SIZE) {
+            let chunk = chunk.to_vec();
+            rewritten += self
+                .database
+                .perform::<_, CustomDictionaryError>(move |connection| {
+                    immediate_transaction(connection, |connection| {
+                        let mut rewritten = 0;
+                        for (id, roman) in &chunk {
+                            let normalized: String = roman.nfc().collect();
+                            rewritten += connection.execute(
+                                &format!(
+                                    "UPDATE {TABLE_NAME} SET roman = ? WHERE id = ? AND roman = ?;"
+                                ),
+                                params![normalized, id, roman],
+                            )?;
+                        }
+                        Ok(rewritten)
+                    })
+                })?;
+        }
         log::info!("custom_dictionary.normalized_romans count={rewritten}");
         Ok(())
     }
