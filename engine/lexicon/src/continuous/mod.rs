@@ -311,9 +311,9 @@ pub struct RawCandidate {
     /// `false` for `dict.bin` FST hits ([`record_to_candidate`]). Read
     /// by [`CandidateSortKey::new`] (→ `source_tier_rank(bitmask, is_custom)`
     /// returns rank `0` when `true`, ahead of every `dict.bin` source
-    /// tier) and by the `(roman, hanji)` dedupe winner policy
+    /// tier) and by the `(canonical_tl, hanji)` dedupe winner policy
     /// (`docs/engine/continuous-commit-and-display.md` §10.10): on a
-    /// duplicate `(roman, hanji)` pair the lowest `source_tier_rank`
+    /// duplicate `(canonical_tl, hanji)` identity the lowest `source_tier_rank`
     /// survivor wins, so a custom entry always beats a `dict.bin`
     /// duplicate. Internal axis only — NOT emitted on
     /// `CandidateMessage` (same pattern as [`coverage_kind`] /
@@ -339,8 +339,9 @@ impl RawCandidate {
 
 /// v3.5.8 Phase 9 Item 12 — one `custom_dictionary.db` row, as the engine
 /// reads it from its store (`composing::UserRows`). `roman` / `hanji` are
-/// the raw stored columns, verbatim (no display capitalization) so the engine's
-/// `(roman, hanji)` dedupe key collides correctly against
+/// the raw stored columns, verbatim (no display capitalization); the
+/// engine folds `roman` to `canonical_tl` (NFC, POJ → TL) so its
+/// `(canonical_tl, hanji)` dedupe key collides correctly against
 /// `dict.bin`'s `DictionaryRecord.tl` / `.hanji`. `hanji = None`
 /// is a romanization-only custom entry (mirrors
 /// `DictionaryRecord.hanji` / `RawCandidate.hanji` `Option` semantics

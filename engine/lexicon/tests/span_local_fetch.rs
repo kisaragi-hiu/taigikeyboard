@@ -1670,9 +1670,10 @@ fn item12_custom_dedupes_and_wins_dict_collision() {
 }
 
 #[test]
-fn item12_custom_roman_variant_not_deduped() {
-    // Same hanji, different roman → distinct `(roman, hanji)` keys.
-    // Both the dict entry and the custom entry survive (D1 dual-key).
+fn item12_custom_numeric_tone_spelling_is_the_same_word() {
+    // Same hanji, same reading spelled with digit tones → one word identity
+    // `(canonical_tl, hanji)` (Core Principle #6), so the pair collapses and
+    // custom (rank 0) wins. Pre-2026-10-07 the raw-roman key kept both.
     let (prefix_index, dict) = build_fixture(
         "item12-roman-variant",
         &[Row {
@@ -1697,9 +1698,11 @@ fn item12_custom_roman_variant_not_deduped() {
     );
     assert_eq!(
         out.len(),
-        2,
-        "roman variants must both survive, got {out:#?}"
+        1,
+        "spellings of one reading collapse, got {out:#?}"
     );
+    assert!(out[0].is_custom, "custom wins the collision");
+    assert_eq!(out[0].canonical_tl, "tâi-gí");
 }
 
 #[test]

@@ -10,6 +10,7 @@ mod common;
 
 mod composing_caret;
 mod continuous_abbrev;
+mod continuous_custom_unicode_form;
 mod continuous_explicit_tone;
 mod continuous_keys_tl_hyphen;
 mod continuous_keys_tl_lattice;
