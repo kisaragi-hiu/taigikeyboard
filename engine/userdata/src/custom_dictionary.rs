@@ -428,31 +428,37 @@ impl CustomDictionaryStore {
         self.database.wait_long_for_locks(false);
     }
 
-    /// Rewrites every stored roman that is not NFC into NFC, with its
-    /// search keys — the rows written before the write boundary
-    /// normalised (`with_nfc_roman`), e.g. a decomposed CSV import. No
-    /// marker: the scan is the gate, so a file an older build of any
-    /// platform writes NFD into again heals on the next launch, and a file
-    /// with nothing to fix costs one read. Ids, timestamps and Hanji are
-    /// kept; two rows that become identical both stay (a repair never
-    /// deletes a word); a row whose NFC roman will not derive keeps its
-    /// roman and keys. Each rewrite is conditional on the roman still being
-    /// the one read, so an edit made in between — or another process that
-    /// already normalised — wins.
+    /// Rewrites every stored roman that is not NFC into NFC — the rows
+    /// written before the write boundary normalised (`with_nfc_roman`), e.g.
+    /// a decomposed CSV import. No marker: the stamps cannot carry one
+    /// (Android files keep 10 and iOS files 6 whatever this build writes,
+    /// and `application_id` is the takeover), so the scan is the gate — a
+    /// file an older build writes NFD into again heals on the next launch,
+    /// and a file with nothing to fix costs one read that keeps no rows. The
+    /// search keys stay: the derivation folds NFD and NFC onto the same keys
+    /// (`tests/stores.rs` pins it). Ids, timestamps and Hanji are kept; two
+    /// rows that become identical both stay (a repair never deletes a word).
+    /// Each rewrite is conditional on the roman still being the one read, so
+    /// an edit made in between — or another process that already
+    /// normalised — wins.
     pub fn normalize_stored_romans_if_needed(&self) -> Result<(), CustomDictionaryError> {
-        let stored = self
-            .database
-            .perform::<_, CustomDictionaryError>(|connection| Ok(entry_romans(connection)?))?;
-        let rewrites: Vec<(String, String, String, Vec<CustomSearchKey>)> = stored
-            .into_iter()
-            .filter(|(_, roman)| !unicode_normalization::is_nfc(roman))
-            .filter_map(|(id, roman)| {
-                let normalized: String = roman.nfc().collect();
-                let keys =
-                    (self.derive_search_keys)(&normalized).filter(|keys| !keys.is_empty())?;
-                Some((id, roman, normalized, keys))
-            })
-            .collect();
+        let rewrites: Vec<(String, String)> =
+            self.database
+                .perform::<_, CustomDictionaryError>(|connection| {
+                    let mut statement =
+                        connection.prepare(&format!("SELECT id, roman FROM {TABLE_NAME};"))?;
+                    let rows = statement.query_map([], |row| {
+                        Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+                    })?;
+                    let mut rewrites = Vec::new();
+                    for row in rows {
+                        let (id, roman) = row?;
+                        if !unicode_normalization::is_nfc(&roman) {
+                            rewrites.push((id, roman));
+                        }
+                    }
+                    Ok(rewrites)
+                })?;
         if rewrites.is_empty() {
             return Ok(());
         }
@@ -461,17 +467,14 @@ impl CustomDictionaryStore {
             .perform::<_, CustomDictionaryError>(move |connection| {
                 immediate_transaction(connection, |connection| {
                     let mut rewritten = 0;
-                    for (id, roman, normalized, keys) in &rewrites {
-                        let changed = connection.execute(
+                    for (id, roman) in &rewrites {
+                        let normalized: String = roman.nfc().collect();
+                        rewritten += connection.execute(
                             &format!(
                                 "UPDATE {TABLE_NAME} SET roman = ? WHERE id = ? AND roman = ?;"
                             ),
                             params![normalized, id, roman],
                         )?;
-                        if changed == 1 {
-                            replace_search_keys(connection, id, keys)?;
-                            rewritten += 1;
-                        }
                     }
                     Ok(rewritten)
                 })

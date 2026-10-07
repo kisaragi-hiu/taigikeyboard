@@ -1018,7 +1018,8 @@ fn the_list_filter_finds_a_word_typed_in_either_form() {
 
 #[test]
 fn a_launch_rewrites_stored_nfd_romans_and_keeps_everything_else() {
-    // trace: `CustomDictionaryStore::normalize_stored_romans_if_needed`.
+    // trace: `CustomDictionaryStore::normalize_stored_romans_if_needed`,
+    // driven through the launch entry point.
     let directory = scratch();
     drop(custom_store(
         &directory,
@@ -1029,23 +1030,15 @@ fn a_launch_rewrites_stored_nfd_romans_and_keeps_everything_else() {
     // Becomes identical to "C" once normalised: both stay.
     insert_raw_row(&directory, "B", DECOMPOSED_LI, "你");
     insert_raw_row(&directory, "C", PRECOMPOSED_LI, "你");
-    // Its NFC roman derives no keys: it keeps its roman.
-    insert_raw_row(&directory, "D", "bo\u{302}", "無");
-
-    let calls = Arc::new(Mutex::new(Vec::<String>::new()));
-    let recording = {
-        let calls = Arc::clone(&calls);
-        let inner = stub_deriver("");
-        Arc::new(move |roman: &str| {
-            calls.lock().unwrap().push(roman.to_owned());
-            if roman == "b\u{f4}" {
-                return None;
-            }
-            inner(roman)
-        }) as SearchKeyDeriver
-    };
-    let store = custom_store(&directory, recording, CustomDictionaryStore::MAX_ENTRIES);
-    store.normalize_stored_romans_if_needed().unwrap();
+    // Already NFC although it carries combining marks (U+030D, U+0358 have
+    // no precomposed form): never rewritten.
+    insert_raw_row(&directory, "D", "a\u{30d}-o\u{358}", "鴨烏");
+    let store = custom_store(
+        &directory,
+        stub_deriver(""),
+        CustomDictionaryStore::MAX_ENTRIES,
+    );
+    store.finish_takeover();
 
     let a = stored_row(&store, "A");
     assert_eq!(a.roman, PRECOMPOSED_LI);
@@ -1056,28 +1049,12 @@ fn a_launch_rewrites_stored_nfd_romans_and_keeps_everything_else() {
         "a repair is not an edit"
     );
     assert_eq!(stored_row(&store, "B").roman, PRECOMPOSED_LI);
+    assert_eq!(stored_row(&store, "D").roman, "a\u{30d}-o\u{358}");
     assert_eq!(store.count().unwrap(), 4, "no row is deleted");
-    assert_eq!(stored_row(&store, "D").roman, "bo\u{302}");
-    // The two rewritten rows got keys from their NFC roman ("C", written
-    // raw, never had any).
-    let mut found = hanji_of(&store.rows_matching(&query_key(PRECOMPOSED_LI, "tl"), 20))
-        .into_iter()
-        .map(str::to_owned)
-        .collect::<Vec<_>>();
-    found.sort();
-    assert_eq!(found, ["你", "李"]);
-
-    // Only "D" is left to retry; nothing else is derived again.
-    calls.lock().unwrap().clear();
-    store.normalize_stored_romans_if_needed().unwrap();
-    assert_eq!(calls.lock().unwrap().as_slice(), ["b\u{f4}"]);
 }
 
 #[test]
-fn the_launch_repair_never_overwrites_an_edit_made_while_it_derived() {
-    // The derivation runs between the snapshot and the write: an edit that
-    // lands there (here, from a second connection, as the settings app's
-    // process would) keeps its roman. Driven through the launch entry point.
+fn two_processes_repairing_one_file_leave_it_normalised_once() {
     let directory = scratch();
     drop(custom_store(
         &directory,
@@ -1086,24 +1063,57 @@ fn the_launch_repair_never_overwrites_an_edit_made_while_it_derived() {
     ));
     insert_raw_row(&directory, "A", DECOMPOSED_LI, "李");
     insert_raw_row(&directory, "B", "gi\u{301}", "語");
-    let database = directory.path().join("custom_dictionary.db");
-    let editing = {
-        let inner = stub_deriver("");
-        Arc::new(move |roman: &str| {
-            if roman == PRECOMPOSED_LI {
-                rusqlite::Connection::open(&database)
-                    .unwrap()
-                    .execute(
-                        "UPDATE custom_dictionary SET roman = 'lí-á' WHERE id = 'A';",
-                        [],
-                    )
-                    .unwrap();
-            }
-            inner(roman)
-        }) as SearchKeyDeriver
-    };
-    let store = custom_store(&directory, editing, CustomDictionaryStore::MAX_ENTRIES);
-    store.finish_takeover();
-    assert_eq!(stored_row(&store, "A").roman, "lí-á", "the edit wins");
-    assert_eq!(stored_row(&store, "B").roman, "g\u{ed}");
+    let ime = custom_store(
+        &directory,
+        stub_deriver(""),
+        CustomDictionaryStore::MAX_ENTRIES,
+    );
+    let settings = custom_store(
+        &directory,
+        stub_deriver(""),
+        CustomDictionaryStore::MAX_ENTRIES,
+    );
+    std::thread::scope(|scope| {
+        scope.spawn(|| ime.finish_takeover());
+        scope.spawn(|| settings.finish_takeover());
+    });
+    for store in [&ime, &settings] {
+        assert_eq!(stored_row(store, "A").roman, PRECOMPOSED_LI);
+        assert_eq!(stored_row(store, "B").roman, "g\u{ed}");
+        assert_eq!(store.count().unwrap(), 2);
+    }
+}
+
+#[test]
+fn the_search_keys_of_a_roman_do_not_depend_on_its_unicode_form() {
+    // Why the launch repair rewrites only `roman`: the keys an NFD row was
+    // stored under are the keys of its NFC form. If this ever fails, the
+    // repair has to re-derive them.
+    use unicode_normalization::UnicodeNormalization;
+    for roman in [
+        "lí",
+        "tâi-gí",
+        "sió-bē",
+        "hô͘",
+        "a̍h-á",
+        "tsiūⁿ",
+        "tshiū-á",
+        "ńg",
+        "m̄-bat",
+        "khòng-sî",
+        "só-sî",
+        "Tâi-uân",
+    ] {
+        let nfc: String = roman.nfc().collect();
+        let nfd: String = roman.nfd().collect();
+        let keys = |text: &str| {
+            derive_custom_search_keys(text).map(|keys| {
+                keys.into_iter()
+                    .map(|key| (key.family, key.form, key.key))
+                    .collect::<Vec<_>>()
+            })
+        };
+        assert!(keys(&nfc).is_some(), "{roman} derives keys");
+        assert_eq!(keys(&nfd), keys(&nfc), "{roman}");
+    }
 }
