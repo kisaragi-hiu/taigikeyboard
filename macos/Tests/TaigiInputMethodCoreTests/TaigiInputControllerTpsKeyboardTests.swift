@@ -41,14 +41,14 @@ final class TaigiInputControllerTpsKeyboardTests: XCTestCase {
         XCTAssertNotNil(TpsKeyboardPanel.shared.owner, "a panel on screen names the session that raised it")
     }
 
-    /// trace: `tps_keyboard_rows` — 12 + 10 + 11 + 10 caps, read from the
+    /// trace: `tps_keyboard_rows` — 12 + 10 + 10 + 10 caps, read from the
     /// core through `KeyRules.tpsKeyboardRows`.
     func testThePanel_drawsTheCoresRows() throws {
         let session = try makeSession(under: .tps)
 
         session.controller.performShortcutAction(.showTpsKeyboard)
 
-        XCTAssertEqual(TpsKeyboardPanel.shared.capCount, 43)
+        XCTAssertEqual(TpsKeyboardPanel.shared.capCount, 42)
     }
 
     func testTheChord_again_hidesThePanel_andClearsTheWish() throws {

@@ -1596,11 +1596,11 @@ mod tests {
 
     #[test]
     fn under_tps_a_layout_key_types_its_glyph_idle_or_composing() {
-        // trace: tps_layout — `e` ㄍ, number-row `1` ㄅ, `7` tone 8 U+02D9, `,` ㆰ;
+        // trace: tps_layout — `e` ㄍ, number-row `1` ㄅ, `7` tone 8 U+02D9, `,` ㄝ;
         // taken ahead of the slot tier. These events carry no key code, so
         // even a window up does not read `1` / `7` as the number row (D7,
         // `under_tps_the_window_picks_with_the_number_row_and_space_confirms`).
-        let cases = [("e", "ㄍ"), ("1", "ㄅ"), ("7", "\u{02d9}"), (",", "ㆰ")];
+        let cases = [("e", "ㄍ"), ("1", "ㄅ"), ("7", "\u{02d9}"), (",", "ㄝ")];
         for (key, glyph) in cases {
             for (is_composing, is_showing) in [(false, false), (true, false), (true, true)] {
                 assert_eq!(

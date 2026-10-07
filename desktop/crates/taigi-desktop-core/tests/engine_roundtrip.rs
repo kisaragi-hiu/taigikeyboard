@@ -153,10 +153,10 @@ fn every_layout_glyph_begins_a_composition_the_engine_takes() {
     let settings = tps_settings();
     let keys = ('a'..='z')
         .chain('0'..='9')
-        .chain(",;/-.=".chars())
+        .chain(",;/.=".chars())
         .map(|key| (key.to_string(), KeyModifiers::NONE))
         .chain(
-            "!EDRY*IKO>UJ(L<:^"
+            "!#EDRY*)OMAPUJ(L:^"
                 .chars()
                 .map(|key| (key.to_string(), KeyModifiers::SHIFT)),
         );

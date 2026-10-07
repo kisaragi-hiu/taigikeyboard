@@ -538,8 +538,8 @@ mod tests {
 
     #[test]
     fn the_panel_is_as_wide_as_its_widest_staggered_row() {
-        // trace: rows 12 @0, 10 @0.5, 11 @0.75, 10 @1.25 key widths; pitch
-        // 54 → widths 642, 561, 628.5, 601.5; the number row is widest.
+        // trace: rows 12 @0, 10 @0.5, 10 @0.75, 10 @1.25 key widths; pitch
+        // 54 → widths 642, 561, 574.5, 601.5; the number row is widest.
         // Height: 4 × 54 − 6 = 210. Plus 12 padding each side.
         let (width, height) = panel_size(&tps_keyboard_rows());
         assert_eq!(width, 642.0 + 24.0);

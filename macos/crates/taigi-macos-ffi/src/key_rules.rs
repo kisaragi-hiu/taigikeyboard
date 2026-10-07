@@ -636,7 +636,7 @@ mod tests {
 
     /// The seam hands Swift the core's rows as they are — trace:
     /// `tps_keyboard_rows` — 12 caps at indent 0 leading with `1` ㄅ / ㆠ;
-    /// `Q` ㄆ with no Shift glyph; 43 caps in all.
+    /// `Q` ㄆ with no Shift glyph; 42 caps in all.
     #[test]
     fn the_tps_key_panel_rows_are_the_cores() {
         use crate::proto::{desktop_request, desktop_response};
@@ -658,6 +658,6 @@ mod tests {
         );
         assert_eq!(reply.rows[1].caps[0].shift_glyph, None);
         let count: usize = reply.rows.iter().map(|row| row.caps.len()).sum();
-        assert_eq!(count, 43);
+        assert_eq!(count, 42);
     }
 }

@@ -1,13 +1,15 @@
 //! The physical-keyboard TPS layout: which glyph a key types under TPS
-//! (`docs/architecture/desktop-tps-roadmap.md` § D2). The system Zhuyin
-//! (Dachen) positions as `rime-moetaigi` adapts them, with the TPS-only
-//! glyphs on Shift, so a Zhuyin typist's hands already know the base layer.
+//! (`docs/architecture/desktop-tps-roadmap.md` § D2). Every symbol Mandarin
+//! Zhuyin shares with TPS keeps its system (Dachen) key, so a Zhuyin typist's
+//! hands already know the base layer; the TPS-only glyphs take the keys
+//! Dachen leaves free and the Shift layer, where Shift is the key's sister
+//! sound (voiced, syllabic or nasalized).
 //!
 //! Keyed on the character a key types on a US layout — the same assumption
 //! the slot keys make. A letter is read lowercased with the Shift modifier
 //! choosing the layer, so Caps Lock never selects it; a digit or punctuation
 //! key is read as typed, because Windows and Linux hand over the shifted
-//! character (`!`, `^`, `<`) rather than the key's base one.
+//! character (`!`, `^`, `)`) rather than the key's base one.
 
 use super::chord::is_keypad_key_code;
 use super::snapshot::{KeyEventSnapshot, KeyModifiers};
@@ -39,19 +41,19 @@ const KEYS: &[(char, &str)] = &[
     ('Y', "ㆡ"),
     ('h', "ㄘ"),
     ('n', "ㄙ"),
-    // Vowels and nasalized vowels. `k` is ㄛ, not ㄜ as in `rime-moetaigi`:
-    // this engine spells TL `o` as ㄛ and keeps ㄜ for `er` / `or`
-    // (`engine/phonetics/src/tps.rs`), so the common vowel takes the bare key.
+    // Vowels and nasalized vowels. ㄛ ㄜ ㄝ keep their Dachen keys (TL `o`
+    // is ㄛ, ㄜ is `er` / `or`, `engine/phonetics/src/tps.rs`); ㆦ takes the
+    // Dachen ㄩ key, ㆨ the ㄡ key, both free under TPS.
     ('8', "ㄚ"),
     ('*', "ㆩ"),
-    ('i', "ㆦ"),
-    ('I', "ㆧ"),
-    ('k', "ㄛ"),
-    ('K', "ㄜ"),
+    ('i', "ㄛ"),
+    ('k', "ㄜ"),
     ('o', "ㆤ"),
     ('O', "ㆥ"),
+    ('m', "ㆦ"),
+    ('M', "ㆧ"),
+    (',', "ㄝ"),
     ('.', "ㆨ"),
-    ('>', "ㄝ"),
     ('u', "ㄧ"),
     ('U', "ㆪ"),
     ('j', "ㄨ"),
@@ -60,32 +62,33 @@ const KEYS: &[(char, &str)] = &[
     ('(', "ㆮ"),
     ('l', "ㄠ"),
     ('L', "ㆯ"),
-    // Nasal finals.
-    (',', "ㆰ"),
-    ('<', "ㆱ"),
+    // Nasal finals; the syllabic nasals on Shift of ㄇ and ㄣ, ㆱ on the free `=`.
     ('0', "ㄢ"),
+    (')', "ㆰ"),
     (';', "ㄤ"),
     (':', "ㆲ"),
-    ('m', "ㆬ"),
+    ('=', "ㆱ"),
+    ('A', "ㆬ"),
     ('p', "ㄣ"),
+    ('P', "ㆭ"),
     ('/', "ㄥ"),
-    ('-', "ㆭ"),
     // Stop codas.
     ('b', "ㆴ"),
     ('t', "ㆵ"),
     ('g', "ㆻ"),
     ('z', "ㆷ"),
     // Tone marks 2, 3, 5, 6, 7, 8 and 9; tones 1 and 4 are Space. Tone 8 is
-    // U+02D9, what mobile types; the engine folds it for lookup.
+    // U+02D9, what mobile types; the engine folds it for lookup. `3` is tone
+    // 3 (˪); Dachen's ˇ, tone 6, sits on Shift+`3`.
     ('4', "\u{02cb}"),
     ('3', "\u{02ea}"),
     ('6', "\u{02ca}"),
-    ('=', "\u{02c7}"),
+    ('#', "\u{02c7}"),
     ('5', "\u{02eb}"),
     ('7', "\u{02d9}"),
     ('^', "\u{02c6}"),
-    // The hyphen (`--` writes the neutral tone); `-` itself is ㆭ.
-    ('\'', "-"),
+    // The hyphen (`--` writes the neutral tone).
+    ('-', "-"),
 ];
 
 /// The glyph `event` types under TPS, or `None` for a key the layout does not
@@ -159,9 +162,9 @@ mod tests {
 
     #[test]
     fn every_bare_letter_digit_and_layout_punctuation_key_types_a_glyph() {
-        // trace: roadmap D2 — all 26 letters, all ten digits and `, ; / - . = '`
+        // trace: roadmap D2 — all 26 letters, all ten digits and `, ; / - . =`
         // carry a base glyph.
-        for key in ('a'..='z').chain('0'..='9').chain(",;/-.='".chars()) {
+        for key in ('a'..='z').chain('0'..='9').chain(",;/-.=".chars()) {
             assert!(
                 glyph(&key.to_string(), KeyModifiers::NONE).is_some(),
                 "{key:?}"
@@ -171,13 +174,15 @@ mod tests {
 
     #[test]
     fn shift_selects_the_tps_only_layer() {
-        // trace: Shift+e types `E` → ㆣ; Shift+1 types `!` → ㆠ; Shift+k → ㄜ.
+        // trace: Shift+e types `E` → ㆣ; Shift+1 types `!` → ㆠ; Shift+p → ㆭ;
+        // Shift+3 types `#` → ˇ.
         assert_eq!(glyph("e", KeyModifiers::NONE), Some("ㄍ"));
         assert_eq!(glyph("E", KeyModifiers::SHIFT), Some("ㆣ"));
         assert_eq!(glyph("1", KeyModifiers::NONE), Some("ㄅ"));
         assert_eq!(glyph("!", KeyModifiers::SHIFT), Some("ㆠ"));
-        assert_eq!(glyph("k", KeyModifiers::NONE), Some("ㄛ"));
-        assert_eq!(glyph("K", KeyModifiers::SHIFT), Some("ㄜ"));
+        assert_eq!(glyph("p", KeyModifiers::NONE), Some("ㄣ"));
+        assert_eq!(glyph("P", KeyModifiers::SHIFT), Some("ㆭ"));
+        assert_eq!(glyph("#", KeyModifiers::SHIFT), Some("\u{02c7}"));
         assert_eq!(glyph("^", KeyModifiers::SHIFT), Some("\u{02c6}"));
     }
 
@@ -191,10 +196,13 @@ mod tests {
 
     #[test]
     fn an_unassigned_shift_cell_or_a_chord_is_not_a_tps_key() {
-        // trace: Shift+q (`Q`), Shift+2 (`@`) and Shift+/ (`?`) have no TPS glyph.
+        // trace: Shift+q (`Q`), Shift+k (`K`), Shift+2 (`@`) and Shift+/ (`?`)
+        // have no TPS glyph; nor has the bare `'`.
         assert_eq!(glyph("Q", KeyModifiers::SHIFT), None);
+        assert_eq!(glyph("K", KeyModifiers::SHIFT), None);
         assert_eq!(glyph("@", KeyModifiers::SHIFT), None);
         assert_eq!(glyph("?", KeyModifiers::SHIFT), None);
+        assert_eq!(glyph("'", KeyModifiers::NONE), None);
         assert_eq!(glyph("e", KeyModifiers::CONTROL), None);
         assert_eq!(glyph("e", KeyModifiers::ALT), None);
         assert_eq!(glyph("e", KeyModifiers::WIN), None);
@@ -227,18 +235,18 @@ mod tests {
     #[test]
     fn tones_and_the_hyphen_type_what_mobile_types() {
         // trace: tps.rs ZHUYIN_TONES — 2 ˋ U+02CB, 3 ˪ U+02EA, 5 ˊ U+02CA,
-        // 6 ˇ U+02C7, 7 ˫ U+02EB, 8 ˙ U+02D9 (encode-safe form), 9 ˆ U+02C6.
+        // 7 ˫ U+02EB, 8 ˙ U+02D9 (encode-safe form) on bare keys; 6 ˇ U+02C7
+        // and 9 ˆ U+02C6 on Shift (`shift_selects_the_tps_only_layer`).
         let tones = [
             ("4", "\u{02cb}"),
             ("3", "\u{02ea}"),
             ("6", "\u{02ca}"),
-            ("=", "\u{02c7}"),
             ("5", "\u{02eb}"),
             ("7", "\u{02d9}"),
         ];
         for (key, mark) in tones {
             assert_eq!(glyph(key, KeyModifiers::NONE), Some(mark), "{key}");
         }
-        assert_eq!(glyph("'", KeyModifiers::NONE), Some("-"));
+        assert_eq!(glyph("-", KeyModifiers::NONE), Some("-"));
     }
 }
