@@ -99,8 +99,9 @@ final class TpsKeyboardPanel {
     /// still up at every handover). Built once and reused — its content never
     /// changes, and AppKit re-colours it for the appearance.
     func show(ownedBy owner: ComposingSessionToken, target: any TpsKeyboardTarget, generation: Int) {
-        // A flash belongs to the session that typed it; a handover ends it.
-        endFlash()
+        // A flash or a press belongs to the session it lit for; a handover
+        // puts both out.
+        putOutLights()
         self.owner = owner
         self.target = target
         self.generation = generation
@@ -128,7 +129,7 @@ final class TpsKeyboardPanel {
 
     /// Takes the panel down whatever session raised it.
     func hideNow() {
-        endFlash()
+        putOutLights()
         owner = nil
         target = nil
         panel?.orderOut(nil)
@@ -150,6 +151,14 @@ final class TpsKeyboardPanel {
             guard !Task.isCancelled else { return }
             self?.endFlash()
         }
+    }
+
+    /// Ends the flash and unlights a held press: the press's release may
+    /// never come (the panel went down under it), and if it does it still
+    /// types only for the session showing the panel.
+    private func putOutLights() {
+        endFlash()
+        capViews.joined().forEach { $0.unlightPress() }
     }
 
     private func endFlash() {
@@ -270,25 +279,37 @@ private final class TpsKeyCapView: NSView {
     /// ends.
     private var labels: [(field: NSTextField, restingColor: NSColor)] = []
 
-    /// Lit in the system accent (not the candidate window's per-app
-    /// highlight: the panel belongs to no app), the texts in the
-    /// selected-text colour.
+    /// The key it types was just taken (`TpsKeyboardPanel.flash`).
     var isFlashed = false {
-        didSet {
-            guard isFlashed != oldValue else { return }
-            for label in labels {
-                label.field.textColor = isFlashed ? .alternateSelectedControlTextColor : label.restingColor
-            }
-            guard isFlashed else {
-                layer?.backgroundColor = nil
-                return
-            }
-            // Resolved under the panel's own appearance, as
-            // `CandidateItemView` does: `cgColor` snapshots a dynamic colour
-            // against the current drawing appearance.
-            effectiveAppearance.performAsCurrentDrawingAppearance {
-                layer?.backgroundColor = NSColor.selectedContentBackgroundColor.cgColor
-            }
+        didSet { updateLight() }
+    }
+
+    /// The mouse button is down on the cap, the pointer over it.
+    private(set) var isPressed = false {
+        didSet { updateLight() }
+    }
+
+    private var isLit = false
+
+    /// Lit while flashed or pressed, in the system accent (not the
+    /// candidate window's per-app highlight: the panel belongs to no app),
+    /// the texts in the selected-text colour.
+    private func updateLight() {
+        let shouldLight = isFlashed || isPressed
+        guard shouldLight != isLit else { return }
+        isLit = shouldLight
+        for label in labels {
+            label.field.textColor = isLit ? .alternateSelectedControlTextColor : label.restingColor
+        }
+        guard isLit else {
+            layer?.backgroundColor = nil
+            return
+        }
+        // Resolved under the panel's own appearance, as
+        // `CandidateItemView` does: `cgColor` snapshots a dynamic colour
+        // against the current drawing appearance.
+        effectiveAppearance.performAsCurrentDrawingAppearance {
+            layer?.backgroundColor = NSColor.selectedContentBackgroundColor.cgColor
         }
     }
 
@@ -319,16 +340,33 @@ private final class TpsKeyCapView: NSView {
         frame.contains(point) ? self : nil
     }
 
-    /// Taken, so the release comes back to this cap (`mouseUp`).
-    override func mouseDown(with _: NSEvent) {}
+    /// Taken, so the drag and the release come back to this cap; the cap
+    /// lights while the button is down over it, as a button does.
+    override func mouseDown(with _: NSEvent) {
+        isPressed = true
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        isPressed = isOver(event)
+    }
 
     /// Types on the release, over the cap the press began on — as the
     /// Windows panel does (`WM_LBUTTONUP`); a release dragged off the cap
     /// types nothing. The half is read where the button comes up.
     override func mouseUp(with event: NSEvent) {
+        isPressed = false
+        guard isOver(event) else { return }
         let point = convert(event.locationInWindow, from: nil)
-        guard bounds.contains(point) else { return }
         let isShiftLayer = point.y >= bounds.midY || event.modifierFlags.contains(.shift)
         onPress(TpsKeyboardPanel.pressedGlyph(of: cap, isShiftLayer: isShiftLayer))
+    }
+
+    /// Unlights the cap; a release still to come types as before.
+    func unlightPress() {
+        isPressed = false
+    }
+
+    private func isOver(_ event: NSEvent) -> Bool {
+        bounds.contains(convert(event.locationInWindow, from: nil))
     }
 }

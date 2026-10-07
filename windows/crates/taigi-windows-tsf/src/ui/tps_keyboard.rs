@@ -100,6 +100,8 @@ struct PanelContent {
     surface: Option<Surface>,
     /// The cap flashing now, and when its flash ends.
     flash: Option<(TpsKeyCapIndex, Instant)>,
+    /// The cap the left button went down on, lit until the button comes up.
+    pressed: Option<TpsKeyCapIndex>,
 }
 
 impl TpsKeyboard {
@@ -118,6 +120,7 @@ impl TpsKeyboard {
             dpi: BASE_DPI,
             surface: None,
             flash: None,
+            pressed: None,
         }));
         let handler: Rc<RefCell<dyn WindowHandler>> = panel.clone();
         let window = PopupWindow::create(WINDOW_CLASS, handler)
@@ -180,6 +183,7 @@ impl PanelContent {
     fn sync(&mut self, window: &WindowRef) {
         let Some(appearance) = (self.source)() else {
             self.end_flash(window);
+            self.pressed = None;
             window.hide();
             return;
         };
@@ -234,13 +238,13 @@ impl PanelContent {
     }
 
     /// One cap at `(x, y)`: its outline, the key's label top left, the Shift
-    /// glyph top right, the glyph large in the middle. A flashing cap is lit
-    /// as the candidate window's selection is: the highlight behind, every
-    /// text in the highlighted-text colour.
-    fn draw_cap(&self, pen: &Pen<'_>, cap: &TpsKeyCap, x: f32, y: f32, is_flashed: bool) {
+    /// glyph top right, the glyph large in the middle. A cap flashing or
+    /// pressed is lit as the candidate window's selection is: the highlight
+    /// behind, every text in the highlighted-text colour.
+    fn draw_cap(&self, pen: &Pen<'_>, cap: &TpsKeyCap, x: f32, y: f32, is_lit: bool) {
         let theme = self.theme;
         let colour = |resting: D2D1_COLOR_F| {
-            if is_flashed {
+            if is_lit {
                 theme.highlighted_text
             } else {
                 resting
@@ -258,7 +262,7 @@ impl PanelContent {
         };
         // SAFETY: drawing on our own target between Begin/EndDraw.
         unsafe {
-            if is_flashed {
+            if is_lit {
                 pen.brush.SetColor(&theme.highlight);
                 pen.target.FillRoundedRectangle(&rounded, pen.brush);
             }
@@ -337,15 +341,23 @@ fn cap_origin(row_index: usize, row: &TpsKeyboardRow, cap_index: usize) -> (f32,
     )
 }
 
-/// The cap under `point` (DIPs, the panel's top left at 0, 0), and whether
-/// the point is in its top half — the Shift glyph's, as the cap draws it.
-fn cap_at(rows: &[TpsKeyboardRow], point: (f32, f32)) -> Option<(&TpsKeyCap, bool)> {
+/// The cap under `point` (DIPs, the panel's top left at 0, 0) — where it
+/// sits and what it is — and whether the point is in its top half, the
+/// Shift glyph's, as the cap draws it.
+fn cap_at(
+    rows: &[TpsKeyboardRow],
+    point: (f32, f32),
+) -> Option<(TpsKeyCapIndex, &TpsKeyCap, bool)> {
     rows.iter().enumerate().find_map(|(row_index, row)| {
         row.caps.iter().enumerate().find_map(|(cap_index, cap)| {
             let (x, y) = cap_origin(row_index, row, cap_index);
             let is_inside =
                 (x..x + CAP_SIZE).contains(&point.0) && (y..y + CAP_SIZE).contains(&point.1);
-            is_inside.then_some((cap, point.1 < y + CAP_SIZE / 2.0))
+            let index = TpsKeyCapIndex {
+                row: row_index,
+                cap: cap_index,
+            };
+            is_inside.then_some((index, cap, point.1 < y + CAP_SIZE / 2.0))
         })
     })
 }
@@ -422,12 +434,12 @@ impl WindowHandler for PanelContent {
                 for (row_index, row) in self.rows.iter().enumerate() {
                     for (cap_index, cap) in row.caps.iter().enumerate() {
                         let (x, y) = cap_origin(row_index, row, cap_index);
-                        let is_flashed = flashed
-                            == Some(TpsKeyCapIndex {
-                                row: row_index,
-                                cap: cap_index,
-                            });
-                        self.draw_cap(&pen, cap, x, y, is_flashed);
+                        let index = Some(TpsKeyCapIndex {
+                            row: row_index,
+                            cap: cap_index,
+                        });
+                        let is_lit = flashed == index || self.pressed == index;
+                        self.draw_cap(&pen, cap, x, y, is_lit);
                     }
                 }
             })
@@ -437,16 +449,44 @@ impl WindowHandler for PanelContent {
         }
     }
 
-    /// A click on a cap types its glyph; a click between caps, nothing. The
-    /// window takes no activation (`WM_MOUSEACTIVATE`), so the document
-    /// keeps the keyboard and the injected key reaches its key sink.
-    fn click(&mut self, _window: &WindowRef, point: (f32, f32)) {
-        let Some((cap, is_top_half)) = cap_at(&self.rows, point) else {
+    /// A press on a cap lights it, and takes the mouse so the release comes
+    /// back here wherever it happens; a press between caps, nothing.
+    fn press(&mut self, window: &WindowRef, point: (f32, f32)) {
+        let Some((index, _, _)) = cap_at(&self.rows, point) else {
             return;
         };
+        self.pressed = Some(index);
+        window.capture_mouse();
+        window.invalidate();
+    }
+
+    /// The release types the glyph of the cap the press began on, if it
+    /// comes up over that cap — as the macOS panel does; anywhere else,
+    /// nothing. The half is read where the button comes up. The window
+    /// takes no activation (`WM_MOUSEACTIVATE`), so the document keeps the
+    /// keyboard and the injected key reaches its key sink.
+    fn click(&mut self, window: &WindowRef, point: (f32, f32)) {
+        let Some(pressed) = self.pressed.take() else {
+            return;
+        };
+        window.invalidate();
+        let Some((index, cap, is_top_half)) = cap_at(&self.rows, point) else {
+            return;
+        };
+        if index != pressed {
+            return;
+        }
         // SAFETY: a plain query of this thread's keyboard state.
         let is_shift_held = unsafe { GetKeyState(i32::from(VK_SHIFT.0)) } < 0;
         send_click(cap.pressed_glyph(is_top_half || is_shift_held));
+    }
+
+    /// The mouse went elsewhere mid-press (another window took it): the
+    /// press ends, typing nothing.
+    fn press_cancelled(&mut self, window: &WindowRef) {
+        if self.pressed.take().is_some() {
+            window.invalidate();
+        }
     }
 
     fn wheel(&mut self, _window: &WindowRef, _delta: f32) {}
@@ -507,7 +547,7 @@ mod tests {
         // y 12..60 — top half above y 36. Row 1 (indent 0.5): `Q` at
         // x 12 + 27 = 39..87, y 66..114.
         let rows = tps_keyboard_rows();
-        let label = |point| cap_at(&rows, point).map(|(cap, top)| (cap.label, top));
+        let label = |point| cap_at(&rows, point).map(|(_, cap, top)| (cap.label, top));
         assert_eq!(label((13.0, 13.0)), Some(('1', true)));
         assert_eq!(label((59.0, 59.0)), Some(('1', false)));
         assert_eq!(label((66.0, 20.0)), Some(('2', true)));
