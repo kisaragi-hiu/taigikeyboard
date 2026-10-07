@@ -37,7 +37,7 @@ fn tl() -> AppConfig {
 #[test]
 fn normalize_tone_uppercase_input_promotes_nasal_marker() {
     // POJ `ANN2` with `nn_doubletap_enabled`: preprocess → `A` + `\u{207f}` +
-    // `2`, then `to_tone_marks` adds tone diacritic on `A`. Final character
+    // `2`, then permissive placement adds the tone diacritic on `A`. Final character
     // sequence has uppercase letters preceding the nasal marker, so the
     // adjustment must promote `\u{207f}` → `\u{1D3A}`.
     let out = normalize("ANN2", poj_doubletap());
@@ -71,15 +71,14 @@ fn normalize_tone_mixed_case_per_marker_resolution() {
 
 // -------------------------------------------------------------------------
 // Typed case survives tone placement letter by letter (Discord report
-// 2026-09-14: Caps Lock `SIANN5` showed `Siâⁿ`). `convert_syllable` places
-// the tone on a lowercased copy and restores case via `match_case`, so
-// every typed capital comes back, not only the first one.
+// 2026-09-14: Caps Lock `SIANN5` showed `Siâⁿ`). Permissive placement
+// preserves each typed letter's case while adding its combining tone mark.
 // -------------------------------------------------------------------------
 
 #[test]
 fn normalize_tone_poj_keeps_every_typed_capital() {
-    // trace: preprocess "SIANN5" → "SIAⁿ5", base "SIAⁿ", placed on lowered
-    // "siâⁿ", match_case → "SIÂⁿ", nasal adjust after capital Â → "SIÂᴺ".
+    // trace: preprocess "SIANN5" → "SIAⁿ5", place tone → "SIÂⁿ",
+    // then nasal adjustment after capital Â → "SIÂᴺ".
     let cases = [
         ("SIANN5", "SI\u{c2}\u{1d3a}"),
         ("SIAnn5", "SI\u{c2}\u{1d3a}"),
@@ -96,8 +95,9 @@ fn normalize_tone_poj_keeps_every_typed_capital() {
         ("NG5", "N\u{302}G"),
         ("CHIAH8", "CHIA\u{30d}H"),
         ("A9", "\u{102}"),
-        // Untouched early returns: tone 1 / 4 and a non-syllable.
-        ("TAI1", "TAI1"),
+        // Tone 1 is invisible while the typed case is preserved.
+        ("TAI1", "TAI"),
+        // No tone-bearing letter: keep the digit.
         ("XYZ2", "XYZ2"),
     ];
     for (input, expected) in cases {
@@ -145,7 +145,7 @@ fn normalize_tone_tl_keeps_every_typed_capital() {
         ("SiAnn5", "Si\u{c2}nn"),
         ("HOO2", "H\u{d3}O"),
         ("A9", "A\u{30b}"),
-        ("TSHIAH4", "TSHIAH4"),
+        ("TSHIAH4", "TSHIAH"),
     ];
     for (input, expected) in cases {
         assert_eq!(normalize(input, tl()), expected, "input {input:?}");

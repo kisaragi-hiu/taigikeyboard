@@ -363,9 +363,9 @@ fn adopt_collapsed_dict_identity(literal: &mut RawCandidate, candidates: &[RawCa
 /// with `roman == display_text ==` the preedit literal (except the identity
 /// it inherits under a single-script display — `adopt_collapsed_dict_identity`)
 /// — WYSIWYG with the underline (§30 literal-no-fold: tone marks only, no spelling fold). It
-/// mirrors the preedit EXACTLY, so a tone-1/4 syllable or an unhyphenated
-/// multi-syllable blob keeps its raw digits as the underline shows them
-/// (`tai1`, `goa2ai3li2` — the engine does not auto-syllabify, §10.2). It
+/// mirrors the preedit EXACTLY. Tone digits apply to the preceding last
+/// vowel cluster without validating a whole syllable (`tai5gi2` → `tâigí`).
+/// Tones 1 and 4 consume their digits without a visible mark. It
 /// carries `canonical_tl` via `canonical_tl_form` so the frequency / association records learn the
 /// canonical `(∅, TL)` identity on commit (Core Principle #7; §24/§28).
 fn literal_roman_candidate(
@@ -724,16 +724,30 @@ mod tests {
     }
 
     #[test]
-    fn literal_roman_candidate_mirrors_preedit_verbatim_with_digits() {
-        // The candidate is EXACTLY the preedit (§30 / §10.2): a tone-1/4
-        // syllable and an unhyphenated multi-syllable blob keep their raw
-        // digits as the underline shows them — the engine does not
-        // auto-syllabify, and the candidate must not diverge from the
-        // underline (consistency).
+    fn literal_roman_candidate_preserves_digits_without_a_tone_target() {
         let cfg = config_tl();
-        for raw in ["tai1", "goa2ai3li2", "tai5gi2"] {
+        for raw in ["t2", "123", "tai-2"] {
             let cand = literal_roman_candidate(raw, &cfg, phonetics::InputMode::Tl).unwrap();
+            assert_eq!(cand.roman, raw);
             assert_eq!(cand.roman, crate::derived::derived_display(raw, &cfg));
+        }
+    }
+
+    #[test]
+    fn literal_roman_candidate_permissive_tones_mirror_preview() {
+        let cfg = config_tl();
+        for (raw, expected) in [
+            ("tai5gi2", "tâigí"),
+            ("goa2ai3li2", "goáàilí"),
+            ("tai1", "tai"),
+            ("bak4", "bak"),
+            ("tai1bak4", "taibak"),
+            ("taigi2", "taigí"),
+        ] {
+            let cand = literal_roman_candidate(raw, &cfg, phonetics::InputMode::Tl).unwrap();
+            assert_eq!(cand.roman, expected, "{raw}");
+            assert_eq!(cand.roman, crate::derived::derived_display(raw, &cfg));
+            assert_eq!(cand.consumed_span, (0, raw.len() as u32));
         }
     }
 
@@ -763,9 +777,8 @@ mod tests {
 
     #[test]
     fn literal_roman_candidate_poj_doubletap_mirrors_preedit() {
-        // POJ `oo`/`nn` doubletap rewrites the spelling (`oo1`→`o͘1`); the
-        // candidate mirrors the preedit verbatim (including any residual
-        // tone-1/4 digit) — consistency with the underline, no special gate.
+        // POJ `oo`/`nn` doubletap preprocessing is preserved (`oo1`→`o͘`);
+        // the candidate mirrors the preedit, including invisible tones 1/4.
         let cfg = AppConfig {
             input_mode: "poj".to_string(),
             oo_doubletap_enabled: true,

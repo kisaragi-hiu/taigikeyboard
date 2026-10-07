@@ -18,6 +18,7 @@ mod external_lookup;
 mod hanji;
 mod key_family;
 mod normalization;
+mod permissive_tone;
 mod poj;
 mod punctuation;
 mod syllable;

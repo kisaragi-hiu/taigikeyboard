@@ -198,8 +198,8 @@ fn replace_last_swaps_the_char_before_the_caret() {
 #[test]
 fn telex_key_acts_on_the_chunk_before_the_caret() {
     // "tai" caret 2, Telex `v` (tone 2): apply_telex_key("ta") → "ta2", tail
-    // "i" rides along → "ta2i", caret 3. A digit mid-buffer is not a
-    // syllable end, so the display stays literal and the caret is 3.
+    // "i" rides along → "ta2i", raw caret 3. The internal tone digit
+    // is consumed, so the display is "tái" with its caret after "á".
     let mut engine = start("tai");
     move_caret(&mut engine, CaretDirection::Left);
     let resp = engine.apply(
@@ -211,9 +211,9 @@ fn telex_key_acts_on_the_chunk_before_the_caret() {
     let p = preedit(&resp);
     assert_eq!(
         (p.raw_input.as_str(), p.display_text.as_str()),
-        ("ta2i", "ta2i")
+        ("ta2i", "tái")
     );
-    assert_eq!(p.caret_utf16, 3);
+    assert_eq!(p.caret_utf16, 2);
     assert_eq!(caret_of(&engine), 3);
 }
 
