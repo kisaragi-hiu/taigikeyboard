@@ -12,7 +12,10 @@ The VM's own install and user data are never touched: the framework is
 pointed at the test build in <prefix> and at a private config / data / cache
 tree, and put back afterwards (`--restore`, also run at every start, undoes
 an interrupted run from the marker file written before anything changes).
-Keys come from a uinput keyboard (uinput.py, needs passwordless sudo).
+Keys come from a uinput keyboard (uinput.py, needs passwordless sudo) as US
+key codes, so the session's active keyboard layout must be US: the IBus
+engine keeps the active layout (`<layout>default</layout>`), as Fcitx5 keeps
+the group layout.
 """
 
 from __future__ import annotations
