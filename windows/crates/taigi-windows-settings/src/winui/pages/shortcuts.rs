@@ -13,7 +13,7 @@ use crate::winui::cards;
 use crate::winui::window::{Message, ResetScope, SettingsWindow};
 use taigi_desktop_core::keys::shortcut_labels::{
     cancel_key_label, caret_chords_label, navigation_keys_label, shifted_slot_keys_label,
-    slot_keys_label, width_flip_chords_label,
+    slot_keys_label,
 };
 use taigi_desktop_core::keys::{
     rejection_message_key, ComposingAction, ComposingKeyBindings, ComposingKeyChord,
@@ -98,15 +98,6 @@ pub fn view(
                     keys,
                 )
             },
-        ),
-        // Shown, not recordable (USER 2026-09-20): Ctrl on a punctuation key
-        // types it in the other width once, whatever the Hanji/romanization mode would have
-        // typed (`ComposingKeyIntent::width_flip_character`). Here because it
-        // writes into the document; three sample chords, since the row stands
-        // for every key of the map.
-        fixed_row(
-            strings.resolve(StringKey::DesktopShortcutFlipPunctuationWidth),
-            width_flip_chords_label(DESKTOP_PLATFORM),
         ),
         // Shown, not recordable: Escape drops the composition without
         // writing to the document (`ComposingKeyIntent::intent`). Last in

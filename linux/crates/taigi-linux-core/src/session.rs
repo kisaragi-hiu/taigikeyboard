@@ -303,7 +303,7 @@ pub fn process_key(
     if !would_consume && !matches!(intent, ComposingKeyIntent::CommitThenPassThrough) {
         // Not ours, and nothing to finish — but a character reaching the
         // document outside a composition still ends the next-word context.
-        if let Some(typed) = ComposingKeyIntent::document_text(snapshot) {
+        if let Some(typed) = ComposingKeyIntent::document_text(snapshot, bindings.input_mode) {
             if let Some(coordinator) = runtime.coordinator_if_built() {
                 if let Ok(mut coordinator) = coordinator.try_lock() {
                     if let Some(manager) = coordinator.manager(token) {

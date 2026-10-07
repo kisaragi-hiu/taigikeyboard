@@ -211,7 +211,6 @@ extension ComposingShortcuts {
             shiftedSlotKeys: reply.shiftedSlotKeys,
             navigationKeys: reply.navigationKeys,
             caretChords: reply.caretChords,
-            widthFlipChords: reply.widthFlipChords,
             cancelKey: reply.cancelKey,
         )
     }

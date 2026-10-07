@@ -84,9 +84,9 @@ extension KeyEventSnapshot {
     private static let appKitFunctionKeyRange: ClosedRange<UInt32> = 0xF700 ... 0xF8FF
 
     /// The chords the host owns. Named once because several rules are written
-    /// against it — `documentText` and the Escape that closes the Telex guide
-    /// or the symbol picker (`isPlainEscape`) — and a list spelled out at each
-    /// of them is a list that can drift apart.
+    /// against it — `documentText(inputMode:)` and the Escape that closes the
+    /// Telex guide or the symbol picker (`isPlainEscape`) — and a list spelled
+    /// out at each of them is a list that can drift apart.
     static let hostChords: NSEvent.ModifierFlags = [.command, .control, .option]
 
     /// The four chording modifiers — what a recorded chord is made of. Caps
@@ -94,21 +94,17 @@ extension KeyEventSnapshot {
     /// not which key it is.
     static let chordingModifiers: NSEvent.ModifierFlags = hostChords.union(.shift)
 
-    /// The modifier that types a punctuation key in the other width, once —
-    /// the 新注音 / Microsoft IME gesture (`Ctrl+,` → `，`). Fixed, not
-    /// recordable; the Shortcuts pane prints the core's row for it.
-    static let widthFlipModifiers: NSEvent.ModifierFlags = [.control]
-
     /// The text this key puts into the document, or nil when it is a key the
     /// host acts on. Read off the whole event rather than its characters: `⌘.`
     /// and a typed `.` carry the same character, and one of them is a host
     /// command that inserts nothing — the chording modifiers tell them apart.
-    /// The width-flip chord is document text too, and what it types is the key
-    /// under the modifier: `⌃,` arrives with `characters` `,` but `⌃[` arrives
-    /// as Escape, and the bracket is what the user asked for.
-    var documentText: String? {
-        if let flipped = widthFlipCharacter {
-            return String(flipped)
+    /// The TPS punctuation chord is document text too, and what it types is the
+    /// key under the modifier: `⌃,` arrives with `characters` `,` but `⌃[`
+    /// arrives as Escape, and the bracket is what the user asked for. The
+    /// desktop core's `ComposingKeyIntent::document_text`.
+    func documentText(inputMode: InputMode) -> String? {
+        if let punctuation = tpsPunctuationChord(inputMode: inputMode) {
+            return String(punctuation)
         }
         guard modifiers
             .intersection(.deviceIndependentFlagsMask)
@@ -119,20 +115,21 @@ extension KeyEventSnapshot {
         return characters.unicodeScalars.allSatisfy(Self.isTextScalar) ? characters : nil
     }
 
-    /// The punctuation key under a width-flip chord, or nil when this key is
-    /// not one: exactly ⌃ among the four chording modifiers, ⇧ allowed since it
-    /// picks the key (`⌃⇧,` is `⌃<`), and the key one `FullWidthPunctuation`
-    /// flips (`isWidthFlipKey`). Read off `charactersIgnoringModifiers`
-    /// because Control rewrites what some keys type (`⌃[` arrives as Escape).
-    /// Which width comes out is the controller's call: the chord means "the
-    /// other one", and only the controller knows which one the mode would have
-    /// typed.
-    var widthFlipCharacter: Character? {
+    /// The punctuation key under the TPS punctuation chord, or nil when this
+    /// key is not one: TPS only (its bare `,` `.` `;` type glyphs, so ⌃ types
+    /// their full-width marks), exactly ⌃ among the four chording modifiers, ⇧
+    /// allowed since it picks the key (`⌃⇧,` is `⌃<`), and the key one
+    /// `FullWidthPunctuation` maps (`isPunctuationChordKey`). Read off
+    /// `charactersIgnoringModifiers` because Control rewrites what some keys
+    /// type (`⌃[` arrives as Escape). The desktop core's
+    /// `ComposingKeyIntent::tps_punctuation_chord`.
+    func tpsPunctuationChord(inputMode: InputMode) -> Character? {
+        guard inputMode == .tps else { return nil }
         let chording = modifiers.intersection(Self.chordingModifiers)
-        guard chording.subtracting(.shift) == Self.widthFlipModifiers else { return nil }
+        guard chording.subtracting(.shift) == .control else { return nil }
         guard !isNamedSpecialKey,
               let unmodified = charactersIgnoringModifiers,
-              FullWidthPunctuation.isWidthFlipKey(unmodified)
+              FullWidthPunctuation.isPunctuationChordKey(unmodified)
         else { return nil }
         return unmodified.first
     }

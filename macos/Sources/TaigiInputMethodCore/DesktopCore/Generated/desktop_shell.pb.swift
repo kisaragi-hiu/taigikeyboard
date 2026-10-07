@@ -1557,8 +1557,8 @@ public nonisolated struct Taigi_DesktopShell_ComposingShortcutsReply: Sendable {
   public var actions: [Taigi_DesktopShell_ComposingShortcut] = []
 
   /// The fixed rows, as the pane prints them (`shortcut_labels`): the live
-  /// slot keys bare and behind ⇧, the navigation keys, the caret and
-  /// width-flip chords, the cancel key.
+  /// slot keys bare and behind ⇧, the navigation keys, the caret chords,
+  /// the cancel key.
   public var slotKeys: String = String()
 
   public var shiftedSlotKeys: String = String()
@@ -1566,8 +1566,6 @@ public nonisolated struct Taigi_DesktopShell_ComposingShortcutsReply: Sendable {
   public var navigationKeys: String = String()
 
   public var caretChords: String = String()
-
-  public var widthFlipChords: String = String()
 
   public var cancelKey: String = String()
 
@@ -4007,7 +4005,7 @@ nonisolated extension Taigi_DesktopShell_ComposingShortcutsRequest: SwiftProtobu
 
 nonisolated extension Taigi_DesktopShell_ComposingShortcutsReply: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ComposingShortcutsReply"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}actions\0\u{3}slot_keys\0\u{3}shifted_slot_keys\0\u{3}navigation_keys\0\u{3}caret_chords\0\u{3}width_flip_chords\0\u{3}cancel_key\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}actions\0\u{3}slot_keys\0\u{3}shifted_slot_keys\0\u{3}navigation_keys\0\u{3}caret_chords\0\u{4}\u{2}cancel_key\0\u{b}width_flip_chords\0\u{c}\u{6}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -4020,7 +4018,6 @@ nonisolated extension Taigi_DesktopShell_ComposingShortcutsReply: SwiftProtobuf.
       case 3: try { try decoder.decodeSingularStringField(value: &self.shiftedSlotKeys) }()
       case 4: try { try decoder.decodeSingularStringField(value: &self.navigationKeys) }()
       case 5: try { try decoder.decodeSingularStringField(value: &self.caretChords) }()
-      case 6: try { try decoder.decodeSingularStringField(value: &self.widthFlipChords) }()
       case 7: try { try decoder.decodeSingularStringField(value: &self.cancelKey) }()
       default: break
       }
@@ -4043,9 +4040,6 @@ nonisolated extension Taigi_DesktopShell_ComposingShortcutsReply: SwiftProtobuf.
     if !self.caretChords.isEmpty {
       try visitor.visitSingularStringField(value: self.caretChords, fieldNumber: 5)
     }
-    if !self.widthFlipChords.isEmpty {
-      try visitor.visitSingularStringField(value: self.widthFlipChords, fieldNumber: 6)
-    }
     if !self.cancelKey.isEmpty {
       try visitor.visitSingularStringField(value: self.cancelKey, fieldNumber: 7)
     }
@@ -4058,7 +4052,6 @@ nonisolated extension Taigi_DesktopShell_ComposingShortcutsReply: SwiftProtobuf.
     if lhs.shiftedSlotKeys != rhs.shiftedSlotKeys {return false}
     if lhs.navigationKeys != rhs.navigationKeys {return false}
     if lhs.caretChords != rhs.caretChords {return false}
-    if lhs.widthFlipChords != rhs.widthFlipChords {return false}
     if lhs.cancelKey != rhs.cancelKey {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true

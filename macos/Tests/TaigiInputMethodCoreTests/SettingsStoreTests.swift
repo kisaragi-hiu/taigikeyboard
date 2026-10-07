@@ -34,7 +34,6 @@ final class SettingsStoreTests: XCTestCase {
     func testStore_withNothingStored_isHanjiFirst() {
         let store = makeStore()
         XCTAssertTrue(store.storedIsHanjiFirst)
-        XCTAssertTrue(store.isFullWidthPunctuation)
         XCTAssertNil(userDefaults.object(forKey: SettingsStore.Keys.isHanjiFirst.name))
     }
 
@@ -189,23 +188,20 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertNil(userDefaults.string(forKey: SettingsStore.Keys.lastRomanizationMode.name))
     }
 
-    /// Under TPS punctuation is full width whatever the stored swap, and the
-    /// digits pick; both come back with the romanization.
-    func testTps_widensPunctuation_andPicksWithTheKeypad() {
+    /// Under TPS the digits pick, and the stored swap is kept for the way
+    /// back; both come back with the romanization.
+    func testTps_picksWithTheKeypad_andKeepsTheStoredSwap() {
         let store = makeStore()
         store.storedIsHanjiFirst = false
-        XCTAssertFalse(store.isFullWidthPunctuation)
         XCTAssertEqual(store.candidateSlotKeySet, .bareKeys)
 
         store.switchInputMode(.pick(.tps))
 
-        XCTAssertTrue(store.isFullWidthPunctuation)
         XCTAssertEqual(store.candidateSlotKeySet, .tpsDigits)
         XCTAssertFalse(store.storedIsHanjiFirst)
 
         store.switchInputMode(.toggleTps)
 
-        XCTAssertFalse(store.isFullWidthPunctuation)
         XCTAssertEqual(store.candidateSlotKeySet, .bareKeys)
     }
 
@@ -690,29 +686,9 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertFalse(makeStore().isCandidateWindowEnabled)
     }
 
-    /// The rules the swap shortcut and the punctuation width read live on the enum — pinned once.
+    /// The rule the swap shortcut reads live on the enum — pinned once.
     func testCandidateDisplayMode_rules_perMode() {
         XCTAssertEqual(CandidateDisplayMode.allCases.filter(\.allowsSwapToggle), [.sideBySide, .combined])
         XCTAssertEqual(CandidateDisplayMode.allCases.filter { !$0.showsHanji }, [.romanOnly])
-        // Punctuation width follows the STORED swap under Hanji–Romanization Pairing / Hanji with Romanization, never under Romanization Only.
-        XCTAssertFalse(CandidateDisplayMode.combined.effectiveFullWidthPunctuation(stored: false))
-        XCTAssertTrue(CandidateDisplayMode.combined.effectiveFullWidthPunctuation(stored: true))
-        XCTAssertFalse(CandidateDisplayMode.romanOnly.effectiveFullWidthPunctuation(stored: true))
-    }
-
-    /// Under Hanji with Romanization the candidate projection stays swapped while the punctuation
-    /// width follows the stored flag the swap shortcut toggles.
-    func testStore_underCombined_punctuationWidthFollowsTheStoredSwap() {
-        let store = makeStore()
-        store.candidateDisplayMode = .combined
-
-        store.storedIsHanjiFirst = false
-        XCTAssertFalse(store.isFullWidthPunctuation, "half-width until the chord is pressed")
-
-        store.storedIsHanjiFirst = true
-        XCTAssertTrue(store.isFullWidthPunctuation, "full-width after the chord is pressed")
-
-        store.candidateDisplayMode = .romanOnly
-        XCTAssertFalse(store.isFullWidthPunctuation, "羅馬字 is always half-width")
     }
 }

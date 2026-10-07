@@ -260,7 +260,7 @@ impl TextService_Impl {
             // Not ours, and nothing to finish — but a character reaching the
             // document outside a composition still ends the next-word
             // context (a full stop typed here is a sentence end).
-            if let Some(typed) = ComposingKeyIntent::document_text(&snapshot) {
+            if let Some(typed) = ComposingKeyIntent::document_text(&snapshot, bindings.input_mode) {
                 if let Some(mut coordinator) = runtime.try_coordinator() {
                     if let Some(manager) = coordinator.manager(token) {
                         manager.note_character_typed_outside_composition(&typed);
@@ -370,8 +370,8 @@ impl TextService_Impl {
 
     /// The pass-through keys this input method consumes: attaching
     /// punctuation right after an auto space (the swap), full-width
-    /// punctuation in hanji-first mode, and the width-flip chord in either
-    /// width. Optimistic — the swap is verified against the document only
+    /// punctuation in hanji-first mode and under TPS, its Ctrl punctuation
+    /// chord included. Optimistic — the swap is verified against the document only
     /// in the session. Mirrors the session's `PassThrough` arm.
     fn pass_through_may_consume(
         &self,

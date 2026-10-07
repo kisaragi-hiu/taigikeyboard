@@ -5,7 +5,7 @@ import AppKit
 import XCTest
 
 /// What a key event is to the controller and the core back end: a plain
-/// Escape, document text, the width-flip chord. What a key means to a
+/// Escape, document text, the TPS punctuation chord. What a key means to a
 /// composition, the symbol picker and the Shortcuts pane is desktop-core's
 /// (`keys/`).
 final class KeyEventSnapshotTests: XCTestCase {
@@ -46,19 +46,15 @@ final class KeyEventSnapshotTests: XCTestCase {
     /// nothing, and reporting it as document text would end a learning context
     /// on a keystroke that never reached the document.
     func testIsDocumentText_rejectsAHostChordCarryingAPrintableCharacter() {
-        // `x` under ⌃ rather than `.`: ⌃. is the width flip, document text by
-        // design (`testWidthFlipChord…`).
+        // ⌃. included: outside TPS no chord is document text (the TPS
+        // punctuation chord: `testTpsPunctuationChord…`).
         for modifier in [NSEvent.ModifierFlags.command, .control, .option] {
-            XCTAssertFalse(
-                isDocumentText(textSnapshot("x", modifiers: modifier)),
-                "a chord is a host command however printable its character is",
-            )
-        }
-        for modifier in [NSEvent.ModifierFlags.command, .option] {
-            XCTAssertFalse(
-                isDocumentText(textSnapshot(".", modifiers: modifier)),
-                "a chord is a host command however printable its character is",
-            )
+            for text in ["x", "."] {
+                XCTAssertFalse(
+                    isDocumentText(textSnapshot(text, modifiers: modifier)),
+                    "a chord is a host command however printable its character is",
+                )
+            }
         }
         XCTAssertTrue(
             isDocumentText(textSnapshot(".", modifiers: .shift)),
@@ -93,7 +89,7 @@ final class KeyEventSnapshotTests: XCTestCase {
             "🏴\u{E0067}\u{E0062}\u{E0073}\u{E0063}\u{E0074}\u{E007F}", // emoji tag sequence (plane 14 Cf)
         ] {
             let key = textSnapshot(text)
-            XCTAssertEqual(key.documentText, text, "\(text.unicodeScalars)")
+            XCTAssertEqual(key.documentText(inputMode: .tl), text, "\(text.unicodeScalars)")
         }
         // Negative control: C0, C1 (NEL) and DEL are not text.
         for text in ["\u{1}", "\u{85}"] {
@@ -103,13 +99,13 @@ final class KeyEventSnapshotTests: XCTestCase {
         XCTAssertFalse(isDocumentText(textSnapshot("\u{7F}")))
     }
 
-    // MARK: - Width flip
+    // MARK: - TPS punctuation chord
 
-    /// ⌃ on a punctuation key types that key in the other width, once. The
-    /// predicate answers the key as typed — the width is picked later — and
-    /// the key is read under the modifier: `⌃,` arrives as
-    /// `,`, `⌃[` as Escape, `⌃⇧,` as `<`.
-    func testWidthFlipChord_typesTheMappedKeyInBothStates() throws {
+    /// Under TPS, ⌃ on a punctuation key types its full-width mark. The
+    /// predicate answers the key as typed — the mapping comes later — and the
+    /// key is read under the modifier: `⌃,` arrives as `,`, `⌃[` as Escape,
+    /// `⌃⇧,` as `<`. Outside TPS the same keys are the host's chords.
+    func testTpsPunctuationChord_typesTheMappedKeyInBothStates() throws {
         // trace: AppKit's `charactersIgnoringModifiers` keeps Shift, so ⌃⇧,
         // reads `<`; Control rewrites `[` to `\u{1B}` in `characters` only.
         let comma = try KeyEventSnapshot(TestFixtures.keyDownEvent(
@@ -122,16 +118,20 @@ final class KeyEventSnapshotTests: XCTestCase {
             characters: "<", modifiers: [.control, .shift], charactersIgnoringModifiers: "<",
         ))
         for (key, expected) in [(comma, ","), (bracket, "["), (angle, "<")] {
-            XCTAssertEqual(key.widthFlipCharacter, expected.first)
-            XCTAssertEqual(key.documentText, expected)
+            XCTAssertEqual(key.tpsPunctuationChord(inputMode: .tps), expected.first)
+            XCTAssertEqual(key.documentText(inputMode: .tps), expected)
+            for mode in [InputMode.tl, .poj] {
+                XCTAssertNil(key.tpsPunctuationChord(inputMode: mode), "\(mode)")
+                XCTAssertNil(key.documentText(inputMode: mode), "\(mode): the host's chord")
+            }
         }
-        XCTAssertFalse(bracket.isPlainEscape, "⌃[ is the flip, not a cancel")
+        XCTAssertFalse(bracket.isPlainEscape, "⌃[ is the chord, not a cancel")
     }
 
     /// Exactly ⌃ on a mapped key: another chording modifier beside it, a key
     /// the policy does not map or leaves to the host (⌃⇧` is VS Code's New
-    /// Terminal), or a bare key is no flip.
-    func testWidthFlipChord_needsExactlyControlOnAMappedKey() throws {
+    /// Terminal), or a bare key is no chord.
+    func testTpsPunctuationChord_needsExactlyControlOnAMappedKey() throws {
         let withCommand = try KeyEventSnapshot(TestFixtures.keyDownEvent(
             characters: ",", modifiers: [.control, .command], charactersIgnoringModifiers: ",",
         ))
@@ -151,14 +151,14 @@ final class KeyEventSnapshotTests: XCTestCase {
             characters: "`", modifiers: [.control, .shift], charactersIgnoringModifiers: "~",
         ))
         for key in [withCommand, withOption, letter, hyphen, quote, tilde] {
-            XCTAssertNil(key.widthFlipCharacter, "\(key)")
+            XCTAssertNil(key.tpsPunctuationChord(inputMode: .tps), "\(key)")
         }
-        XCTAssertNil(textSnapshot(",").widthFlipCharacter)
+        XCTAssertNil(textSnapshot(",").tpsPunctuationChord(inputMode: .tps))
     }
 
     /// Text the host will put into its document, rather than a key it will act on.
     private func isDocumentText(_ key: KeyEventSnapshot) -> Bool {
-        key.documentText != nil
+        key.documentText(inputMode: .tl) != nil
     }
 
     private func textSnapshot(

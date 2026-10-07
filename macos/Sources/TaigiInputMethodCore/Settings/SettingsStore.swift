@@ -716,18 +716,6 @@ final class SettingsStore: @unchecked Sendable {
         set { userDefaults.set(newValue, forKey: Keys.isHanjiFirst.name) }
     }
 
-    /// Whether a typed punctuation key becomes full-width: the stored swap
-    /// masked by the display mode (`CandidateDisplayMode
-    /// .effectiveFullWidthPunctuation(stored:)`, §42). Read by
-    /// `FullWidthPunctuation` on every key.
-    /// Always on under TPS, whatever the stored swap, as on mobile; the
-    /// stored swap is kept for the way back. Mirrors desktop-core's
-    /// effective value (`SettingsDocument`, desktop TPS roadmap D4).
-    var isFullWidthPunctuation: Bool {
-        inputMode == .tps
-            || candidateDisplayMode.effectiveFullWidthPunctuation(stored: storedIsHanjiFirst)
-    }
-
     /// Whether committing a word auto-inserts a trailing space. Read by the
     /// controller's commit paths, never by the engine.
     var isAutoSpaceEnabled: Bool {

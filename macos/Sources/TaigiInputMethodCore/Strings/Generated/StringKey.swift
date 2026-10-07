@@ -39,7 +39,6 @@ enum StringKey: String {
     case desktopShortcutShowTpsKeyboard = "i18n_desktop_shortcutShowTpsKeyboard"
     case desktopShortcutShowSymbolPicker = "i18n_desktop_shortcutShowSymbolPicker"
     case desktopShortcutMoveComposingCaret = "i18n_desktop_shortcutMoveComposingCaret"
-    case desktopShortcutFlipPunctuationWidth = "i18n_desktop_shortcutFlipPunctuationWidth"
     case desktopShortcutSelectCandidateSlot = "i18n_desktop_shortcutSelectCandidateSlot"
     case desktopShortcutNavigateCandidates = "i18n_desktop_shortcutNavigateCandidates"
     case desktopShortcutCancelComposing = "i18n_desktop_shortcutCancelComposing"

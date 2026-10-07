@@ -30,10 +30,7 @@ pub use action::ComposingAction;
 pub use bindings::ComposingKeyBindings;
 pub use chord::{ChordRejection, ComposingKeyChord};
 pub use input_method_menu::{menu_rows, MenuCommand, MenuRow, MENU};
-pub use intent::{
-    caret_chord_modifiers, CandidateNavigation, CaretDirection, ComposingKeyIntent,
-    WIDTH_FLIP_MODIFIERS,
-};
+pub use intent::{caret_chord_modifiers, CandidateNavigation, CaretDirection, ComposingKeyIntent};
 pub use language_mode::LanguageMode;
 pub use recorder::{
     evaluate_press, rejection_message_key, RecordedPress, RecorderOutcome, RecorderTarget,

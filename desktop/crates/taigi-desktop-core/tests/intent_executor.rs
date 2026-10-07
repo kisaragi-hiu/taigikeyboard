@@ -289,6 +289,22 @@ fn a_picked_symbol_swaps_only_when_it_attaches() {
     assert_eq!(rig.calls(), ["swap \"， \"", "arm"]);
 }
 
+/// No chord types the other width (USER 2026-10-07): outside TPS, Ctrl on a
+/// punctuation key is the host's in either width mode — not consumed, nothing
+/// written, no swap even with one armed.
+#[test]
+fn outside_tps_ctrl_punctuation_is_never_consumed_or_written() {
+    let mut rig = new_rig(true);
+    rig.surface.can_swap = true;
+    let ctrl_comma = KeyEventSnapshot::chord(None, ",", KeyModifiers::CONTROL);
+    for is_hanji_first in [true, false] {
+        rig.settings.set_bool(&keys::IS_HANJI_FIRST, is_hanji_first);
+        assert!(!pass_through_may_consume(&ctrl_comma, &rig.settings, true));
+        assert!(!rig.run(ComposingKeyIntent::PassThrough, &ctrl_comma));
+        assert!(rig.calls().is_empty(), "{:?}", rig.calls());
+    }
+}
+
 #[test]
 fn a_pass_through_key_is_consumed_for_punctuation_or_an_armed_swap() {
     let mut settings = SettingsDocument::default();
@@ -615,9 +631,9 @@ fn tps_a_flipped_slot_commits_the_cells_own_hanji_never_the_tl() {
 
 #[test]
 fn tps_ctrl_comma_writes_the_full_width_mark() {
-    // trace: under TPS the width is full and the Ctrl chord is no flip, so
-    // `policies::document_punctuation(",", true, false)` → `，`; the swap is
-    // tried first and the surface refuses it.
+    // trace: under TPS the derived width is full, so the chord's key maps:
+    // `policies::full_width_mapped(",")` → `，`; the swap is tried first and
+    // the surface refuses it.
     let mut rig = new_tps_rig();
     let ctrl_comma = KeyEventSnapshot::chord(Some(","), ",", KeyModifiers::CONTROL);
     assert!(rig.run(ComposingKeyIntent::PassThrough, &ctrl_comma));
@@ -732,9 +748,9 @@ fn tps_space_refused_inside_the_composition_does_nothing() {
 /// mark outside the layout flips nothing, idle or composing.
 #[test]
 fn tps_ctrl_on_a_non_layout_mark_stays_full_width() {
-    // trace: under TPS the chord is no flip → `policies::document_punctuation(
-    // "[", true, false)` = `Some("「")`; `「` attaches to nothing, so no swap
-    // is tried. Composing: the commit is TPS (no auto space, H6) → `好「`.
+    // trace: under TPS the derived width is full → `policies::full_width_mapped(
+    // "[")` = `Some("「")`; `「` attaches to nothing, so no swap is tried.
+    // Composing: the commit is TPS (no auto space, H6) → `好「`.
     let mut rig = new_tps_rig();
     let ctrl_bracket = KeyEventSnapshot::chord(Some("["), "[", KeyModifiers::CONTROL);
     assert!(rig.run(ComposingKeyIntent::PassThrough, &ctrl_bracket));
@@ -754,8 +770,8 @@ fn tps_ctrl_on_a_non_layout_mark_stays_full_width() {
 #[test]
 fn tps_a_bare_mark_swaps_the_armed_space_in_full_width() {
     // trace: `?` is no TPS layout key → PassThrough; the width is full and
-    // the swap attaches what is written: `document_punctuation("?", true,
-    // false)` = `？`, attaching (`punctuation.rs` ATTACHING) → swap `？ `.
+    // the swap attaches what is written: `full_width_mapped("?")` = `？`,
+    // attaching (`punctuation.rs` ATTACHING) → swap `？ `.
     let mut rig = new_tps_rig();
     rig.surface.can_swap = true;
     let question = KeyEventSnapshot::text("?", KeyModifiers::SHIFT);

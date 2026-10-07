@@ -4,7 +4,7 @@
 //! the macOS pane draws these strings in `ShortcutSettingsView.swift`.
 
 use super::chord::ComposingKeyChord;
-use super::intent::{caret_chord_modifiers, WIDTH_FLIP_MODIFIERS};
+use super::intent::caret_chord_modifiers;
 use super::slot_key_set::CandidateSlotKeySet;
 use super::snapshot::KeyModifiers;
 use crate::candidates::HorizontalPageLayout;
@@ -49,20 +49,6 @@ pub fn caret_chords_label(platform: DesktopPlatform) -> String {
         .map(String::as_str)
         .chain(edges)
         .collect::<Vec<_>>()
-        .join("  ")
-}
-
-/// `Ctrl+,  Ctrl+.  Ctrl+;` (the Mac's `⌃,  ⌃.  ⌃;`) — three of the keys
-/// the width flip reaches.
-pub fn width_flip_chords_label(platform: DesktopPlatform) -> String {
-    [",", ".", ";"]
-        .map(|key| {
-            ComposingKeyChord {
-                key: key.to_owned(),
-                modifiers: WIDTH_FLIP_MODIFIERS,
-            }
-            .display(platform)
-        })
         .join("  ")
 }
 
@@ -119,15 +105,14 @@ mod tests {
 
     #[test]
     fn the_fixed_rows_read_in_the_recorder_rows_spelling() {
-        // trace: caret_chord_modifiers = WIDTH_FLIP_MODIFIERS = CONTROL on
-        // Windows and Linux, whose label is "Ctrl"; `display` joins with "+"
-        // (read by running the functions, 2026-09-30).
+        // trace: caret_chord_modifiers = CONTROL on Windows and Linux, whose
+        // label is "Ctrl"; `display` joins with "+" (read by running the
+        // functions, 2026-09-30).
         for platform in WINDOWS_AND_LINUX {
             assert_eq!(
                 caret_chords_label(platform),
                 "Ctrl+←  Ctrl+→  Ctrl+↑  Ctrl+↓  Home  End"
             );
-            assert_eq!(width_flip_chords_label(platform), "Ctrl+,  Ctrl+.  Ctrl+;");
             assert_eq!(navigation_keys_label(platform), "←  →  ↑  ↓  PgUp  PgDn");
             assert_eq!(cancel_key_label(platform), "Esc");
         }
@@ -135,11 +120,10 @@ mod tests {
 
     #[test]
     fn the_mac_fixed_rows_read_in_glyphs() {
-        // trace: caret ⌥ (`caret_chord_modifiers`), width flip ⌃
-        // (`WIDTH_FLIP_MODIFIERS`), the Mac's ⇞ ⇟ ⎋ legends, no separator.
+        // trace: caret ⌥ (`caret_chord_modifiers`), the Mac's ⇞ ⇟ ⎋ legends,
+        // no separator.
         let mac = DesktopPlatform::MacOS;
         assert_eq!(caret_chords_label(mac), "⌥←  ⌥→  ⌥↑  ⌥↓  ↖  ↘");
-        assert_eq!(width_flip_chords_label(mac), "⌃,  ⌃.  ⌃;");
         assert_eq!(navigation_keys_label(mac), "←  →  ↑  ↓  ⇞  ⇟");
         assert_eq!(cancel_key_label(mac), "⎋");
     }
