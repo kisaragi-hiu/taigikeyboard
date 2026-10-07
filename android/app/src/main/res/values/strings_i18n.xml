@@ -204,7 +204,7 @@
     <string name="i18n_settings_syllableSeparatorSpace">空白</string>
     <string name="i18n_settings_syllableSeparatorNone">無</string>
     <string name="i18n_settings_syllableSeparatorInfo">音節中間用連字符（tâi-uân）、空白（tâi uân）抑是無分隔（tâiuân）。後兩種輕聲 -- 改用 ·。</string>
-    <string name="i18n_settings_literalRomanCandidate">當咧拍 ê 字囥第一个</string>
+    <string name="i18n_settings_literalRomanCandidate">拍 ê 羅馬字囥第一格</string>
     <string name="i18n_settings_literalRomanCandidateInfo">候選詞列第一格顯示你拍 ê 羅馬字，點揤抑是揤 Enter 送出。關閉了後干焦會當用 Enter 送出。</string>
     <string name="i18n_settings_autoCapitalization">自動大本字</string>
     <string name="i18n_settings_autoSpace">自動閬一格</string>

@@ -3674,7 +3674,7 @@
       }
     },
     "i18n_settings_literalRomanCandidate": {
-      "comment": "Toggle label: show what is being typed as the first candidate in the strip (§34 literal-roman candidate). All four platforms.",
+      "comment": "Toggle label: show what is being typed as the first candidate in the strip (§34 literal-roman candidate). All five platforms.",
       "extractionState": "manual",
       "localizations": {
         "en": {

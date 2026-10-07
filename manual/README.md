@@ -159,11 +159,11 @@ macOS 的符號：`⌃` control、`⌥` option、`⌘` command、`⇧` shift。
 | 漢羅濫 | 漢字佮羅馬字逐个家己一格，欲用佗一个就揀佗一个。 | ![漢羅濫](shots/display-combined.png) |
 | 羅馬字 | 選字窗干焦顯示羅馬字。聲調無拍，伊嘛會補起來。 | ![羅馬字](shots/display-roman.png) |
 
-### 當咧拍 ê 字囥第一个
+### 拍 ê 羅馬字囥第一格
 
-設定 → 一般 → 當咧拍 ê 字囥第一个。拍開了後，你拍的羅馬字排第一格，揤確定齒就照你拍的輸出。無拍開的時，`⇧` `Return`（Windows、Linux：`Shift` `Enter`）嘛會當輸出當咧拍 ê 字。
+設定 → 一般 → 拍 ê 羅馬字囥第一格。拍開了後，你拍的羅馬字排第一格，揤確定齒就照你拍的輸出。無拍開的時，`⇧` `Return`（Windows、Linux：`Shift` `Enter`）嘛會當輸出當咧拍 ê 字。
 
-![拍開「當咧拍 ê 字囥第一个」](shots/literal-on.png)
+![拍開「拍 ê 羅馬字囥第一格」](shots/literal-on.png)
 
 ### 輸入文字
 
