@@ -34,8 +34,8 @@ All logging must be guarded so that **no log output appears in production/releas
 
 ## SQL
 
-- All queries must use **parameterized binding** (`?` placeholders + `sqlite3_bind_*` / `rawQuery` with args)
-- Never use string interpolation for values in SQL: `WHERE name = '\(column)'` is forbidden
+- All queries must use **parameterized binding** (`?` placeholders bound through rusqlite `params!`)
+- Never use string interpolation for values in SQL: `format!("… WHERE name = '{name}'")` is forbidden
 - DDL statements (ALTER TABLE, CREATE INDEX) that require dynamic identifiers must validate against a **hardcoded whitelist** before interpolation
 - Every platform's user-data SQL is the engine's (`engine/userdata`, rusqlite `params!` binding)
 
@@ -57,7 +57,7 @@ All logging must be guarded so that **no log output appears in production/releas
 ## Permissions
 
 - Request only the minimum permissions required
-- iOS: Only enable `RequestsOpenAccess` if the keyboard extension genuinely needs network access
+- iOS: `RequestsOpenAccess` (Full Access) is on only because the App Group container is read-only to the keyboard without it (`docs/contributing/ios-guidelines.md`); it is not a license to add network access
 - Android: Do not request `INTERNET`, `READ_CONTACTS`, or other dangerous permissions unless justified
 
 ## Exported Components (Android)

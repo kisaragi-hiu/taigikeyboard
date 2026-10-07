@@ -80,12 +80,8 @@ Generic Kotlin idioms (`val` over `var`, sealed hierarchies, data classes, corou
 
 ## 5. Coroutines + threading `[B]` `[A]`
 
-- Structured concurrency — every coroutine has an explicit parent scope owned by a lifecycle.
-- Dispatcher choice:
-  - `Dispatchers.Main.immediate` — UI state updates, `InputConnection` calls.
-  - `Dispatchers.IO` — SQLite reads/writes, file I/O, network.
-  - `Dispatchers.Default` — CPU-bound work (candidate scoring, display derivation).
-- `SupervisorJob` at roots where one child failure must not cancel siblings. Pair with a `CoroutineExceptionHandler` where failures must be logged.
+Structured concurrency and dispatcher choice follow the Kotlin coroutines guide; every coroutine's parent scope is one of the lifecycle scopes in §4. Project-specific rules:
+
 - Cancel before reschedule — if a new request supersedes an old one, cancel the old `Job` first (see `CandidateUpdateCoordinator.kt` for the working pattern).
 - **IME thread rule**: every `InputConnection` call runs on `Dispatchers.Main.immediate`. The platform executor (`ComposingManager`, `NextWordController`-equivalent) is the thread gate; shared-core code stays thread-agnostic.
 
@@ -105,11 +101,7 @@ Generic Kotlin idioms (`val` over `var`, sealed hierarchies, data classes, corou
 
 ## 8. Kotlin extension shadowing rule `[B]`
 
-When a receiver class already exposes a member function `fun X(...)`, a top-level extension `fun Receiver.X(...)` with the **same name** is unreachable — Kotlin resolution always picks the member first, regardless of argument-type compatibility.
-
-- Lazy-logging helpers on a class with existing `d/i/w/e` members must use distinct names: `debug`, `info`, `warn`, `error`.
-- More generally: when adding an inline extension with lazy evaluation semantics alongside an eager member, the extension needs a different name. A compile check after definition is faster than guessing.
-- Same caveat applies to extension properties shadowing member properties.
+Kotlin resolves a member before a same-name extension, whatever the argument types, so an extension named like an existing member is unreachable. `LoggerBackend` (`ime/core/logging/LoggerBackend.kt`) has members `d` / `i` / `w` / `e`; its lazy-logging extensions take distinct names (`debug`, and `info` / `warn` / `error` if added). The same holds for extension properties.
 
 ## 8a. User-data SQLite is the engine's `[A]`
 

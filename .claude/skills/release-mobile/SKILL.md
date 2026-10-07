@@ -188,7 +188,6 @@ What that means while preparing a mobile release:
 
 - Never edit another version's changelog or store-note files.
 - Never touch `changelog/desktop-v<version>.md`, `macos/`, `windows/`, `linux/`, or `desktop/` — that is `release-desktop`'s surface.
-- Never hand-edit the generated target history entry.
 - Tag only the release commit made in § 6, only as `mobile-<version>`, and never move or delete an existing tag.
 - Never request, store, or use signing certificates, keystores, API keys, or store credentials.
 - Never upload a build, edit a live store listing, or submit production.

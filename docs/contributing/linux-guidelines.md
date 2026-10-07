@@ -43,8 +43,10 @@ record: `docs/architecture/linux-roadmap.md`.
   touches the candidate window only after the edit session returned.
 - Every D-Bus method body runs under `catch_unwind`; a panic answers `false` / `()` and logs.
   The daemon respawns a dead engine and the user loses the composition.
-- No `libibus`, no GObject, no C dependency in the Rust crates of `linux/`: they must build on the
-  macOS host and cross-build for `x86_64-unknown-linux-gnu`. The ONE crate allowed `unsafe` is
+- No `libibus`, no GObject in the Rust crates of `linux/`. The settings window
+  (`taigikeyboard-settings`, GTK 4 + libadwaita) is the one crate that links a system C library;
+  `taigikeyboard-ibus` and `taigi-linux-ffi` must build on the macOS host and cross-build for
+  `x86_64-unknown-linux-gnu` (`linux/Makefile` `check-target`). The ONE crate allowed `unsafe` is
   `taigi-linux-ffi` (the C ABI the Fcitx5 addon calls), one `// SAFETY:` line per call,
   `catch_unwind` at every exported function. The Fcitx5 addon itself (`linux/fcitx5/`, C++) is
   built only in the VM and on the Ubuntu CI job; it composes nothing — every effect comes back

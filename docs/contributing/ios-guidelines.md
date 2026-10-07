@@ -45,9 +45,9 @@ KeyboardKit 10+ is closed-source, so its API comes from docs, not source. Look i
 
 `ios/TaigiKeyboard.xcodeproj/project.pbxproj` uses Xcode 16's `PBXFileSystemSynchronizedRootGroup` for nearly all `Sources/TaigiKeyboard/*` subdirectories (`App/`, `Actions/`, `Callouts/`, `Candidates/`, `Emojis/`, `Engine/`, `Input/`, `Layout/`, `Lexicon/`, `Logging/`, `NextWord/`, `Overlays/`, `ServiceGraph/`, `Settings/`, `Strings/`, `Styling/`, `Theme/`). Files dropped under any of these paths are **auto-included** on next build. Do NOT add "user adds X to target" steps when X lives under a synced group. The list above can drift — when in doubt, audit pbxproj live (see "Folder renames" below).
 
-### File DELETION within a synced group is auto-handled — no reminder
+### File deletion within a synced group is auto-handled
 
-Refactors that delete Swift files under a synced-group directory: Xcode auto-removes them on next open/build. Do NOT list "user removes deleted files in Xcode" as a release blocker. (User directive 2026-05-15.)
+Refactors that delete Swift files under a synced-group directory: Xcode auto-removes them on next open/build, so a deletion needs no Xcode action item and is not a release blocker.
 
 ### When manual action IS still required
 

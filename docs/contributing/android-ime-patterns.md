@@ -4,15 +4,8 @@ Compose + IME-specific patterns + testing + refactor-round checklist. Split out 
 
 ## 1. Compose patterns `[B]`
 
-- `remember { … }` for UI-only state that survives recomposition but not configuration change.
-- `rememberSaveable { … }` when the state should survive process death (e.g. user input in a form).
-- `collectAsStateWithLifecycle(initial)` — preferred over `collectAsState` for Flow observation in Compose. Pauses collection when the lifecycle stops, avoiding unnecessary recomposition.
-- State hoisting — stateless `@Composable` functions take state + callbacks as parameters. Stateful versions delegate to the stateless version.
-- `derivedStateOf { … }` for computed state that depends on multiple observable sources.
-- Side-effect APIs choose by scope:
-  - `LaunchedEffect(key)` — coroutine bound to composition, restarts on key change.
-  - `DisposableEffect(key)` — setup + teardown pair (listeners, subscriptions).
-  - `SideEffect` — synchronous side effect on every recomposition.
+Generic Compose patterns (state hoisting, `remember` / `rememberSaveable`, `collectAsStateWithLifecycle`, side-effect APIs) follow the Compose documentation; the project-specific rule:
+
 - ViewModel owns async; View invokes ViewModel methods. No `LaunchedEffect { viewModelScope.launch { … } }` inside a Compose function.
 
 ## 2. IME-specific rules `[B]` `[A]`
@@ -23,6 +16,7 @@ Compose + IME-specific patterns + testing + refactor-round checklist. Split out 
 - `InputMethodService.onStartInput` / `onFinishInput` bracket per-input-session state — reset composing context here, not in `onCreate` / `onDestroy`.
 - `LifecycleInputMethodService` provides a `Lifecycle` + `ViewModelStore`. Scoped ViewModels inside the IME use the service's `ViewModelStoreOwner`, not a plain `androidx.lifecycle.ViewModel()` (which has no owner).
 - FlorisBoard-derived code (keyboard view hierarchy, layout JSON loaders) is **platform**, not shared-core. Do not try to purify it.
+- The IME window uses platform-default insets, never `MATCH_PARENT × MATCH_PARENT` plus a custom inset (reference: `references/aiongtaigi-sushi`, `references/florisboard`).
 
 ## 3. Testing `[B]` `[A]`
 

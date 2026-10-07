@@ -10,7 +10,7 @@ Answer one question: **what in the tree costs maintenance without paying for it,
 
 Output is a report; the maintainer decides which rounds open. Never write "deferred", "post-vX" or "known limitation".
 
-Worked example of the finished product: `docs/reports/2026-09-24-mobile-smart-suggestions-brainstorm.md` §3.
+Worked example of the finished product: `docs/reports/2026-09-30-audit-all.md` §1–5.
 
 ## 1. Scope → surfaces
 
