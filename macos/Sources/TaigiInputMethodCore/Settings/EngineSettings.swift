@@ -81,15 +81,6 @@ enum CandidateDisplayMode: String, CaseIterable, Sendable {
     var allowsSwapToggle: Bool {
         showsHanji
     }
-
-    /// Whether a typed punctuation key becomes full-width (`，` for `,`) for a
-    /// stored swap flag — the stored flag masked by the display mode, NOT the
-    /// candidate projection (desktop-core `effective_hanji_first`, §42), which
-    /// `.combined` forces on while the swap shortcut still picks the width.
-    /// Mirrored on ios / android / desktop-core.
-    func effectiveFullWidthPunctuation(stored: Bool) -> Bool {
-        stored && showsHanji
-    }
 }
 
 /// How the rendered romanization separates syllables (Syllable Separator,
@@ -128,7 +119,7 @@ struct EngineSettings: Sendable {
     /// The STORED swap (`isTranslateSwapped`): whether a cell leads with — and
     /// commits — the Hanji. Its readers take it through the display mode
     /// (§42): desktop-core's `SettingsDocument::engine_settings` for the
-    /// candidate lead, `SettingsStore.isFullWidthPunctuation` for the width.
+    /// candidate lead, `effective_full_width_punctuation` for the width.
     /// CROSS-PLATFORM INVARIANT — defaults ON on every platform (§48): iOS
     /// `SharedSettings.isHanjiFirstKey`, Android `PrefHelper.storedIsHanjiFirst`,
     /// desktop-core `EngineSettings::DEFAULT`. Drift changes what a fresh

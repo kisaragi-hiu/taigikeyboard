@@ -11,7 +11,7 @@ use super::PageContext;
 use adw::prelude::*;
 use taigi_desktop_core::keys::shortcut_labels::{
     cancel_key_label, caret_chords_label, navigation_keys_label, shifted_slot_keys_label,
-    slot_keys_label, width_flip_chords_label,
+    slot_keys_label,
 };
 use taigi_desktop_core::keys::{
     rejection_message_key, ComposingAction, ComposingKeyBindings, ComposingKeyChord,
@@ -77,12 +77,6 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
         shifted_slot_keys.clone().unwrap_or_default(),
     );
     shifted_slot_row.set_visible(shifted_slot_keys.is_some());
-    fixed_row(
-        &mut context,
-        &output,
-        StringKey::DesktopShortcutFlipPunctuationWidth,
-        width_flip_chords_label(DESKTOP_PLATFORM),
-    );
     fixed_row(
         &mut context,
         &output,

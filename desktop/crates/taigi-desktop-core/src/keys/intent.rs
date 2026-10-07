@@ -65,13 +65,6 @@ pub fn caret_chord_modifiers(platform: DesktopPlatform) -> KeyModifiers {
     }
 }
 
-/// The modifier that types a punctuation key in the other width, once — the
-/// 新注音 (New Phonetic) / Microsoft IME gesture (`Ctrl+,` → `，`). Fixed, not recordable,
-/// shown read-only on the Shortcuts pane like the caret chord; the row is
-/// drawn from this same value the classifier compares against. The same ⌃ on every
-/// desktop, so it takes no platform.
-pub const WIDTH_FLIP_MODIFIERS: KeyModifiers = KeyModifiers::CONTROL;
-
 /// A move in the candidate window. The six physical keys are handed through
 /// raw because what each does depends on the layout (`↓` pages a horizontal
 /// window and walks a vertical list); `NextCandidate` / `PreviousCandidate`
@@ -296,16 +289,15 @@ impl ComposingKeyIntent {
                 }
             }
         }
-        // Ctrl on a punctuation key types that key in the other width, once
-        // (`width_flip_character`). Below the bindings, so a chord the user
-        // recorded on Ctrl+, still reaches its action; above the host guard,
-        // because this is the one Ctrl chord that is this input method's.
-        // The session decides the width — the intent carries the key as
-        // typed.
-        if let Some(flipped) = Self::width_flip_character(key) {
+        // Under TPS, Ctrl on a punctuation key types its full-width mark
+        // (`tps_punctuation_chord`): the bare key types a glyph there. Below
+        // the bindings, so a chord the user recorded on Ctrl+, still reaches
+        // its action; above the host guard, because this is the one Ctrl
+        // chord that is this input method's. Outside TPS it is the host's.
+        if let Some(punctuation) = Self::tps_punctuation_chord(key, bindings.input_mode) {
             return Self::composition_or_host(
                 is_composing,
-                Self::CommitThenInsert(flipped.to_string()),
+                Self::CommitThenInsert(punctuation.to_string()),
             );
         }
         // Tier 5 — Control, Alt and Win chords are the host's shortcuts, mid-
@@ -475,23 +467,18 @@ impl ComposingKeyIntent {
             .then(|| Self::TpsKey(glyph.to_owned()))
     }
 
-    /// True when `key` is text the host will put into its document, rather
-    /// than a key it will act on. Asked by the pass-through path so
-    /// punctuation typed outside a composition can be reported to the engine
-    /// as the end of a context — while Escape, Return and the arrows are not.
-    pub fn is_document_text(key: &KeyEventSnapshot) -> bool {
-        Self::document_text(key).is_some()
-    }
-
     /// The text `key` puts into the document, or `None` when it is a key the
-    /// host acts on. The width-flip chord is document text too, and what it
-    /// types is the key under the modifier: under Ctrl the layout types
+    /// host acts on. Asked by the pass-through path so punctuation typed
+    /// outside a composition can be reported to the engine as the end of a
+    /// context — while Escape, Return and the arrows are not. The TPS
+    /// punctuation chord is document text too, and what it types is the key
+    /// under the modifier: under Ctrl the layout types
     /// nothing for `,` (`characters` is `None`) and Escape for `[`, and the
     /// key itself is what the user asked for. macOS keeps a Swift twin:
-    /// `KeyEventSnapshot.swift` `documentText`.
-    pub fn document_text(key: &KeyEventSnapshot) -> Option<String> {
-        if let Some(flipped) = Self::width_flip_character(key) {
-            return Some(flipped.to_string());
+    /// `KeyEventSnapshot.swift` `documentText(inputMode:)`.
+    pub fn document_text(key: &KeyEventSnapshot, input_mode: InputMode) -> Option<String> {
+        if let Some(punctuation) = Self::tps_punctuation_chord(key, input_mode) {
+            return Some(punctuation.to_string());
         }
         if key.modifiers.has_host_chord() || key.is_named_special_key {
             return None;
@@ -504,24 +491,28 @@ impl ComposingKeyIntent {
             .map(str::to_owned)
     }
 
-    /// The punctuation key under a width-flip chord, or `None` when `key` is
-    /// not one: exactly Ctrl among the chording modifiers, Shift allowed
-    /// since it picks the key (Ctrl+Shift+, is Ctrl+<), and the key one the
-    /// full-width policy flips (`policies::is_width_flip_key`). Read off the
-    /// unmodified characters because Ctrl rewrites what a key types. Which
-    /// width comes out is the session's call: the chord means "the other
-    /// one", and only the session knows which one the mode would have typed. macOS keeps a Swift twin:
-    /// `KeyEventSnapshot.swift` `widthFlipCharacter`.
-    pub fn width_flip_character(key: &KeyEventSnapshot) -> Option<char> {
+    /// The punctuation key under the TPS punctuation chord, or `None` when
+    /// `key` is not one: TPS only (its bare `,` `.` `;` type glyphs, so Ctrl
+    /// is how their marks are typed — full width, the only width TPS
+    /// writes), exactly Ctrl among the chording modifiers, Shift allowed since
+    /// it picks the key (Ctrl+Shift+, is Ctrl+<), and the key one the
+    /// full-width policy maps (`policies::is_punctuation_chord_key`). Read off
+    /// the unmodified characters because Ctrl rewrites what a key types.
+    /// macOS keeps a Swift twin: `KeyEventSnapshot.swift`
+    /// `tpsPunctuationChord(inputMode:)`.
+    pub fn tps_punctuation_chord(key: &KeyEventSnapshot, input_mode: InputMode) -> Option<char> {
         let chording = KeyModifiers {
             shift: false,
             ..key.modifiers
         };
-        if chording != WIDTH_FLIP_MODIFIERS || key.is_named_special_key {
+        if input_mode != InputMode::Tps
+            || chording != KeyModifiers::CONTROL
+            || key.is_named_special_key
+        {
             return None;
         }
         let unmodified = key.unmodified_characters()?;
-        if !crate::policies::is_width_flip_key(unmodified) {
+        if !crate::policies::is_punctuation_chord_key(unmodified) {
             return None;
         }
         unmodified.chars().next()
@@ -903,7 +894,7 @@ mod tests {
 
     /// The Mac steps the caret on ⌥← / ⌥→ (`caret_chord_modifiers`,
     /// inventory K1); ⌃← is Mission Control there, so it is a host chord
-    /// that ends the composition like any other. The width flip stays ⌃.
+    /// that ends the composition like any other.
     #[test]
     fn the_mac_moves_the_caret_on_option_arrows() {
         let mac = DesktopPlatform::MacOS;
@@ -941,7 +932,6 @@ mod tests {
             }
         }
         assert_eq!(caret_chord_modifiers(mac), KeyModifiers::ALT);
-        assert_eq!(WIDTH_FLIP_MODIFIERS, KeyModifiers::CONTROL);
     }
 
     #[test]
@@ -1042,7 +1032,10 @@ mod tests {
                 classify_on(&key, false, false, mac),
                 ComposingKeyIntent::PassThrough
             );
-            assert!(ComposingKeyIntent::is_document_text(&key), "{characters:?}");
+            assert!(
+                ComposingKeyIntent::document_text(&key, InputMode::Tl).is_some(),
+                "{characters:?}"
+            );
         }
         // Negative control: a C1 control (NEL, Cc) is the host's.
         let next_line = text("\u{85}");
@@ -1050,7 +1043,10 @@ mod tests {
             classify_on(&next_line, true, false, mac),
             ComposingKeyIntent::CommitThenPassThrough
         );
-        assert!(!ComposingKeyIntent::is_document_text(&next_line));
+        assert_eq!(
+            ComposingKeyIntent::document_text(&next_line, InputMode::Tl),
+            None
+        );
     }
 
     /// Roadmap E2 (settled P11c): a dead key, a custom layout or an input
@@ -1430,38 +1426,32 @@ mod tests {
     }
 
     #[test]
-    fn is_document_text_accepts_printable_and_rejects_host_keys() {
+    fn document_text_accepts_printable_and_rejects_host_keys() {
+        let is_text = |key: &KeyEventSnapshot| {
+            ComposingKeyIntent::document_text(key, InputMode::Tl).is_some()
+        };
         for t in ["。", "、", "!", "?", " ", "台", "x"] {
-            assert!(ComposingKeyIntent::is_document_text(&text(t)), "{t}");
+            assert!(is_text(&text(t)), "{t}");
         }
         for t in ["\u{1B}", "\r", "\u{8}", "\u{7F}", "", "\u{F702}"] {
-            assert!(!ComposingKeyIntent::is_document_text(&text(t)), "{t:?}");
+            assert!(!is_text(&text(t)), "{t:?}");
         }
-        // `x` rather than `.`: Ctrl+. is the width flip, document text by
-        // design (`width_flip_chord_types_the_mapped_key_in_both_states`).
+        // Outside TPS no Ctrl chord is text, a punctuation key included
+        // (the TPS chord: `tps_punctuation_chord_types_the_mapped_key_in_both_states`).
         for modifiers in [KeyModifiers::CONTROL, KeyModifiers::ALT, KeyModifiers::WIN] {
-            assert!(!ComposingKeyIntent::is_document_text(
-                &KeyEventSnapshot::text("x", modifiers)
-            ));
+            for t in ["x", "."] {
+                assert!(!is_text(&KeyEventSnapshot::text(t, modifiers)), "{t}");
+            }
         }
-        for modifiers in [KeyModifiers::ALT, KeyModifiers::WIN] {
-            assert!(!ComposingKeyIntent::is_document_text(
-                &KeyEventSnapshot::text(".", modifiers)
-            ));
-        }
-        assert!(ComposingKeyIntent::is_document_text(
-            &KeyEventSnapshot::text(".", KeyModifiers::SHIFT)
-        ));
-        assert!(!ComposingKeyIntent::is_document_text(
-            &KeyEventSnapshot::named_special(KeyModifiers::NONE)
-        ));
-        assert!(!ComposingKeyIntent::is_document_text(
-            &KeyEventSnapshot::default()
-        ));
+        assert!(is_text(&KeyEventSnapshot::text(".", KeyModifiers::SHIFT)));
+        assert!(!is_text(&KeyEventSnapshot::named_special(
+            KeyModifiers::NONE
+        )));
+        assert!(!is_text(&KeyEventSnapshot::default()));
     }
 
     #[test]
-    fn width_flip_chord_types_the_mapped_key_in_both_states() {
+    fn tps_punctuation_chord_types_the_mapped_key_in_both_states() {
         // trace: under Ctrl the layout types nothing for `,` (`characters`
         // None, `key_translation.rs`) and Escape for `[`; the unmodified
         // translation is the key. Ctrl+Shift+, keeps Shift → `<`.
@@ -1471,26 +1461,58 @@ mod tests {
             KeyEventSnapshot::chord(None, "<", KeyModifiers::CONTROL.with(KeyModifiers::SHIFT));
         for (key, expected) in [(&comma, ","), (&bracket, "["), (&angle, "<")] {
             assert_eq!(
-                ComposingKeyIntent::width_flip_character(key),
+                ComposingKeyIntent::tps_punctuation_chord(key, InputMode::Tps),
                 expected.chars().next()
             );
             assert_eq!(
-                ComposingKeyIntent::document_text(key).as_deref(),
+                ComposingKeyIntent::document_text(key, InputMode::Tps).as_deref(),
                 Some(expected)
             );
-            assert_eq!(classify(key, false, false), ComposingKeyIntent::PassThrough);
             assert_eq!(
-                classify(key, true, true),
+                classify_tps(key, false, false),
+                ComposingKeyIntent::PassThrough
+            );
+            assert_eq!(
+                classify_tps(key, true, true),
                 ComposingKeyIntent::CommitThenInsert(expected.into())
             );
         }
-        // Ctrl+[ is the flip, not a cancel: the fixed tier reads Escape only
+        // Ctrl+[ is the chord, not a cancel: the fixed tier reads Escape only
         // with no host chord held.
         assert!(!bracket.is_bare_escape());
     }
 
+    /// The chord is TPS's alone (USER 2026-10-07): under TL and POJ, Ctrl on
+    /// a punctuation key is the host's like any Ctrl chord — no text, idle
+    /// passed through, a composition committed first.
     #[test]
-    fn width_flip_needs_exactly_control_on_a_mapped_key() {
+    fn outside_tps_ctrl_on_punctuation_is_the_hosts() {
+        let comma = KeyEventSnapshot::chord(None, ",", KeyModifiers::CONTROL);
+        let bracket = KeyEventSnapshot::chord(Some("\u{1B}"), "[", KeyModifiers::CONTROL);
+        for input_mode in [InputMode::Tl, InputMode::Poj] {
+            let mut bindings = ComposingKeyBindings::default();
+            bindings.input_mode = input_mode;
+            for key in [&comma, &bracket] {
+                assert_eq!(
+                    ComposingKeyIntent::tps_punctuation_chord(key, input_mode),
+                    None
+                );
+                assert_eq!(ComposingKeyIntent::document_text(key, input_mode), None);
+                assert_eq!(
+                    ComposingKeyIntent::intent(key, false, false, &bindings, PLATFORM),
+                    ComposingKeyIntent::PassThrough
+                );
+                assert_eq!(
+                    ComposingKeyIntent::intent(key, true, true, &bindings, PLATFORM),
+                    ComposingKeyIntent::CommitThenPassThrough,
+                    "{key:?} under {input_mode:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn tps_punctuation_chord_needs_exactly_control_on_a_mapped_key() {
         // Another host chord beside Ctrl, a key the policy does not map or
         // leaves to the host (Ctrl+Shift+` is VS Code's New Terminal), a
         // named key, a bare key: all the host's or the ordinary text rule's.
@@ -1499,34 +1521,38 @@ mod tests {
         let with_win =
             KeyEventSnapshot::chord(None, ",", KeyModifiers::CONTROL.with(KeyModifiers::WIN));
         let letter = KeyEventSnapshot::chord(Some("\u{13}"), "s", KeyModifiers::CONTROL);
-        let hyphen = KeyEventSnapshot::chord(None, "-", KeyModifiers::CONTROL);
         let quote = KeyEventSnapshot::chord(None, "\"", KeyModifiers::CONTROL);
         let tilde =
             KeyEventSnapshot::chord(None, "~", KeyModifiers::CONTROL.with(KeyModifiers::SHIFT));
         let arrow = KeyEventSnapshot::navigation(NavigationKey::LeftArrow, KeyModifiers::CONTROL);
-        for key in [
-            &with_alt, &with_win, &letter, &hyphen, &quote, &tilde, &arrow,
-        ] {
+        for key in [&with_alt, &with_win, &letter, &quote, &tilde, &arrow] {
             assert_eq!(
-                ComposingKeyIntent::width_flip_character(key),
+                ComposingKeyIntent::tps_punctuation_chord(key, InputMode::Tps),
                 None,
                 "{key:?}"
             );
-            assert_eq!(classify(key, false, false), ComposingKeyIntent::PassThrough);
+            assert_eq!(
+                classify_tps(key, false, false),
+                ComposingKeyIntent::PassThrough
+            );
         }
         for key in [&letter, &tilde] {
             assert_eq!(
-                classify(key, true, true),
+                classify_tps(key, true, true),
                 ComposingKeyIntent::CommitThenPassThrough,
                 "{key:?}"
             );
         }
-        assert_eq!(ComposingKeyIntent::width_flip_character(&text(",")), None);
+        assert_eq!(
+            ComposingKeyIntent::tps_punctuation_chord(&text(","), InputMode::Tps),
+            None
+        );
     }
 
     #[test]
-    fn width_flip_chord_yields_to_a_recorded_binding() {
-        // trace: tier 4 (bindings) is read before the width flip.
+    fn tps_punctuation_chord_yields_to_a_recorded_binding() {
+        // trace: tier 4 (bindings) is read before the TPS punctuation chord;
+        // under TPS the Commit Literal action commits as typed.
         let mut stored = BTreeMap::new();
         stored.insert(
             ComposingAction::CommitLiteral,
@@ -1535,17 +1561,18 @@ mod tests {
                 modifiers: KeyModifiers::CONTROL,
             }),
         );
-        let recorded = ComposingKeyBindings::resolve(&stored, ToneInputScheme::Standard);
+        let mut recorded = ComposingKeyBindings::resolve(&stored, ToneInputScheme::Standard);
+        recorded.input_mode = InputMode::Tps;
         let comma = KeyEventSnapshot::chord(None, ",", KeyModifiers::CONTROL);
 
         assert_eq!(
             ComposingKeyIntent::intent(&comma, true, false, &recorded, PLATFORM),
-            ComposingKeyIntent::Commit
+            ComposingKeyIntent::CommitAsTyped
         );
         assert_eq!(
-            classify(&comma, true, false),
+            classify_tps(&comma, true, false),
             ComposingKeyIntent::CommitThenInsert(",".into()),
-            "unrecorded, the same chord is the flip"
+            "unrecorded, the same chord is the punctuation key"
         );
     }
 

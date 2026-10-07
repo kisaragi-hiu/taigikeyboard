@@ -2,11 +2,10 @@
 //! output, applied only while the
 //! Hanji/Romanization Swap has Hanji coming first (the MOE rule: full-width in Hanji mode, TL mode
 //! half-width); the caller reads the mode, and the auto-space swap is read first
-//! and wins. The mode is a default, not a wall: Ctrl on a key of this map
-//! types the other width once (`ComposingKeyIntent::width_flip_character`),
-//! except the keys in [`HOST_CHORD_KEYS`]. TPS is the wall: full width only,
-//! the chord flips nothing and the swap attaches the full-width glyph (the
-//! executor's `document_punctuation`, USER 2026-10-07).
+//! and wins. The mode is the only switch: no chord types the other width
+//! (USER 2026-10-07). TPS is full width only; there Ctrl on a key of this map
+//! types its mark (`ComposingKeyIntent::tps_punctuation_chord`), except the
+//! keys in [`HOST_CHORD_KEYS`], and the swap attaches the full-width glyph.
 //! macOS keeps a Swift twin: `macos/.../Policies/FullWidthPunctuation.swift`.
 
 /// The MOE manual's symbol shortcut table, minus what this input method must keep
@@ -42,13 +41,13 @@ const MAP: [(char, char); 25] = [
     ('+', '＋'),
 ];
 
-/// Mapped keys whose Ctrl chord stays the host's instead of flipping the
-/// width: Ctrl+Shift+` (`~`) is VS Code's New Terminal on every desktop.
+/// Mapped keys whose Ctrl chord stays the host's even under TPS:
+/// Ctrl+Shift+` (`~`) is VS Code's New Terminal on every desktop.
 const HOST_CHORD_KEYS: [char; 1] = ['~'];
 
-/// Whether Ctrl on the key that typed `text` flips the punctuation width: a
+/// Whether Ctrl on the key that typed `text` is the TPS punctuation chord: a
 /// mapped key outside [`HOST_CHORD_KEYS`].
-pub fn is_width_flip_key(text: &str) -> bool {
+pub fn is_punctuation_chord_key(text: &str) -> bool {
     full_width_mapped(text).is_some() && !text.chars().any(|c| HOST_CHORD_KEYS.contains(&c))
 }
 
@@ -65,45 +64,9 @@ pub fn full_width_mapped(text: &str) -> Option<String> {
         .map(|(_, full)| full.to_string())
 }
 
-/// The punctuation the input method writes for `text`, or `None` when the
-/// host should write it: the full-width form when the mode types full-width
-/// marks, and under the width-flip chord the OTHER width. A flipped key is
-/// never `None` — the host would read the chord as a shortcut, so even its
-/// half-width form is written by the input method. macOS keeps a Swift twin:
-/// `FullWidthPunctuation.swift` `documentPunctuation`.
-pub fn document_punctuation(
-    text: &str,
-    is_full_width_mode: bool,
-    is_width_flip: bool,
-) -> Option<String> {
-    if is_full_width_mode != is_width_flip {
-        return full_width_mapped(text);
-    }
-    is_width_flip.then(|| text.to_owned())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn the_flip_chord_types_the_other_width_and_the_bare_key_the_modes() {
-        // trace: `document_punctuation` — mode != flip → the mapped form;
-        // mode == flip → the typed text under the flip, `None` without it.
-        assert_eq!(
-            document_punctuation(",", true, false).as_deref(),
-            Some("，")
-        );
-        assert_eq!(document_punctuation(",", true, true).as_deref(), Some(","));
-        assert_eq!(document_punctuation(",", false, false), None);
-        assert_eq!(
-            document_punctuation(",", false, true).as_deref(),
-            Some("，")
-        );
-        // A key the map does not carry is the host's under the mode; the
-        // classifier never reports it as a flip.
-        assert_eq!(document_punctuation("5", true, false), None);
-    }
 
     #[test]
     fn every_mapped_pair_follows_the_moe_table() {
@@ -122,12 +85,12 @@ mod tests {
 
     #[test]
     fn ctrl_shift_backtick_stays_the_hosts_while_tilde_still_maps() {
-        // trace: `~` is in `MAP` and in `HOST_CHORD_KEYS` → mapped, no flip.
+        // trace: `~` is in `MAP` and in `HOST_CHORD_KEYS` → mapped, no chord.
         assert_eq!(full_width_mapped("~").as_deref(), Some("～"));
-        assert!(!is_width_flip_key("~"));
-        assert!(is_width_flip_key(","));
-        assert!(is_width_flip_key("<"));
-        assert!(!is_width_flip_key("5"));
+        assert!(!is_punctuation_chord_key("~"));
+        assert!(is_punctuation_chord_key(","));
+        assert!(is_punctuation_chord_key("<"));
+        assert!(!is_punctuation_chord_key("5"));
     }
 
     #[test]

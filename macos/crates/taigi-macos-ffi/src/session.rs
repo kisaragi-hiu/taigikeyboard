@@ -981,9 +981,11 @@ mod tests {
 
     /// trace: the default display is Hanji-first, whose punctuation is full
     /// width: `,` mid-composition commits `l` and writes `，` with the auto
-    /// space in one write, then arms; ⌃`,` flips to the half width.
+    /// space in one write, then arms. ⌃`,` types no other width (USER
+    /// 2026-10-07): under TL it is the host's chord, like ⌘ below — `l` is
+    /// committed as typed, no mark, no space, the key handed back.
     #[test]
-    fn punctuation_commits_then_inserts_and_the_width_flip_flips_it() {
+    fn punctuation_commits_then_inserts_and_ctrl_punctuation_is_the_hosts() {
         let (_engine, shell) = engine_shell();
         let typist = Typist::activated(shell, auto_space());
         typist.type_text("l");
@@ -992,8 +994,9 @@ mod tests {
         assert_eq!(effects(&reply), vec![insert("l， "), closed(), arm()]);
 
         typist.type_text("l");
-        let flipped = typist.key(chord(",", CONTROL, None), list(Some(0)));
-        assert_eq!(effects(&flipped), vec![insert("l, "), closed(), arm()]);
+        let chorded = typist.key(chord(",", CONTROL, None), list(Some(0)));
+        assert!(!chorded.handled && !chorded.is_composing);
+        assert_eq!(effects(&chorded), vec![insert("l"), closed()]);
     }
 
     /// ⌘ is the host's: the composition is finished, the key handed back.

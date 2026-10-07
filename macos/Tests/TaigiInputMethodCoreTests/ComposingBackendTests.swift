@@ -152,17 +152,17 @@ final class ComposingBackendTests: XCTestCase {
         }
     }
 
-    /// The width-flip chord attaches the glyph it maps to, which is what the
-    /// check is asked for; a composing session commits with the character
-    /// instead of passing it through, so nothing is asked.
-    func testTheSwapCheck_followsTheWidthFlip_andSkipsAComposingSession() throws {
+    /// Outside TPS ⌃, is the host's chord, so it attaches nothing and no
+    /// check is asked; a composing session commits with the character instead
+    /// of passing it through, so nothing is asked either.
+    func testTheSwapCheck_skipsAHostChord_andAComposingSession() throws {
         let store = try makeScratchSettingsStore()
         store.isAutoSpaceEnabled = true
-        let flip = KeyEventSnapshot(characters: ",", modifiers: .control, isNamedSpecialKey: false)
+        let chord = KeyEventSnapshot(characters: ",", modifiers: .control, isNamedSpecialKey: false)
 
         _ = try activatedBackend(composing: false)
-            .key(flip, in: request(settings: store, armed: true))
-        XCTAssertTrue(isSwapCheckAsked, "⌃, writes an attaching comma")
+            .key(chord, in: request(settings: store, armed: true))
+        XCTAssertFalse(isSwapCheckAsked, "⌃, is the host's under TL")
 
         isSwapCheckAsked = false
         _ = try activatedBackend(composing: true)

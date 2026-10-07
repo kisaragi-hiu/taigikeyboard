@@ -177,91 +177,78 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
         XCTAssertTrue(inserted.hasSuffix("? "), "got \(session.client.insertedTexts)")
     }
 
-    // MARK: - Width flip (⌃ + punctuation = the other width, once)
+    // MARK: - ⌃ + punctuation (no other width; TPS's punctuation key)
 
-    /// The four cells of the contract outside a composition: the bare key
-    /// follows the mode, ⌃ types the other width — and is consumed in BOTH
-    /// widths, since the host would read the chord as a shortcut. Nothing
-    /// stored moves: the next bare key still follows the mode.
-    func testControlPunctuationOutsideAComposition_typesTheOtherWidthOnce() throws {
-        for (swapped, bare, flipped) in [(true, "，", ","), (false, nil, "，")] {
+    /// No chord types the other width (USER 2026-10-07): outside TPS ⌃, is
+    /// the host's chord in either width mode — not consumed, nothing written,
+    /// the mode unmoved.
+    func testControlPunctuationOutsideTps_isTheHostsInEitherWidth() throws {
+        for swapped in [true, false] {
             let session = try makeSession(configure: { $0.storedIsHanjiFirst = swapped })
-
-            let handledFlip = try session.controller.handle(
-                TestFixtures.keyDownEvent(characters: ",", modifiers: .control, charactersIgnoringModifiers: ","),
-                client: session.client,
-            )
-            XCTAssertTrue(handledFlip, "the flip chord is consumed in either width (swapped=\(swapped))")
-            XCTAssertEqual(session.client.insertedTexts, [flipped])
-            XCTAssertEqual(session.store.storedIsHanjiFirst, swapped, "one shot: the mode does not move")
-
-            session.client.clearWrites()
-            let handledBare = try session.controller.handle(
-                TestFixtures.keyDownEvent(characters: ","), client: session.client,
-            )
-            XCTAssertEqual(handledBare, bare != nil)
-            XCTAssertEqual(session.client.insertedTexts, bare.map { [$0] } ?? [])
-        }
-    }
-
-    /// The key is read under the modifier: `⌃[` arrives as Escape, and in
-    /// romanization mode it types `「` rather than cancelling anything.
-    func testControlBracket_typesTheFullWidthBracketInRomanFirstMode() throws {
-        let session = try makeSession(configure: { $0.storedIsHanjiFirst = false })
-
-        let handled = try session.controller.handle(
-            TestFixtures.keyDownEvent(characters: "\u{1B}", modifiers: .control, charactersIgnoringModifiers: "["),
-            client: session.client,
-        )
-
-        XCTAssertTrue(handled)
-        XCTAssertEqual(session.client.insertedTexts, ["「"])
-    }
-
-    /// Mid-composition the flip rides the commit's single mutation, the other
-    /// width from what the bare key would have written at this same site
-    /// (`testPunctuationMidComposition_…`). Auto-space off, so the inserted
-    /// text is exactly the commit plus the mark.
-    func testControlPunctuationMidComposition_commitsWithTheOtherWidth_inOneMutation() throws {
-        for (swapped, expected) in [(true, "taigi?"), (false, "taigi？")] {
-            let session = try composedSession(configure: {
-                $0.storedIsHanjiFirst = swapped
-                $0.isAutoSpaceEnabled = false
-            })
-
-            _ = try session.controller.handle(
-                TestFixtures.keyDownEvent(characters: "?", modifiers: [.control, .shift], charactersIgnoringModifiers: "?"),
-                client: session.client,
-            )
-
-            XCTAssertEqual(session.client.insertedTexts.count, 1, "commit and punctuation stay one mutation")
-            XCTAssertEqual(session.client.insertedTexts.last, expected, "swapped=\(swapped)")
-        }
-    }
-
-    /// The flip names its width, so an armed auto space attaches the glyph
-    /// the user asked for — the one ordering exception to the bare-key rule
-    /// pinned by `testSwappingModesAfterAnArmedAutoSpace_stillSwaps`. In
-    /// hanji-first the bare key would have swapped a half-width comma in too,
-    /// so there the two agree.
-    func testControlPunctuationAfterAnArmedAutoSpace_swapsTheFlippedGlyph() throws {
-        for (swapped, expected) in [(false, "， "), (true, ", ")] {
-            let session = try composedSession(configure: {
-                $0.isAutoSpaceEnabled = true
-                $0.storedIsHanjiFirst = swapped
-            })
-            session.client.documentTextForReads = ""
-            session.client.selectedRangeToReturn = NSRange(location: 0, length: 0)
-            _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "\r"), client: session.client)
-            session.client.clearWrites()
 
             let handled = try session.controller.handle(
                 TestFixtures.keyDownEvent(characters: ",", modifiers: .control, charactersIgnoringModifiers: ","),
                 client: session.client,
             )
+            XCTAssertFalse(handled, "swapped=\(swapped)")
+            XCTAssertEqual(session.client.insertedTexts, [])
+            XCTAssertEqual(session.store.storedIsHanjiFirst, swapped)
+        }
+    }
 
-            XCTAssertTrue(handled)
-            XCTAssertEqual(session.client.insertedTexts, [expected], "swapped=\(swapped): the flipped comma takes the armed space")
+    /// Mid-composition the chord finishes the composition as typed and goes
+    /// back to the host, like any host chord: no mark, no auto space.
+    func testControlPunctuationMidComposition_commitsAndHandsTheChordBack() throws {
+        for swapped in [true, false] {
+            let session = try composedSession(configure: {
+                $0.storedIsHanjiFirst = swapped
+                $0.isAutoSpaceEnabled = true
+            })
+
+            let handled = try session.controller.handle(
+                TestFixtures.keyDownEvent(characters: "?", modifiers: [.control, .shift], charactersIgnoringModifiers: "?"),
+                client: session.client,
+            )
+
+            XCTAssertFalse(handled, "swapped=\(swapped)")
+            XCTAssertEqual(session.client.insertedTexts, [Self.composition], "swapped=\(swapped)")
+        }
+    }
+
+    /// An armed auto space stays put under the chord: the host's key
+    /// attaches nothing.
+    func testControlPunctuationAfterAnArmedAutoSpace_leavesTheSpace() throws {
+        let session = try composedSession(configure: { $0.isAutoSpaceEnabled = true })
+        session.client.documentTextForReads = ""
+        session.client.selectedRangeToReturn = NSRange(location: 0, length: 0)
+        _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "\r"), client: session.client)
+        session.client.clearWrites()
+
+        let handled = try session.controller.handle(
+            TestFixtures.keyDownEvent(characters: ",", modifiers: .control, charactersIgnoringModifiers: ","),
+            client: session.client,
+        )
+
+        XCTAssertFalse(handled)
+        XCTAssertEqual(session.client.insertedTexts, [])
+    }
+
+    /// Under TPS the bare `,` types a glyph, so ⌃ is how its mark is typed —
+    /// full width, the only width TPS writes. The key is read under the
+    /// modifier: `⌃[` arrives as Escape and types `「`, cancelling nothing.
+    func testUnderTps_controlPunctuationTypesTheFullWidthMark() throws {
+        let session = try makeSession(configure: { _ = $0.switchInputMode(.pick(.tps)) })
+
+        for (characters, unmodified, expected) in [(",", ",", "，"), ("\u{1B}", "[", "「")] {
+            session.client.clearWrites()
+            let handled = try session.controller.handle(
+                TestFixtures.keyDownEvent(
+                    characters: characters, modifiers: .control, charactersIgnoringModifiers: unmodified,
+                ),
+                client: session.client,
+            )
+            XCTAssertTrue(handled, unmodified)
+            XCTAssertEqual(session.client.insertedTexts, [expected])
         }
     }
 

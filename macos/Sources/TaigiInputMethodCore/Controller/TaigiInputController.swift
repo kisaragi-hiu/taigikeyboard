@@ -751,7 +751,7 @@ public final class TaigiInputController: IMKInputController {
         case .toggleTranslateSwapped:
             // Inert under romanization-only — silently, no flash (USER
             // 2026-09-01, Q11; see `allowsSwapToggle`). Under Hanji with Romanization the chord
-            // flips only the punctuation width (`isFullWidthPunctuation`).
+            // flips only the punctuation width (desktop-core `effective_full_width_punctuation`).
             guard settings.candidateDisplayMode.allowsSwapToggle else { return }
             // The bar STAYS: the SWAP changes how a candidate displays and
             // commits, never which candidates exist, so the list on screen is

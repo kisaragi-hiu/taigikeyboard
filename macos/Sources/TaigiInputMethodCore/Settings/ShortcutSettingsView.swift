@@ -108,13 +108,6 @@ struct ShortcutSettingsView: View {
                     fixedRow(.desktopActionCommitAlternateScript, shortcuts.shiftedSlotKeys)
                 }
 
-                // Shown, not recordable (USER 2026-09-20): ⌃ on a punctuation
-                // key types it in the other width once, whatever the Hanji/romanization
-                // mode would have typed (`KeyEventSnapshot.widthFlipCharacter`).
-                // Here because it writes into the document; three sample
-                // chords, since the row stands for every key of the map.
-                fixedRow(.desktopShortcutFlipPunctuationWidth, shortcuts.widthFlipChords)
-
                 // Shown, not recordable: Escape drops the composition without
                 // writing to the document (`keys/intent.rs`). Last
                 // in the block (USER 2026-09-21): every row above it writes

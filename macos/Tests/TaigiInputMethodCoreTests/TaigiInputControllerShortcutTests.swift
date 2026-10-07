@@ -185,12 +185,11 @@ final class TaigiInputControllerShortcutTests: XCTestCase {
         controller.performShortcutAction(.toggleTranslateSwapped)
 
         XCTAssertTrue(controller.settings.storedIsHanjiFirst, "the chord flips the stored swap")
-        XCTAssertTrue(controller.settings.isFullWidthPunctuation, "…which is the punctuation width under combined")
         XCTAssertEqual(flashes, [])
 
         controller.performShortcutAction(.toggleTranslateSwapped)
 
-        XCTAssertFalse(controller.settings.isFullWidthPunctuation, "a second press goes back to half-width")
+        XCTAssertFalse(controller.settings.storedIsHanjiFirst, "a second press flips it back")
     }
 
     /// The cycle walks the Appearance picker's order and comes back round, so three
