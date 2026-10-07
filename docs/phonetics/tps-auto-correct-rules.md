@@ -268,7 +268,7 @@ These are manual alternatives accessible via long-press, providing access to rel
 | ㄫ | ㆭ, ㄥ | Syllabic ng / -ing variant |
 | ㆰ | ㆱ | om variant |
 | ㆤ | ㄝ | ee variant |
-| ㆪ | ㆳ | Vertical glyph variant |
+| ㆪ | ㆳ | Same symbol encoded twice (Unicode L2/18-052); every lookup folds ㆳ onto ㆪ |
 | ㆮ | ㆯ | aunn variant |
 
 ---

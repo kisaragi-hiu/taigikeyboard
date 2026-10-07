@@ -97,7 +97,7 @@ A key or Shift layer the table leaves out (`?`, `@`, a capital) and every keypad
 
 ‡ = differs from `rime-moetaigi`, which spells TL `o` as ㄜ on `k`. This engine spells `o` as ㄛ and keeps ㄜ for `er` / `or` (`engine/phonetics/src/tps.rs:53-56,67`); a typed ㄛ finds both, a typed ㄜ finds only `er` / `or` words, so ㄛ takes the unshifted key.
 
-ㆳ (U+31B3) gets no key: the engine has no vowel row for it and no dictionary entry holds it.
+ㆳ (U+31B3) gets no key: it is ㆪ encoded a second time, and the engine folds it onto ㆪ before any lookup (`phonetics::fold_tps_glyph_alias`), so the ㆪ key already types the symbol.
 
 The table was checked glyph by glyph against `engine/phonetics/src/tps.rs:17-130` and `taigi-converter/src/tables.js:75-98` (2026-10-03): every glyph the engine spells has a key, and every key types a glyph the engine accepts. The palatal keys `r` `f` `v` are optional — ㄗ ㄘ ㄙ ㆡ before ㄧ or ㆪ are rewritten by `tps_adjust.rs:319-332`. The explicit coda keys do not force a final reading: §35 lookup reads every member of a key's family in both directions, and a user who never learns `b t g z m p / -` types the same words through the fold (§32, §33). Only a tone mark or Space pins the boundary.
 

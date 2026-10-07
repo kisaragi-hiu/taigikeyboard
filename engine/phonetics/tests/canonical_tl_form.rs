@@ -187,3 +187,11 @@ fn capslock_taigi_is_known_non_idempotent() {
         poj_capslock
     );
 }
+
+#[test]
+fn tps_folds_only_the_innn_glyph_alias() {
+    // A raw TPS commit keys user_frequency.db as typed, except ㆳ — ㆪ encoded
+    // twice — which folds so either glyph keys one row.
+    assert_eq!(canonical_tl_form("ㄒㆳˋ", InputMode::Tps), "ㄒㆪˋ");
+    assert_eq!(canonical_tl_form("ㄒㆪˋ", InputMode::Tps), "ㄒㆪˋ");
+}

@@ -154,7 +154,7 @@ fn span_is_fully_toned_tps(span: &str) -> bool {
 ///   matching the `tl:<tl_num>` / `poj:<poj_num>` family.
 /// - **TPS** ([`span_is_fully_toned_tps`]): Bopomofo + tone marks kept, with
 ///   the tone-8 dot normalized `U+02D9 → U+0307`
-///   ([`phonetics::normalize_tps_tone8_scalar`]) so it matches the
+///   ([`phonetics::normalize_tps_lookup_scalar`]) so it matches the
 ///   `tps:<tps_num>` family the build pipeline stores. Tones 1/4 carry no
 ///   mark and fall through to the toneless branch (see
 ///   [`span_is_fully_toned_tps`]).
@@ -172,7 +172,7 @@ pub(crate) fn fst_body_for_span(span: &str, mode: InputMode) -> String {
         InputMode::Tl | InputMode::Poj if span_is_fully_toned_ascii(span) => span.to_string(),
         InputMode::Tps if span_is_fully_toned_tps(span) => span
             .chars()
-            .map(phonetics::normalize_tps_tone8_scalar)
+            .map(phonetics::normalize_tps_lookup_scalar)
             .collect(),
         _ => strip_tones_for_mode(span, mode),
     }
@@ -203,6 +203,16 @@ pub(crate) struct ShadowLattice {
     pub hyphen_runs: Vec<(usize, usize)>,
 }
 
+/// The raw buffer as every lookup reads it: ASCII letters lowercased and the
+/// TPS glyph alias folded ([`phonetics::fold_tps_glyph_alias`]). Byte-length
+/// preserving, so an offset into the result indexes `raw` unchanged; the
+/// display keeps the typed glyph.
+pub(crate) fn lookup_form(raw: &str) -> String {
+    raw.chars()
+        .map(|c| phonetics::fold_tps_glyph_alias(c.to_ascii_lowercase()))
+        .collect()
+}
+
 /// Run the canonicalize → hyphen-shadow → (TPS-only) space-strip
 /// pipeline and build the segmentation lattice over the resulting
 /// shadow. The TPS space-strip ([`build_separator_shadow`]) folds the
@@ -221,7 +231,7 @@ pub(crate) fn build_shadow_lattice_with_barriers(
     inv: &SyllableInventory,
     mode: InputMode,
 ) -> ShadowLattice {
-    let lower = raw.to_ascii_lowercase();
+    let lower = lookup_form(raw);
     let (canonical, canonical_to_raw_end) = canonicalize_poj_shadow(&lower, mode);
     lattice_from_canonical_with_barriers(&canonical, &canonical_to_raw_end, inv, mode)
 }
@@ -1142,7 +1152,7 @@ fn fused_shadow_with_barriers(
     raw: &str,
     mode: InputMode,
 ) -> (String, Vec<usize>, Vec<(usize, usize)>) {
-    let lower = raw.to_ascii_lowercase();
+    let lower = lookup_form(raw);
     let (canonical, _) = canonicalize_poj_shadow(&lower, mode);
     let layers = separator_layers(&canonical, mode);
     let (barriers, hyphen_runs) = match mode {
@@ -1577,7 +1587,7 @@ pub(crate) fn abbrev_query_key(raw: &str, mode: InputMode) -> Option<String> {
     let key = format!(
         "{}{}",
         KeyFamily::for_input_mode(mode).prefix(),
-        raw.to_ascii_lowercase()
+        lookup_form(raw)
     );
     phonetics::abbrev_family_key(&key)
 }

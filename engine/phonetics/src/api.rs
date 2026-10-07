@@ -535,10 +535,10 @@ pub fn canonical_tl_form(text: &str, mode: InputMode) -> String {
         InputMode::Poj => poj_display_to_tl_display(text),
         // v3.5.9 D / C-3b — TPS roman is Bopomofo, not POJ/TL Latin shape;
         // poj_display_to_tl_display would no-op on Bopomofo anyway (no Latin
-        // patterns to substitute), but routing through identity makes the
-        // contract explicit and avoids an unnecessary string scan per
-        // user_frequency.db commit key derivation.
-        InputMode::Tps | InputMode::English => text.to_string(),
+        // patterns to substitute). Only the ㆳ glyph alias folds onto ㆪ, so a
+        // raw commit typed with either glyph keys one user_frequency.db row.
+        InputMode::Tps => text.chars().map(crate::tps::fold_tps_glyph_alias).collect(),
+        InputMode::English => text.to_string(),
     }
 }
 

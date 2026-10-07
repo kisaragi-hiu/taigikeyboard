@@ -20,11 +20,14 @@
 //!   is phonologically unconditional, the keystroke rule is always
 //!   correct, and the whole-dictionary replay found zero readings lost
 //!   to it.
-//! - NOT the same-key vowel callouts (`ㆤㄝ`, `ㆮㆯ`, `ㆰㆱ`, `ㆪㆳ`):
-//!   those are DIFFERENT phonemes (e/ee, ainn/aunn, am/om, inn/innn)
+//! - NOT the same-key vowel callouts (`ㆤㄝ`, `ㆮㆯ`, `ㆰㆱ`):
+//!   those are DIFFERENT phonemes (e/ee, ainn/aunn, am/om)
 //!   that merely share a keycap for space reasons; treating them as
 //!   interchangeable would be cross-phoneme fuzzy matching, a separate
 //!   product decision (Codex pre-impl 2026-08-19 BLOCK).
+//! - NOT `ㆪㆳ` either: that pair is one symbol encoded twice, folded
+//!   before any lookup (`crate::tps::fold_tps_glyph_alias`), not an
+//!   ambiguity to expand.
 //!
 //! Every member is a 3-byte Bopomofo / Bopomofo-Extended glyph, so any
 //! substitution is byte-length preserving — lattice spans and offset maps

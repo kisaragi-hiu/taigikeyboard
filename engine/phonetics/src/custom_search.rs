@@ -26,7 +26,7 @@ use crate::api::{
 use crate::derivation::{derive_abbrev, derive_notone};
 use crate::key_family::KeyFamily;
 use crate::tps::{
-    from_zhuyin, is_tps_tone_mark, normalize_tps_tone8_scalar, tps_abbrev_from_tl,
+    from_zhuyin, is_tps_tone_mark, normalize_tps_lookup_scalar, tps_abbrev_from_tl,
     tps_notone_from_tl, tps_notone_or_variant, tps_num_from_tl,
 };
 use std::collections::HashSet;
@@ -197,7 +197,8 @@ fn fuse_latin_numeric(numeric: &str) -> String {
 /// dot `U+02D9`, but the stored `tps:num` key uses the combining form `U+0307`
 /// (`tps_num_from_tl` → `to_zhuyin(encode_safe=false)`). Canonicalize `U+02D9 →
 /// U+0307` BEFORE classification so the kept (`num`) form matches the stored key
-/// and the dropped (`notone`) form still strips it — mirrors
+/// and the dropped (`notone`) form still strips it; the same scalar folds the
+/// ㆳ glyph alias onto ㆪ ([`crate::fold_tps_glyph_alias`]) — mirrors
 /// [`crate::key_family::tps_key_body`].
 fn strip_tps_input(input: &str, keep_tone_marks: bool) -> String {
     let mut out = String::with_capacity(input.len());
@@ -205,7 +206,7 @@ fn strip_tps_input(input: &str, keep_tone_marks: bool) -> String {
         if ch == '-' || ch.is_whitespace() {
             continue;
         }
-        let normalized = normalize_tps_tone8_scalar(ch);
+        let normalized = normalize_tps_lookup_scalar(ch);
         if !keep_tone_marks && is_tps_tone_mark(normalized) {
             continue;
         }
@@ -331,6 +332,20 @@ mod tests {
         assert_eq!(q.form, FORM_NUM, "tone mark present → num form");
         assert_eq!(q.key, stored_num.key, "U+02D9 normalized back to U+0307");
         assert!(query_hits_stored(&stored, &q));
+    }
+
+    // ㆳ is ㆪ encoded twice: a query typed with either glyph is one key.
+    #[test]
+    fn tps_query_folds_the_innn_glyph_onto_inn() {
+        for (innn, inn) in [("ㄒㆳ", "ㄒㆪ"), ("ㄒㆳˋ", "ㄒㆪˋ")] {
+            let q = derive_custom_query_key(innn, "tl").unwrap();
+            let expected = derive_custom_query_key(inn, "tl").unwrap();
+            assert_eq!(
+                (q.family, q.form, q.key),
+                (expected.family, expected.form, expected.key),
+                "{innn}"
+            );
+        }
     }
 
     // 2026-08-28 user report (backlog B1): custom entry `băng-só͘-khó͘` (絆創膏).
