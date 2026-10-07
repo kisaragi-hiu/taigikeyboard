@@ -112,7 +112,7 @@ One branch at the top of `ComposingKeyIntent::intent`, taken when the bindings s
 | Keypad `1`–`9`, no modifier, list showing | — | pick that slot |
 | Keypad digit otherwise | pass through | `CommitThenInsert` |
 | Enter / Shift+Enter / Tab / arrows / `[` `]` / Esc / Backspace / caret chord | unchanged | unchanged |
-| Ctrl + a layout punctuation key (`,` `.` `;` …) | types the full-width mark — the bare key is a glyph, so under TPS the chord is the punctuation key, not a width flip; Ctrl on any other punctuation still flips to half width | commits, then types the mark |
+| Ctrl + a layout punctuation key (`,` `.` `;` …) | types the full-width mark — the bare key is a glyph, so under TPS the chord is the punctuation key, not a width flip. TPS is full width with no way out (USER 2026-10-07): Ctrl on any other mapped punctuation types the same full-width mark as the bare key, and an attaching mark swaps an armed auto space in full width | commits, then types the mark |
 | Any other printable | pass through | `CommitThenInsert` |
 
 `ComposingManager::tps_key` answers `Taken`, `Refused { is_caret_at_end }` or `Failed`. Only a refused Space with the caret at the end of the composition is O1's; a Space refused inside it (beside a tone mark or separator, or at the start) and a failed round trip do nothing. Shift+Space is not the separator: it is document text — the glyphs committed as typed, then a space. The symbol picker picks with the keypad too, and confirms with Space / Enter as in every mode.

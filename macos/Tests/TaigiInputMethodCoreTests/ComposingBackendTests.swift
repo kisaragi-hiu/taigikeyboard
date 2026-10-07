@@ -170,6 +170,23 @@ final class ComposingBackendTests: XCTestCase {
         XCTAssertFalse(isSwapCheckAsked, "composing: the ? commits with the composition")
     }
 
+    /// TPS writes only full width, so a bare key attaches the glyph it maps
+    /// to: `}` (no TPS layout key) attaches to nothing, its `』` does. Under
+    /// TL `}` is asked about as typed — the negative control.
+    func testTheSwapCheck_underTps_followsTheFullWidthGlyph() throws {
+        let store = try makeScratchSettingsStore()
+        store.isAutoSpaceEnabled = true
+
+        _ = try activatedBackend(composing: false)
+            .key(Self.key("}"), in: request(settings: store, armed: true))
+        XCTAssertFalse(isSwapCheckAsked, "TL: } attaches to nothing")
+
+        store.switchInputMode(.pick(.tps))
+        _ = try activatedBackend(composing: false)
+            .key(Self.key("}"), in: request(settings: store, armed: true))
+        XCTAssertTrue(isSwapCheckAsked, "TPS: } writes an attaching 』")
+    }
+
     /// The highlight goes whether or not a list is up — the picker commit is
     /// chosen by it — the slots only while one is.
     func testThePanel_carriesTheHighlightAlways_andTheSlotsWithAList() throws {

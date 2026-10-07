@@ -4,7 +4,9 @@
 //! half-width); the caller reads the mode, and the auto-space swap is read first
 //! and wins. The mode is a default, not a wall: Ctrl on a key of this map
 //! types the other width once (`ComposingKeyIntent::width_flip_character`),
-//! except the keys in [`HOST_CHORD_KEYS`].
+//! except the keys in [`HOST_CHORD_KEYS`]. TPS is the wall: full width only,
+//! the chord flips nothing and the swap attaches the full-width glyph (the
+//! executor's `document_punctuation`, USER 2026-10-07).
 //! macOS keeps a Swift twin: `macos/.../Policies/FullWidthPunctuation.swift`.
 
 /// The MOE manual's symbol shortcut table, minus what this input method must keep

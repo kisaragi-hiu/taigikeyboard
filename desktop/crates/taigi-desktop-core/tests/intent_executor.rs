@@ -728,16 +728,39 @@ fn tps_space_refused_inside_the_composition_does_nothing() {
     assert_eq!(rig.manager.raw_input(), "ㄏㄛ");
 }
 
+/// TPS is full width with no way out (USER 2026-10-07): the Ctrl chord on a
+/// mark outside the layout flips nothing, idle or composing.
 #[test]
-fn tps_ctrl_on_a_non_layout_mark_still_flips_to_half_width() {
-    // trace: `[` is no TPS layout key, so its Ctrl chord keeps the flip:
-    // full width under TPS → `policies::document_punctuation("[", true, true)`
-    // = `Some("[")` (full_width.rs: the flip names its width), written by the
-    // input method itself; `[` attaches to nothing, so no swap is tried.
+fn tps_ctrl_on_a_non_layout_mark_stays_full_width() {
+    // trace: under TPS the chord is no flip → `policies::document_punctuation(
+    // "[", true, false)` = `Some("「")`; `「` attaches to nothing, so no swap
+    // is tried. Composing: the commit is TPS (no auto space, H6) → `好「`.
     let mut rig = new_tps_rig();
     let ctrl_bracket = KeyEventSnapshot::chord(Some("["), "[", KeyModifiers::CONTROL);
     assert!(rig.run(ComposingKeyIntent::PassThrough, &ctrl_bracket));
-    assert_eq!(rig.calls(), ["insert \"[\""]);
+    assert_eq!(rig.calls(), ["insert \"「\""]);
+
+    rig.surface.calls.clear();
+    rig.type_tps("ㄏㄛˋ");
+    assert!(rig.run(
+        ComposingKeyIntent::CommitThenInsert("[".to_owned()),
+        &ctrl_bracket
+    ));
+    assert_eq!(rig.calls(), ["commit 好「", "list closed"]);
+}
+
+/// An auto space armed before a switch into TPS: a bare attaching mark
+/// swaps with it in full width, the only width TPS writes.
+#[test]
+fn tps_a_bare_mark_swaps_the_armed_space_in_full_width() {
+    // trace: `?` is no TPS layout key → PassThrough; the width is full and
+    // the swap attaches what is written: `document_punctuation("?", true,
+    // false)` = `？`, attaching (`punctuation.rs` ATTACHING) → swap `？ `.
+    let mut rig = new_tps_rig();
+    rig.surface.can_swap = true;
+    let question = KeyEventSnapshot::text("?", KeyModifiers::SHIFT);
+    assert!(rig.run(ComposingKeyIntent::PassThrough, &question));
+    assert_eq!(rig.calls(), ["swap \"？ \"", "arm"]);
 }
 
 /// A composition a switch across TPS left behind, reached by a commit that
