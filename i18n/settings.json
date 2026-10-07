@@ -246,6 +246,21 @@
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
       "values": { "hanji": "這會恢復所有設定。學習紀錄佮自訂詞攏會保留。敢欲繼續？", "tailo": "Tse ē hue-ho̍k sóo-iú siat-tīng. Ha̍k-si̍p kì-lio̍k kah tsū-tīng-sû lóng ē pó-liû. Kám beh kè-sio̍k?", "poj": "Che ē hoe-ho̍k só͘-iú siat-tēng. Ha̍k-si̍p kì-lio̍k kah chū-tēng-sû lóng ē pó-liû. Kám beh kè-sio̍k?", "en": "This resets all settings. Learning records and custom words are kept. Continue?", "ja": "すべての設定をリセットします。学習記録とカスタム単語は保持されます。続けますか？" }
     },
+    "resetSuccess": {
+      "comment": "Toast shown after settings were reset successfully.",
+      "scope": { "platforms": ["android"], "surfaces": ["host"] },
+      "values": { "hanji": "設定已恢復", "tailo": "Siat-tīng í hue-ho̍k", "poj": "Siat-tēng í hoe-ho̍k", "en": "Settings reset", "ja": "設定をリセットしました" }
+    },
+    "resetFailed": {
+      "comment": "Toast shown when resetting settings fails.",
+      "scope": { "platforms": ["android"], "surfaces": ["host"] },
+      "values": { "hanji": "恢復設定失敗，請重試", "tailo": "Hue-ho̍k siat-tīng sit-pāi, tshiánn tîng-tshì", "poj": "Hoe-ho̍k siat-tēng sit-pāi, chhiáⁿ tîng-chhì", "en": "Failed to reset settings. Please try again.", "ja": "設定のリセットに失敗しました。もう一度お試しください。" }
+    },
+    "noEmailApp": {
+      "comment": "Toast shown when no email app is available to send the bug report.",
+      "scope": { "platforms": ["android"], "surfaces": ["host"] },
+      "values": { "hanji": "揣無 Email App", "tailo": "Tshuē-bô Email App", "poj": "Chhōe-bô Email App", "en": "No email app found", "ja": "メールアプリが見つかりません" }
+    },
     "diagnosticSectionTitle": {
       "comment": "Section header for device-diagnostics actions.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },

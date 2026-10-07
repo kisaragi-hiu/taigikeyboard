@@ -165,6 +165,7 @@
     <string name="i18n_home_accentDictCredit">實齋 整理・提供</string>
     <string name="i18n_home_devSupplementCredit">建中 整理・提供</string>
     <string name="i18n_keyboard_expandCandidates">候補リストを展開または折りたたむ</string>
+    <string name="i18n_keyboard_morePopupHint">長押しでさらに文字を入力できます</string>
     <string name="i18n_keyboard_toggleToolbar">ツールバーを展開または折りたたむ</string>
     <string name="i18n_keyboard_symbolPanel">記号パネル</string>
     <string name="i18n_keyboard_switchLayout">レイアウトを切り替え</string>
@@ -224,6 +225,9 @@
     <string name="i18n_settings_tpsOrMapsToERInfo">オンでは「or」を ㄜ、オフでは ㄛ と表示します。検索結果には影響しません。</string>
     <string name="i18n_settings_resetSettings">既定値に戻す</string>
     <string name="i18n_settings_resetSettingsMessage">すべての設定をリセットします。学習記録とカスタム単語は保持されます。続けますか？</string>
+    <string name="i18n_settings_resetSuccess">設定をリセットしました</string>
+    <string name="i18n_settings_resetFailed">設定のリセットに失敗しました。もう一度お試しください。</string>
+    <string name="i18n_settings_noEmailApp">メールアプリが見つかりません</string>
     <string name="i18n_settings_diagnosticSectionTitle">デバイス情報</string>
     <string name="i18n_settings_diagnosticCopy">デバイス情報をコピー</string>
     <string name="i18n_settings_diagnosticCopied">コピーしました</string>
