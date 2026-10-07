@@ -240,7 +240,9 @@ Known limits (USER 2026-10-07 chose this scope): the TIP's **English mode**
 still hands keys to the host, which types the US base layout — English is typed
 by switching to the system's own Dvorak / Colemak with Win+Space; host
 shortcuts (Ctrl+C), password fields and contexts without the TIP stay at QWERTY
-positions. A per-profile `hklSubstitute` would move the whole thread but did
+positions. Under TPS the global chords sit at their QWERTY positions too (keys
+are read in QWERTY there), and a chord recorded while TPS is on is stored as
+its QWERTY character. A per-profile `hklSubstitute` would move the whole thread but did
 not take effect without a sign-out on the box (2026-10-07) and is not used.
 
 **Linux** has no row: Fcitx5 follows the group layout and the IBus engine

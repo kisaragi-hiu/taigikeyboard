@@ -70,9 +70,9 @@ pub fn action_for_guid(guid: &GUID) -> Option<ShortcutAction> {
 
 /// A chord as TSF wants it: the virtual key the character sits on in the
 /// current layout — moved to where `remapped_in` types it, a layout already
-/// checked against the thread by [`remapping_layout`] — plus the modifier bits. `None` when
-/// the layout has no key for the character (the recorder's
-/// `NotAGlobalKey`, hit late).
+/// checked against the thread by [`remapping_layout`] — plus the modifier
+/// bits. `None` when the layout has no key for the character (the
+/// recorder's `NotAGlobalKey`, hit late).
 ///
 /// ⚠ The layout's own required modifiers are OR-ed into the chord's, and a
 /// bitmask cannot say "twice": on a layout where the character itself needs

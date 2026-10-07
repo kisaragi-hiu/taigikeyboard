@@ -360,6 +360,17 @@ fn remapped_half_width_text_outside_a_composition_is_written_not_passed() {
 }
 
 #[test]
+fn a_remapped_mark_takes_an_armed_swap_and_writes_nothing_more() {
+    let mut rig = new_rig(true);
+    rig.settings.set_bool(&keys::IS_HANJI_FIRST, false);
+    rig.surface.can_swap = true;
+    // trace: the swap is tried before the write (PassThrough arm), and a
+    // swap that lands answers true there — the remapped text never writes.
+    assert!(rig.run(ComposingKeyIntent::PassThrough, &remapped(comma())));
+    assert_eq!(rig.calls(), ["swap \", \"", "arm"]);
+}
+
+#[test]
 fn a_remapped_host_chord_stays_the_hosts() {
     let mut rig = new_rig(true);
     // trace: Ctrl held → `document_text` answers None (host chord), so
