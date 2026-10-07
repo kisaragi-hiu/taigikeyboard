@@ -39,6 +39,14 @@ fn fixture_rows() -> Vec<Row> {
             syll: 1,
             freq: 3000,
         },
+        // trace: abbrev "ss" (só + sî), toneless "sosi".
+        Row {
+            toneless_key: "sosi",
+            hanji: "鎖匙",
+            tl: "só-sî",
+            syll: 2,
+            freq: 800,
+        },
     ]
 }
 
@@ -47,7 +55,7 @@ fn install() {
     let dict_path = write_temp("dictionary.bin", &build_tkdb_v3(&rows));
     let fst_path = build_dictionary_fst(&rows);
     let association_path = write_temp("association.bin", &empty_association_bin());
-    let syllables_path = build_syllables_fst(&["li2", "li7"]);
+    let syllables_path = build_syllables_fst(&["li2", "li7", "so2", "si5"]);
     install_lexicon(&fst_path, &dict_path, &association_path, &syllables_path);
 }
 
@@ -118,5 +126,23 @@ fn decomposed_custom_roman_collapses_under_caps_and_poj() {
             n, 1,
             "{input_mode} {raw}: NFD custom 李 listed once; got {all:?}"
         );
+    }
+}
+
+#[test]
+fn decomposed_custom_roman_collapses_on_the_abbreviation_and_partial_paths() {
+    // The abbreviation block (Step 4c) and the no-key partial-prefix branch
+    // do not merge custom rows again; their dictionary hit meets the custom
+    // row only through `retain_absent_from`'s identity half.
+    let _lock = engine_install_lock();
+    install();
+    let custom = || with_custom("so\u{301}-si\u{302}", "鎖匙");
+    for raw in ["ss", "SS"] {
+        let (n, all) = count_in("tl", raw, custom(), "鎖匙");
+        assert_eq!(n, 1, "{raw}: NFD custom 鎖匙 listed once; got {all:?}");
+    }
+    for raw in ["l", "L"] {
+        let (n, all) = count_in("tl", raw, with_custom("li\u{301}", "李"), "李");
+        assert_eq!(n, 1, "{raw}: NFD custom 李 listed once; got {all:?}");
     }
 }

@@ -1425,7 +1425,12 @@ pub(crate) fn assemble_candidates(
                         // (removed from its current position) or the synth.
                         // Both then run the SAME dedupe — same word identity
                         // or same recased roman, as [`retain_absent_from`] —
-                        // + `insert(0, …)` so slot 0 stays unique.
+                        // + `insert(0, …)` so slot 0 stays unique. The
+                        // identity half is a defensive mirror here: the
+                        // walker takes a custom edge over the dictionary one
+                        // and the lexicon dedupe already dropped the custom
+                        // row's dictionary twin, so today slot 0 and its
+                        // leftover twin always share the recased roman.
                         let slot0 = match promote_idx {
                             Some(i) => c.remove(i),
                             None => slot0_cand,

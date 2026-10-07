@@ -47,9 +47,9 @@ use crate::dictionary_reader::DictionaryRecord;
 /// the lowest `source_tier_rank` survivor (custom rank 0 beats any
 /// `dict.bin` tier), which is NOT what the full 9-dim sort would pick (it
 /// weighs `score`/`freq` ahead of `source_rank`, so a high-freq `dict.bin`
-/// duplicate could otherwise mask the user's custom entry). `(roman,
-/// hanji)` is the dual key (Codex pre-impl D1) so romanization variants of
-/// the same hanji are preserved; S2 extends it with `consumed_span` (Codex
+/// duplicate could otherwise mask the user's custom entry). `(reading,
+/// hanji)` is the dual key (Codex pre-impl D1) so reading variants of
+/// the same hanji are preserved (spellings of one reading collapse); S2 extends it with `consumed_span` (Codex
 /// pre-impl S2 Q1d) — both the custom synth and its `dict.bin` duplicate
 /// are emitted at the same `(0, raw_len)` span so the collapse still fires.
 ///
@@ -315,19 +315,23 @@ pub(super) fn learned_entry_to_candidate(
 /// identity). Runs on the merged `dict.bin` + custom candidate
 /// vector BEFORE the `CandidateSortKey` sort.
 ///
-/// - **Key**: the triple `(canonical_tl, hanji, consumed_span)` — the
-///   word identity (Core Principle #6), not the raw `roman`. A custom
-///   roman is kept in the user's stored form (POJ spelling, or NFD
+/// - **Key**: two candidates are one when they share `(hanji,
+///   consumed_span)` and EITHER the raw `roman` OR the word identity
+///   `canonical_tl` (Core Principle #6) — two passes, roman first. A
+///   custom roman is kept in the user's stored form (POJ spelling, or NFD
 ///   `li` + U+0301 from an import) while `dict.bin` TL is NFC;
-///   `canonical_tl` folds both onto one canonical NFC TL, so the raw
-///   bytes never split one word in two (2026-10-07: `li2` listed 李 `lí`
-///   twice). The `(canonical_tl, hanji)` pair (D1) keeps reading
-///   variants of the same hanji distinct; adding `consumed_span` keeps the **same
-///   word at different spans** distinct — once the whole-sentence
-///   walker / path-step candidates exist (S2) the same `(roman,
-///   hanji)` legitimately recurs at different spans and must NOT be
-///   collapsed (which the pre-S2 `(roman, hanji)`-only key would
-///   wrongly do). The Item-12 custom-vs-`dict.bin` collapse is
+///   `canonical_tl` folds both onto one canonical NFC TL, so the raw bytes
+///   never split one word in two (2026-10-07: `li2` listed 李 `lí` twice).
+///   The roman pass is still needed: a `dict.bin` row's `canonical_tl` is
+///   its TL verbatim, while a custom row's is `canonical_tl_form(roman)`,
+///   which rewrites ~116 dictionary TLs (`hùi` → `huì`), so a custom row
+///   byte-equal to such a TL would otherwise list twice. The `(reading,
+///   hanji)` pair (D1) keeps reading variants of the same hanji distinct;
+///   adding `consumed_span` keeps the **same word at different spans**
+///   distinct — once the whole-sentence walker / path-step candidates
+///   exist (S2) the same word legitimately recurs at different spans and
+///   must NOT be collapsed (which the pre-S2 pair-only key would wrongly
+///   do). The Item-12 custom-vs-`dict.bin` collapse is
 ///   preserved: both the custom synth and its `dict.bin` duplicate
 ///   are emitted at the **same** full-buffer span `(0, raw_len)`
 ///   (see the `custom_entry_to_candidate` call sites above), so the
@@ -343,13 +347,20 @@ pub(super) fn learned_entry_to_candidate(
 /// - Survivor **insertion order is preserved** so the downstream
 ///   `CandidateSortKey.stable_idx` stays deterministic.
 pub(super) fn dedupe_by_roman_hanji_span(out: &mut Vec<RawCandidate>) {
+    dedupe_by_reading(out, |c| c.roman.as_str());
+    dedupe_by_reading(out, |c| c.canonical_tl.as_str());
+}
+
+/// One pass of [`dedupe_by_roman_hanji_span`]: collapse candidates equal on
+/// `(reading(c), hanji, consumed_span)`, lowest source rank surviving.
+fn dedupe_by_reading(out: &mut Vec<RawCandidate>, reading: fn(&RawCandidate) -> &str) {
     use std::collections::{HashMap, HashSet};
     // key (borrowed from `out`) → (winning source rank, index of winner).
     let mut best: HashMap<(&str, Option<&str>, ConsumedSpan), (u8, usize)> =
         HashMap::with_capacity(out.len());
     for (i, c) in out.iter().enumerate() {
         let rank = source_tier_rank(c.bitmask, c.is_custom);
-        let key = (c.canonical_tl.as_str(), c.hanji.as_deref(), c.consumed_span);
+        let key = (reading(c), c.hanji.as_deref(), c.consumed_span);
         // Strictly lower rank replaces; equal rank keeps the earlier index
         // (no replace) → deterministic tie-break.
         let slot = best.entry(key).or_insert((rank, i));
@@ -635,6 +646,48 @@ mod item12_custom_dedupe_tests {
         dedupe_by_roman_hanji_span(&mut out);
         assert_eq!(out.len(), 1, "collision must collapse to one");
         assert!(out[0].is_custom, "custom (rank 0) must win the collision");
+    }
+
+    fn custom_cand(roman: &str, hanji: &str) -> RawCandidate {
+        custom_entry_to_candidate(
+            &CustomEntry {
+                roman: roman.to_owned(),
+                hanji: Some(hanji.to_owned()),
+            },
+            6,
+            &FrequencyMap::new(),
+            0,
+            ContextRanks::empty(),
+            COVERAGE_KIND_FULL,
+            phonetics::InputMode::Tl,
+        )
+    }
+
+    #[test]
+    fn dedupe_collapses_a_decomposed_custom_roman_by_identity() {
+        // 2026-10-07: an imported custom roman in NFD (`li` + U+0301) is
+        // the dictionary's NFC `lí`; only `canonical_tl` sees it.
+        let mut out = vec![
+            dict_cand("l\u{ed}", Some("李"), 1 << 0),
+            custom_cand("li\u{301}", "李"),
+        ];
+        dedupe_by_roman_hanji_span(&mut out);
+        assert_eq!(out.len(), 1);
+        assert!(out[0].is_custom);
+    }
+
+    #[test]
+    fn dedupe_collapses_a_byte_equal_custom_roman_whose_identity_is_rewritten() {
+        // `canonical_tl_form` moves the tone mark of a few dictionary TLs
+        // (`hùi` → `huì`) while a dict row keeps its TL verbatim as
+        // `canonical_tl`, so a custom row copied byte for byte from the
+        // dictionary meets it only on the raw roman.
+        let custom = custom_cand("hùi", "卉");
+        assert_ne!(custom.canonical_tl, "hùi", "fixture precondition");
+        let mut out = vec![dict_cand("hùi", Some("卉"), 1 << 0), custom];
+        dedupe_by_roman_hanji_span(&mut out);
+        assert_eq!(out.len(), 1);
+        assert!(out[0].is_custom);
     }
 
     #[test]
