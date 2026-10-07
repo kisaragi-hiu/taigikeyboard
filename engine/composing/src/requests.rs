@@ -360,14 +360,15 @@ fn adopt_collapsed_dict_identity(literal: &mut RawCandidate, candidates: &[RawCa
 /// * the preedit literal is non-empty.
 ///
 /// The candidate is roman-only (`hanji = None` → `CandidateScriptKind::Tailo`),
-/// with `roman == display_text ==` the preedit literal (except the identity
-/// it inherits under a single-script display — `adopt_collapsed_dict_identity`)
+/// with `roman ==` the preedit literal. `display_text` preserves the prior
+/// literal learning key (except the dictionary identity inherited under a
+/// single-script display — `adopt_collapsed_dict_identity`)
 /// — WYSIWYG with the underline (§30 literal-no-fold: tone marks only, no spelling fold). It
 /// mirrors the preedit EXACTLY. Tone digits apply to the preceding last
 /// vowel cluster without validating a whole syllable (`tai5gi2` → `tâigí`).
 /// Tones 1 and 4 consume their digits without a visible mark. It
-/// carries `canonical_tl` via `canonical_tl_form` so the frequency / association records learn the
-/// canonical `(∅, TL)` identity on commit (Core Principle #7; §24/§28).
+/// carries `canonical_tl` via `canonical_tl_form` of that stable learning
+/// text, preserving tone boundaries and existing `(text, TL)` records.
 fn literal_roman_candidate(
     raw: &str,
     config: &AppConfig,
@@ -380,11 +381,12 @@ fn literal_roman_candidate(
     if literal.is_empty() {
         return None;
     }
-    let canonical_tl = phonetics::api::canonical_tl_form(&literal, mode);
+    let learning_text = phonetics::api::literal_learning_text(raw, config);
+    let canonical_tl = phonetics::api::canonical_tl_form(&learning_text, mode);
     Some(RawCandidate {
         consumed_span: (0, raw.len() as u32),
         syllable_count: literal.split('-').count().min(u8::MAX as usize) as u8,
-        display_text: literal.clone(),
+        display_text: learning_text,
         roman: literal,
         hanji: None,
         canonical_tl,
@@ -752,6 +754,34 @@ mod tests {
     }
 
     #[test]
+    fn literal_roman_candidate_preserves_existing_learning_keys() {
+        for mode in [phonetics::InputMode::Tl, phonetics::InputMode::Poj] {
+            let cfg = AppConfig {
+                input_mode: if mode == phonetics::InputMode::Tl {
+                    "tl"
+                } else {
+                    "poj"
+                }
+                .into(),
+                ..config_tl()
+            };
+            for (raw, text, canonical_tl) in [
+                ("a1i3", "a1i3", "a1i3"),
+                ("ai3", "ài", "ài"),
+                ("a1i1", "a1i1", "a1i1"),
+                ("ai1", "ai1", "ai"),
+                ("a4i3", "a4i3", "a4i3"),
+                ("tai5gi2", "tai5gi2", "tai5gi2"),
+            ] {
+                let cand = literal_roman_candidate(raw, &cfg, mode).unwrap();
+                assert_eq!(cand.display_text, text, "{mode:?}: {raw}");
+                assert_eq!(cand.canonical_tl, canonical_tl, "{mode:?}: {raw}");
+                assert_eq!(cand.roman, crate::derived::derived_display(raw, &cfg));
+            }
+        }
+    }
+
+    #[test]
     fn literal_roman_candidate_trailing_hyphen_mirrors_preedit() {
         // A trailing hyphen mirrors the preedit too (`tai5-` → `tâi-`); the
         // candidate stays consistent with the underline.
@@ -788,6 +818,35 @@ mod tests {
         for raw in ["oo1", "oo4", "oo2"] {
             let cand = literal_roman_candidate(raw, &cfg, phonetics::InputMode::Poj).unwrap();
             assert_eq!(cand.roman, crate::derived::derived_display(raw, &cfg));
+        }
+    }
+
+    #[test]
+    fn literal_learning_keys_preserve_poj_doubletap_and_nasal_case_settings() {
+        for force_lowercase in [false, true] {
+            let cfg = AppConfig {
+                oo_doubletap_enabled: true,
+                nn_doubletap_enabled: true,
+                force_lowercase_nasal_marker: force_lowercase,
+                ..config_poj()
+            };
+            for (raw, expected) in [
+                ("oo1", "o͘1"),
+                ("oo4", "o͘4"),
+                ("oo2", "ó͘"),
+                (
+                    "SIANN1",
+                    if force_lowercase {
+                        "SIAⁿ1"
+                    } else {
+                        "SIAᴺ1"
+                    },
+                ),
+            ] {
+                let cand = literal_roman_candidate(raw, &cfg, phonetics::InputMode::Poj).unwrap();
+                assert_eq!(cand.display_text, expected);
+                assert_eq!(cand.roman, crate::derived::derived_display(raw, &cfg));
+            }
         }
     }
 }

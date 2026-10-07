@@ -130,6 +130,8 @@ The roman-with-spaces rendering in slot 0 (§10.2 segmented rule) is **display-o
 - Canonical word boundary of dictionary vocabulary tokens
 - Mode-independent learning: frequency / NextWord do not fork by display mode
 
+For the Show Typed Text First literal, the candidate's `roman` mirrors the permissive preedit, while its `display_text` / `canonical_tl` preserve the learning key computed before permissive rendering (§34). Tone boundaries hidden in the visible text therefore stay distinct in storage: `a1i1` and `ai1` both commit `ai` but retain their existing separate keys. Platforms forward those identity fields on `canonical_text` / `association_tl`.
+
 Empty `canonical_text` (legacy callers) falls back to `display_text` — unchanged.
 
 Design intent:

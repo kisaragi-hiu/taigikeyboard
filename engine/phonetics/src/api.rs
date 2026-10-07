@@ -184,6 +184,20 @@ pub fn normalize_tone(input: &str, config: &AppConfig) -> String {
     apply_nasal_marker_case(&tone_marked, config.force_lowercase_nasal_marker).into_owned()
 }
 
+/// Stable text component of a literal candidate's learning identity.
+///
+/// Keep the pre-permissive normalization contract for stored keys: in
+/// particular, internal tone digits and explicit tones 1/4 remain present.
+/// Rendering can hide those boundaries (`a1i1` and `ai1` both show `ai`),
+/// but frequency and association learning must still distinguish them and
+/// reuse existing records. This is an identity transform, not display text.
+pub fn literal_learning_text(input: &str, config: &AppConfig) -> String {
+    let mode = composing_mode(config);
+    let preprocessed = preprocess_for_normalize_tone(input, mode, config);
+    let tone_marked = to_tone_marks(&preprocessed, mode);
+    apply_nasal_marker_case(&tone_marked, config.force_lowercase_nasal_marker).into_owned()
+}
+
 fn renders_roman_tones(config: &AppConfig, mode: InputMode) -> bool {
     !config.is_tps_layout() && matches!(mode, InputMode::Tl | InputMode::Poj)
 }
