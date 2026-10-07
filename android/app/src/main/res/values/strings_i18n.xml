@@ -218,7 +218,7 @@
     <string name="i18n_settings_vibrationFeedback">震動反應</string>
     <string name="i18n_settings_doubleTapOO">連紲拍 oo → o͘</string>
     <string name="i18n_settings_doubleTapNN">連紲拍 nn → ⁿ</string>
-    <string name="i18n_settings_nasalMarkerUppercase">白話字大本鼻音</string>
+    <string name="i18n_settings_nasalMarkerUppercase">白話字大本字的鼻音符號輸出</string>
     <string name="i18n_settings_nasalMarkerUppercaseCapital">ᴺ（SIÂᴺ）</string>
     <string name="i18n_settings_nasalMarkerUppercaseSmall">ⁿ（SIÂⁿ）</string>
     <string name="i18n_settings_tpsOrMapsToER">or 對應 ㄜ</string>

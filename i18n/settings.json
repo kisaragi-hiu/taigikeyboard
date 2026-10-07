@@ -214,7 +214,7 @@
     "nasalMarkerUppercase": {
       "comment": "Picker label: how the POJ nasal marker is written in capitals — the stored switch, true = ᴺ (nasalMarkerUppercaseCapital, the default), false = ⁿ (nasalMarkerUppercaseSmall). All five platforms (host settings) plus the mobile keyboard settings overlay.",
       "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host", "extension"] },
-      "values": { "hanji": "白話字大本鼻音", "tailo": "Pe̍h-uē-jī tuā-pún phīnn-im", "poj": "Pe̍h-ōe-jī tōa-pún phīⁿ-im", "en": "Nasal mark in POJ capitals", "ja": "白話字の大文字での鼻音記号" }
+      "values": { "hanji": "白話字大本字的鼻音符號輸出", "tailo": "Pe̍h-uē-jī tuā-pún-jī ê phīnn-im hû-hō su-tshut", "poj": "Pe̍h-ōe-jī tōa-pún-jī ê phīⁿ-im hû-hō su-chhut", "en": "Nasal mark in POJ capitals", "ja": "白話字の大文字での鼻音記号" }
     },
     "nasalMarkerUppercaseCapital": {
       "comment": "Picker value (default): in capitals the nasal marker follows the letters before it, ᴺ (SIÂᴺ).",
