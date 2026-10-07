@@ -696,14 +696,13 @@ impl TextService_Impl {
         }
     }
 
-    /// Re-registers the preserved keys when the settings revision moved.
-    /// Cheap when it did not (one comparison); COM only when it did.
+    /// Re-registers the preserved keys when the settings revision or the
+    /// remapping layout moved. Cheap when neither did; COM only when one did.
     pub(crate) fn sync_preserved_keys(
         &self,
         settings: &taigi_desktop_core::settings::SettingsDocument,
     ) {
-        let already_current =
-            self.state.borrow().preserved_keys.revision == Some(settings.revision);
+        let already_current = self.state.borrow().preserved_keys.is_current(settings);
         if already_current {
             return;
         }

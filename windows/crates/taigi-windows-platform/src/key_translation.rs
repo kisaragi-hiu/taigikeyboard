@@ -13,22 +13,27 @@
 //! pointer, and an optimized build then reads every modifier as "not held"
 //! (that module carries the measurement).
 //!
+//! A Dvorak / Colemak user's key is read as that layout types it
+//! ([`remapping_layout`], `crate::layout_remap`): the input method runs on
+//! the zh-TW US base layout whatever the user typed in before.
+//!
 //! Shared: the DLL's key sink reads it through
 //! `taigi-windows-tsf/src/key_translation.rs`, and the settings window's
 //! shortcut recorder through [`recorded_press`]. One set of rules, so a
 //! chord the recorder stores is a chord the classifier matches — the
 //! recorder is NOT allowed a weaker copy (roadmap W17).
 
-use crate::os_out_buffer;
+use crate::{layout_remap, os_out_buffer};
 use taigi_desktop_core::keys::{
     KeyEventSnapshot, KeyModifiers, LineEdgeKey, NavigationKey, RecordedPress,
     LEFT_SHIFT_SCAN_CODE, RIGHT_SHIFT_SCAN_CODE,
 };
+use taigi_desktop_core::settings::KeyboardLayout;
 use windows::Win32::UI::Input::KeyboardAndMouse::{
-    GetKeyboardLayout, VIRTUAL_KEY, VK_BACK, VK_CAPITAL, VK_CONTROL, VK_DELETE, VK_DOWN, VK_END,
-    VK_ESCAPE, VK_F1, VK_F24, VK_HOME, VK_INSERT, VK_LCONTROL, VK_LEFT, VK_LMENU, VK_LSHIFT,
-    VK_LWIN, VK_MENU, VK_NEXT, VK_NUMLOCK, VK_PACKET, VK_PRIOR, VK_PROCESSKEY, VK_RCONTROL,
-    VK_RETURN, VK_RIGHT, VK_RMENU, VK_RSHIFT, VK_RWIN, VK_SHIFT, VK_TAB, VK_UP,
+    GetKeyboardLayout, HKL, VIRTUAL_KEY, VK_BACK, VK_CAPITAL, VK_CONTROL, VK_DELETE, VK_DOWN,
+    VK_END, VK_ESCAPE, VK_F1, VK_F24, VK_HOME, VK_INSERT, VK_LCONTROL, VK_LEFT, VK_LMENU,
+    VK_LSHIFT, VK_LWIN, VK_MENU, VK_NEXT, VK_NUMLOCK, VK_PACKET, VK_PRIOR, VK_PROCESSKEY,
+    VK_RCONTROL, VK_RETURN, VK_RIGHT, VK_RMENU, VK_RSHIFT, VK_RWIN, VK_SHIFT, VK_TAB, VK_UP,
 };
 
 const KEY_IS_DOWN: u8 = 0x80;
@@ -160,13 +165,52 @@ fn is_synthetic_key(virtual_key: u16) -> bool {
     virtual_key == VK_PACKET.0 || virtual_key == VK_PROCESSKEY.0
 }
 
+/// The layout keys are actually remapped in on the calling thread: `layout`
+/// while the thread's layout is the US base the tables are written over
+/// ([`layout_remap::is_us_base_layout`]), QWERTY — no remap — when the
+/// thread already types in a real Dvorak / Colemak / other layout, so
+/// nothing is mapped twice.
+pub fn remapping_layout(layout: KeyboardLayout) -> KeyboardLayout {
+    // SAFETY: thread id 0 = the calling thread's layout.
+    remapping_layout_on(layout, unsafe { GetKeyboardLayout(0) })
+}
+
+fn remapping_layout_on(layout: KeyboardLayout, thread_layout: HKL) -> KeyboardLayout {
+    if layout_remap::is_us_base_layout(thread_layout.0 as usize) {
+        layout
+    } else {
+        KeyboardLayout::Qwerty
+    }
+}
+
+/// Whether a key-down builds a snapshot at all: modifiers and synthetic keys
+/// never do ([`snapshot`] answers `None`), which the key sink asks before
+/// reading anything else.
+pub fn builds_snapshot(virtual_key: u16) -> bool {
+    !is_modifier_key(virtual_key) && !is_synthetic_key(virtual_key)
+}
+
 /// The snapshot for a key-down, or `None` for a modifier or synthetic key.
 /// `scan_code` is the low 8 bits of the message's scan code, WITHOUT the
-/// extended-key flag — what the key sink has always passed.
-pub fn snapshot(virtual_key: u16, scan_code: u32) -> Option<KeyEventSnapshot> {
-    if is_modifier_key(virtual_key) || is_synthetic_key(virtual_key) {
+/// extended-key flag — what the key sink has always passed. `layout` is the
+/// layout the key is read in ([`remapping_layout`]): the key becomes the US
+/// key of what that layout types there, and is marked `is_remapped` when that
+/// differs from the key pressed. The scan code stays the pressed key's, which
+/// `ToUnicodeEx` reads only for its key-up bit.
+pub fn snapshot(
+    virtual_key: u16,
+    scan_code: u32,
+    layout: KeyboardLayout,
+) -> Option<KeyEventSnapshot> {
+    if !builds_snapshot(virtual_key) {
         return None;
     }
+    // SAFETY: thread id 0 = the calling thread's layout, which is the
+    // focused thread inside a key sink.
+    let thread_layout = unsafe { GetKeyboardLayout(0) };
+    let pressed_key = virtual_key;
+    let virtual_key =
+        layout_remap::typed_virtual_key(remapping_layout_on(layout, thread_layout), virtual_key);
     let state = keyboard_state_or_empty();
     let held = |key: VIRTUAL_KEY| is_down(&state, key);
     let modifiers = KeyModifiers {
@@ -176,21 +220,23 @@ pub fn snapshot(virtual_key: u16, scan_code: u32) -> Option<KeyEventSnapshot> {
         win: held(VK_LWIN) || held(VK_RWIN),
     };
     let is_chorded = CHORDING_MODIFIER_KEYS.iter().copied().any(held);
-    // SAFETY: thread id 0 = the calling thread's layout, which is the
-    // focused thread inside a key sink.
-    let layout = unsafe { GetKeyboardLayout(0) };
 
     let fixed = fixed_control_character(virtual_key).map(str::to_owned);
     let characters = fixed
         .clone()
-        .or_else(|| os_out_buffer::to_unicode(virtual_key, scan_code, &state, layout));
+        .or_else(|| os_out_buffer::to_unicode(virtual_key, scan_code, &state, thread_layout));
     // With no chording modifier held the cleared state IS this state, so the
     // second translation would ask the layout the same question twice — on
     // every key of ordinary typing, and twice over since `OnTestKeyDown` and
     // `OnKeyDown` both classify.
     let characters_ignoring_modifiers = if is_chorded {
         fixed.or_else(|| {
-            os_out_buffer::to_unicode(virtual_key, scan_code, &unmodified_state(state), layout)
+            os_out_buffer::to_unicode(
+                virtual_key,
+                scan_code,
+                &unmodified_state(state),
+                thread_layout,
+            )
         })
     } else {
         characters.clone()
@@ -203,6 +249,7 @@ pub fn snapshot(virtual_key: u16, scan_code: u32) -> Option<KeyEventSnapshot> {
         is_named_special_key: is_named_special_key(virtual_key),
         navigation_key: navigation_key(virtual_key),
         line_edge_key: line_edge_key(virtual_key),
+        is_remapped: virtual_key != pressed_key,
     })
 }
 
@@ -269,8 +316,13 @@ fn named_key_scalar(virtual_key: u16) -> Option<char> {
 /// `ToUnicodeEx`, not a table of one layout's punctuation — or the
 /// reserved scalar for a key that types nothing. `None` for a modifier or
 /// a synthetic key, which the recorder never records.
-pub fn recorded_press(virtual_key: u16, scan_code: u32, is_repeat: bool) -> Option<RecordedPress> {
-    let snapshot = snapshot(virtual_key, scan_code)?;
+pub fn recorded_press(
+    virtual_key: u16,
+    scan_code: u32,
+    is_repeat: bool,
+    layout: KeyboardLayout,
+) -> Option<RecordedPress> {
+    let snapshot = snapshot(virtual_key, scan_code, layout)?;
     let key = snapshot
         .unmodified_characters()
         .map(str::to_owned)

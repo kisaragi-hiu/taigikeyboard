@@ -107,6 +107,10 @@ pub struct KeyEventSnapshot {
     pub navigation_key: Option<NavigationKey>,
     /// Home or End, if this event is one of them.
     pub line_edge_key: Option<LineEdgeKey>,
+    /// Read in a layout the host does not type in (Windows: Dvorak / Colemak
+    /// over the US base, `layout_remap.rs`), so the input method writes its
+    /// text rather than passing it through. Always `false` on macOS / Linux.
+    pub is_remapped: bool,
 }
 
 impl KeyEventSnapshot {

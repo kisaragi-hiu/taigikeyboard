@@ -12,8 +12,8 @@
       "values": { "hanji": "輸入模式", "tailo": "Su-ji̍p bôo-sik", "poj": "Su-ji̍p bô͘-sek", "en": "Input Mode", "ja": "入力モード" }
     },
     "keyboardLayout": {
-      "comment": "macOS General picker: QWERTY (default), Dvorak, Colemak for TL/POJ input. TPS keeps its fixed QWERTY positions.",
-      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "comment": "macOS + Windows General picker: QWERTY (default), Dvorak, Colemak for TL/POJ input. TPS keeps its fixed QWERTY positions. Linux follows the system layout and has no row.",
+      "scope": { "platforms": ["macos", "windows"], "surfaces": ["host"] },
       "values": { "hanji": "齒盤佈局", "tailo": "Khí-puânn pòo-kio̍k", "poj": "Khí-pôaⁿ pò͘-kio̍k", "en": "Keyboard Layout", "ja": "キーボード配列" }
     },
     "displayLanguage": {

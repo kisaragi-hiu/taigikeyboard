@@ -18,7 +18,9 @@ use crate::guids::{
 };
 use crate::wide::to_wide_nul;
 use taigi_desktop_core::keys::{ComposingKeyChord, ShortcutAction};
-use taigi_desktop_core::settings::SettingsDocument;
+use taigi_desktop_core::settings::{KeyboardLayout, SettingsDocument};
+use taigi_windows_platform::key_translation::remapping_layout;
+use taigi_windows_platform::layout_remap;
 use taigi_windows_platform::DESKTOP_PLATFORM;
 use windows::core::GUID;
 use windows::Win32::UI::Input::KeyboardAndMouse::{
@@ -67,8 +69,10 @@ pub fn action_for_guid(guid: &GUID) -> Option<ShortcutAction> {
 }
 
 /// A chord as TSF wants it: the virtual key the character sits on in the
-/// current layout plus the modifier bits. `None` when the layout has no
-/// key for the character (the recorder's `NotAGlobalKey`, hit late).
+/// current layout — moved to where `remapped_in` types it, a layout already
+/// checked against the thread by [`remapping_layout`] — plus the modifier
+/// bits. `None` when the layout has no key for the character (the
+/// recorder's `NotAGlobalKey`, hit late).
 ///
 /// ⚠ The layout's own required modifiers are OR-ed into the chord's, and a
 /// bitmask cannot say "twice": on a layout where the character itself needs
@@ -76,14 +80,20 @@ pub fn action_for_guid(guid: &GUID) -> Option<ShortcutAction> {
 /// character WITH, not that key plus Ctrl+Alt. Neither `s` nor `c` needs a
 /// modifier on the layouts this input method is typed on, so the shipped
 /// defaults are unaffected — a dogfood item per layout, not a live bug.
-pub fn preserved_key(chord: &ComposingKeyChord) -> Option<TF_PRESERVEDKEY> {
+pub fn preserved_key(
+    chord: &ComposingKeyChord,
+    remapped_in: KeyboardLayout,
+) -> Option<TF_PRESERVEDKEY> {
     let character = chord.key.encode_utf16().next()?;
     // SAFETY: plain layout queries on the calling thread.
     let scan = unsafe { VkKeyScanExW(character, GetKeyboardLayout(0)) };
     if scan == -1 {
         return None;
     }
-    let virtual_key = u32::from((scan & 0xFF) as u8);
+    let virtual_key = u32::from(layout_remap::position_virtual_key(
+        remapped_in,
+        u16::from((scan & 0xFF) as u8),
+    ));
     // The high byte says which modifiers the LAYOUT needs to type this
     // character (bit 1 Shift, bit 2 Ctrl, bit 4 Alt) — a stored chord names
     // the character as typed with no modifiers, so those are added to the
@@ -117,25 +127,44 @@ pub fn preserved_key(chord: &ComposingKeyChord) -> Option<TF_PRESERVEDKEY> {
     })
 }
 
+/// What a registration was read from: the settings revision and the layout
+/// keys were remapped in — a thread moving on or off the US base changes the
+/// keys without a settings write.
+type RegistrationSource = (u64, KeyboardLayout);
+
+fn registration_source(settings: &SettingsDocument) -> RegistrationSource {
+    (
+        settings.revision,
+        remapping_layout(settings.key_reading_layout()),
+    )
+}
+
 /// What is registered right now, so it can be unregistered exactly.
 #[derive(Default)]
 pub struct PreservedKeys {
     registered: Vec<(GUID, TF_PRESERVEDKEY)>,
-    /// The settings revision the registration was read from.
-    pub revision: Option<u64>,
+    /// What the registration was read from.
+    source: Option<RegistrationSource>,
 }
 
 impl PreservedKeys {
-    /// Re-registers from `settings` when its revision moved (or on first
-    /// call). Unregisters everything first so a cleared row really frees
-    /// its key.
+    /// Whether the registration is what `settings` asks for on this thread —
+    /// `sync` has nothing to do.
+    pub fn is_current(&self, settings: &SettingsDocument) -> bool {
+        self.source == Some(registration_source(settings))
+    }
+
+    /// Re-registers from `settings` when its revision or the remapping layout
+    /// moved (or on first call). Unregisters everything first so a cleared
+    /// row really frees its key.
     pub fn sync(
         &mut self,
         keystroke_mgr: &ITfKeystrokeMgr,
         client_id: u32,
         settings: &SettingsDocument,
     ) {
-        if self.revision == Some(settings.revision) {
+        let source = registration_source(settings);
+        if self.source == Some(source) {
             return;
         }
         self.unregister(keystroke_mgr);
@@ -143,7 +172,7 @@ impl PreservedKeys {
             let Some(chord) = action.chord_in(settings, DESKTOP_PLATFORM) else {
                 continue;
             };
-            let Some(key) = preserved_key(&chord) else {
+            let Some(key) = preserved_key(&chord, source.1) else {
                 log::warn!(
                     "preserved_key.no_virtual_key action={action:?} chord={}",
                     chord.display(DESKTOP_PLATFORM)
@@ -160,7 +189,7 @@ impl PreservedKeys {
                 }
             }
         }
-        self.revision = Some(settings.revision);
+        self.source = Some(source);
     }
 
     /// The virtual key `action` is registered on right now, if it is.
@@ -180,7 +209,7 @@ impl PreservedKeys {
             // SAFETY: undoing a registration this struct recorded.
             unsafe { keystroke_mgr.UnpreserveKey(&guid, &key).ok() };
         }
-        self.revision = None;
+        self.source = None;
     }
 }
 

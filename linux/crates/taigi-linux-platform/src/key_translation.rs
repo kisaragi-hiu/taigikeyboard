@@ -106,6 +106,7 @@ pub fn snapshot(event: RawKeyEvent) -> Option<KeyEventSnapshot> {
         is_named_special_key: is_named_special_keysym(keysym),
         navigation_key: navigation_key(keysym),
         line_edge_key: line_edge_key(keysym),
+        is_remapped: false,
     })
 }
 

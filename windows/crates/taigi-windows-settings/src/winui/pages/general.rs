@@ -1,6 +1,6 @@
-//! The General pane: input script, output script, tone keys, auto-space, the
-//! candidate window's two switches, display language; then the update row
-//! and the reset card. Port of `GeneralSettingsView.swift`.
+//! The General pane: input script, keyboard layout, output script, tone
+//! keys, auto-space, the candidate window's two switches, display language;
+//! then the update row and the reset card. Port of `GeneralSettingsView.swift`.
 
 use super::{choice_row, reset_row};
 use crate::updates::INSTALLED_VERSION;
@@ -11,7 +11,9 @@ use taigi_desktop_core::settings::presentation::{
     display_language_label, nasal_marker_style_label, output_script_label, NASAL_MARKER_STYLES,
     OUTPUT_SCRIPTS,
 };
-use taigi_desktop_core::settings::{keys, InputMode, SettingChoice, SyllableSeparator};
+use taigi_desktop_core::settings::{
+    keys, InputMode, KeyboardLayout, SettingChoice, SyllableSeparator,
+};
 use taigi_desktop_core::strings::{DisplayLanguage, StringKey, StringResolver};
 use taigi_desktop_update::checker;
 use windows_reactor::*;
@@ -45,6 +47,16 @@ pub fn view(
             true,
             |mode: InputMode| strings.resolve(mode.label_key()).to_owned(),
             Message::SetInputMode,
+            context,
+        ),
+        // Beside Input Script, as on the Mac; disabled under TPS.
+        choice_row(
+            strings.resolve(StringKey::SettingsKeyboardLayout),
+            KeyboardLayout::ALL,
+            document.key_reading_layout(),
+            !document.is_typing_tps(),
+            |layout: KeyboardLayout| layout.display_name().to_owned(),
+            |layout| Message::set_choice(layout, &keys::KEYBOARD_LAYOUT),
             context,
         ),
         // Which keys type a tone is a fact about how the syllable is

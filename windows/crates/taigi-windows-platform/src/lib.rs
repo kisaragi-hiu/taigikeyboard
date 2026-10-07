@@ -27,6 +27,8 @@ pub mod font_file;
 #[cfg(windows)]
 pub mod key_translation;
 pub mod keyboard_hook;
+/// Pure: the Dvorak / Colemak tables the key translation reads keys through.
+pub mod layout_remap;
 /// Windows-only, and the reason it exists is a `windows` crate wrapper that
 /// cannot be used for a buffer we read back — see the module.
 #[cfg(windows)]

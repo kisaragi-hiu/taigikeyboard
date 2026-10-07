@@ -152,6 +152,9 @@ struct HookState {
     /// holding the thread-local's borrow — and without taking it out,
     /// which would lose it if the closure ever panicked.
     deliver: Option<std::rc::Rc<dyn Fn(RecordedPress) -> Delivery>>,
+    /// The layout presses are read in (`key_translation::remapping_layout`),
+    /// so a chord is recorded where the input method will match it.
+    layout: taigi_desktop_core::settings::KeyboardLayout,
     recording: Recording,
     /// Which guard owns the current installation, so an older guard's
     /// `Drop` cannot stop a newer row's recording.
@@ -177,14 +180,18 @@ pub struct KeyboardHook {
 
 #[cfg(windows)]
 impl KeyboardHook {
-    /// Starts recording on the CALLING thread, reporting each press to
-    /// `deliver`. A hook still draining an earlier row is taken over, keys
-    /// and all; otherwise one is installed. `None` when it could not be.
+    /// Starts recording on the CALLING thread, reporting each press — read
+    /// in `layout` — to `deliver`. A hook still draining an earlier row is
+    /// taken over, keys and all; otherwise one is installed. `None` when it
+    /// could not be.
     ///
     /// `deliver` runs inside the hook callback: it must do bounded,
     /// non-blocking work (queue the press and wake the UI), never call
     /// back into the hook, and never block.
-    pub fn install(deliver: impl Fn(RecordedPress) -> Delivery + 'static) -> Option<Self> {
+    pub fn install(
+        layout: taigi_desktop_core::settings::KeyboardLayout,
+        deliver: impl Fn(RecordedPress) -> Delivery + 'static,
+    ) -> Option<Self> {
         use windows::Win32::System::Threading::GetCurrentThreadId;
         use windows::Win32::UI::WindowsAndMessaging::{SetWindowsHookExW, WH_KEYBOARD};
         let deliver: std::rc::Rc<dyn Fn(RecordedPress) -> Delivery> = std::rc::Rc::new(deliver);
@@ -195,6 +202,7 @@ impl KeyboardHook {
         });
         let is_taken_over = with_state(|state| {
             state.deliver = Some(std::rc::Rc::clone(&deliver));
+            state.layout = layout;
             state.recording.start();
             state.owner = owner;
         })
@@ -211,6 +219,7 @@ impl KeyboardHook {
                 *state.borrow_mut() = Some(HookState {
                     hook,
                     deliver: Some(deliver),
+                    layout,
                     recording: Recording::listening(),
                     owner,
                 });
@@ -303,10 +312,13 @@ fn handle(virtual_key: u16, message: HookMessage) -> bool {
     } else {
         // Modifier and synthetic keys carry no press of their own, and the
         // window needs them: `recorded_press` answers `None` for both.
+        let layout = with_state(|state| state.layout)
+            .unwrap_or(taigi_desktop_core::settings::KeyboardLayout::Qwerty);
         let delivery = crate::key_translation::recorded_press(
             virtual_key,
             message.scan_code,
             message.is_repeat,
+            layout,
         )
         .and_then(|press| with_deliver(|deliver| deliver(press)));
         with_state(|state| state.recording.on_key_down(virtual_key, delivery))
@@ -350,7 +362,10 @@ pub struct KeyboardHook;
 
 #[cfg(not(windows))]
 impl KeyboardHook {
-    pub fn install(_deliver: impl Fn(RecordedPress) -> Delivery + 'static) -> Option<Self> {
+    pub fn install(
+        _layout: taigi_desktop_core::settings::KeyboardLayout,
+        _deliver: impl Fn(RecordedPress) -> Delivery + 'static,
+    ) -> Option<Self> {
         log::info!("recorder.hook_stub");
         None
     }
