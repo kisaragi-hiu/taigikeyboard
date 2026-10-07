@@ -190,7 +190,7 @@ Engine search ownership on the fetch step: `phonetics::KeyFamily::search_key` (c
 
 State machine on every platform: the engine's `composing::api::Phase` is `Idle` / `Composing` / `Continuous` (`engine/composing/src/api.rs`; `Continuous` also holds the nailed segments). Input leaves `Idle`; candidate select / Space / Enter / delete-to-empty return to it; semantics pinned in `behavioral-invariants.md` §13.
 
-### macOS keyboard layouts
+### Desktop keyboard layouts
 
 General settings exposes **Keyboard Layout**: QWERTY (default), Dvorak, or
 Colemak for TL/POJ. The macOS shell stores `keyboardLayout` in `UserDefaults`
@@ -198,9 +198,8 @@ and calls `IMKTextInput.overrideKeyboard(withKeyboardNamed:)` on activation
 and on a live layout change. macOS translates the events before the shared
 Rust key classifier sees them, including punctuation passed through while
 idle; no character substitution or layout setting crosses the engine seam.
-This is intentional macOS OS integration; the other platforms do not expose
-this setting yet. Choosing a separate Dvorak/Colemak input source in System
-Settings does not configure TaigiKeyboard.
+This is intentional macOS OS integration. Choosing a separate Dvorak/Colemak
+input source in System Settings does not configure TaigiKeyboard.
 
 TPS uses QWERTY positions regardless of the stored romanization layout. Its
 Keyboard Layout picker shows QWERTY and is disabled, and leaving TPS restores the user's
@@ -221,6 +220,32 @@ IME acceptance passed in TextEdit and a Chromium host (#431): each layout
 chosen inside TaigiKeyboard, letters and shifted punctuation both idle and
 composing, Caps Lock and Command shortcuts, input-source and application
 switches, and fixed TPS positions.
+
+**Windows** exposes the same row (same `keyboardLayout` key and raw values, in
+`settings.json` via `taigi-desktop-core` `keys::KEYBOARD_LAYOUT`). The TIP is
+registered under zh-TW, so while it is active the thread layout is the zh-TW
+default, KBDUS, whatever layout the user typed in before (measured 2026-10-07:
+HKL `0x04040404`, physical K A G composed `kag` under a Dvorak user). The key
+translation therefore remaps keys itself: `taigi-windows-platform`
+`layout_remap.rs` maps the US virtual key of the pressed position to the US key
+of the character Dvorak / Colemak types there, then `ToUnicodeEx` reads it on
+the US base — only while the thread layout is that base
+(`is_us_base_layout`), so a real Dvorak HKL is never mapped twice. The snapshot
+is marked `is_remapped`; the shared executor writes such a key's text itself
+when it would otherwise pass through outside a composition (Chinese mode only).
+Global chords are registered as preserved keys where the layout types their
+character, and the settings window's recorder reads presses the same way. TPS
+keeps QWERTY (`SettingsDocument::key_reading_layout`).
+Known limits (USER 2026-10-07 chose this scope): the TIP's **English mode**
+still hands keys to the host, which types the US base layout — English is typed
+by switching to the system's own Dvorak / Colemak with Win+Space; host
+shortcuts (Ctrl+C), password fields and contexts without the TIP stay at QWERTY
+positions. A per-profile `hklSubstitute` would move the whole thread but did
+not take effect without a sign-out on the box (2026-10-07) and is not used.
+
+**Linux** has no row: Fcitx5 follows the group layout and the IBus engine
+declares `<layout>default</layout>` (#442), so both shells read the system
+layout's keysyms.
 
 ---
 

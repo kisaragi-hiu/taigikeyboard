@@ -78,7 +78,7 @@ pub(crate) fn is_keypad_key_code(code: u16) -> bool {
 /// the Hanji/romanization commit at it (`CandidateSlotKeySet::shifted_slot_for_event`)
 /// even though the layout types `:` for it. Layout-dependent by Microsoft's
 /// own word, the trade the US-position number row already makes.
-pub(crate) const SEMICOLON_KEY_CODE: u16 = 0xBA;
+pub const SEMICOLON_KEY_CODE: u16 = 0xBA;
 
 /// The AppKit private-use range the Mac spells its arrow and function keys
 /// in. Windows and Linux reserve all of it: the Windows recorder spells

@@ -4,9 +4,12 @@
 //! window's shortcut recorder reads a key exactly as this classifier does.
 
 use taigi_desktop_core::keys::KeyEventSnapshot;
+use taigi_desktop_core::settings::KeyboardLayout;
 use windows::Win32::Foundation::{LPARAM, WPARAM};
 
-pub use taigi_windows_platform::key_translation::is_other_modifier_held_at_shift_press;
+pub use taigi_windows_platform::key_translation::{
+    builds_snapshot, is_other_modifier_held_at_shift_press,
+};
 
 /// The virtual-key code a key message is about.
 pub fn virtual_key(wparam: WPARAM) -> u16 {
@@ -27,7 +30,16 @@ pub fn is_repeat(lparam: LPARAM) -> bool {
     lparam.0 & PREVIOUS_KEY_STATE != 0
 }
 
-/// The snapshot for a key-down, or `None` for a modifier or synthetic key.
-pub fn snapshot(wparam: WPARAM, lparam: LPARAM) -> Option<KeyEventSnapshot> {
-    taigi_windows_platform::key_translation::snapshot(virtual_key(wparam), scan_code(lparam))
+/// The snapshot for a key-down read in `layout`, or `None` for a modifier
+/// or synthetic key.
+pub fn snapshot(
+    wparam: WPARAM,
+    lparam: LPARAM,
+    layout: KeyboardLayout,
+) -> Option<KeyEventSnapshot> {
+    taigi_windows_platform::key_translation::snapshot(
+        virtual_key(wparam),
+        scan_code(lparam),
+        layout,
+    )
 }

@@ -28,7 +28,7 @@ mod tps_layout;
 
 pub use action::ComposingAction;
 pub use bindings::ComposingKeyBindings;
-pub use chord::{ChordRejection, ComposingKeyChord};
+pub use chord::{ChordRejection, ComposingKeyChord, SEMICOLON_KEY_CODE};
 pub use input_method_menu::{menu_rows, MenuCommand, MenuRow, MENU};
 pub use intent::{caret_chord_modifiers, CandidateNavigation, CaretDirection, ComposingKeyIntent};
 pub use language_mode::LanguageMode;

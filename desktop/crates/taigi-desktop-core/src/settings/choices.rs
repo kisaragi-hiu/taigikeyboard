@@ -56,6 +56,41 @@ impl SettingChoice for CandidateLayout {
     }
 }
 
+/// The keyboard layout TL / POJ keys are read in. Same key and raw strings
+/// as macOS (`KeyboardLayout.swift`, `SettingsStore.swift` `Keys.keyboardLayout`).
+/// TPS ignores it and keeps QWERTY positions. Read by Windows only: the
+/// Windows input method runs on the zh-TW US base layout and remaps keys
+/// itself (`taigi-windows-platform/src/layout_remap.rs`); the Linux shells
+/// follow the system layout. The labels are proper names, not i18n keys.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum KeyboardLayout {
+    Qwerty,
+    Dvorak,
+    Colemak,
+}
+
+impl KeyboardLayout {
+    pub fn display_name(self) -> &'static str {
+        match self {
+            Self::Qwerty => "QWERTY",
+            Self::Dvorak => "Dvorak",
+            Self::Colemak => "Colemak",
+        }
+    }
+}
+
+impl SettingChoice for KeyboardLayout {
+    const ALL: &'static [Self] = &[Self::Qwerty, Self::Dvorak, Self::Colemak];
+    const DEFAULT: Self = Self::Qwerty;
+    fn raw(self) -> &'static str {
+        match self {
+            Self::Qwerty => "qwerty",
+            Self::Dvorak => "dvorak",
+            Self::Colemak => "colemak",
+        }
+    }
+}
+
 /// Light / dark / follow the system. Stored under the name it had when only
 /// the candidate window read it (`candidateAppearanceMode`), like macOS.
 /// Order = the Appearance pane's thumbnail row: light, dark, auto
@@ -448,6 +483,7 @@ mod tests {
     #[test]
     fn every_choice_round_trips_and_has_a_listed_default() {
         round_trips::<CandidateLayout>();
+        round_trips::<KeyboardLayout>();
         round_trips::<crate::settings::CandidateDisplayMode>();
         round_trips::<AppearanceMode>();
         round_trips::<CandidateSizeChoice>();

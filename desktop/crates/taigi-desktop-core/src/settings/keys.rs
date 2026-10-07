@@ -17,7 +17,8 @@
 //! fresh install types with, so the cross-platform alignment has one home.
 
 use super::choices::{
-    AppearanceMode, CandidateFontChoice, CandidateLayout, CandidateSizeChoice, SettingsPane,
+    AppearanceMode, CandidateFontChoice, CandidateLayout, CandidateSizeChoice, KeyboardLayout,
+    SettingChoice, SettingsPane,
 };
 use super::document::SettingsKey;
 use super::engine_settings::{
@@ -239,6 +240,11 @@ pub const INSTALLED_FONT_FACE: SettingsKey<&'static str> =
 pub const TONE_INPUT_SCHEME: SettingsKey<crate::keys::ToneInputScheme> =
     SettingsKey::new("toneInputScheme", crate::keys::ToneInputScheme::Standard);
 
+/// The layout TL / POJ keys are read in (`KeyboardLayout`). Windows reads it
+/// (the macOS twin is `SettingsStore.swift` `keyboardLayout`); TPS ignores it.
+pub const KEYBOARD_LAYOUT: SettingsKey<KeyboardLayout> =
+    SettingsKey::new("keyboardLayout", KeyboardLayout::DEFAULT);
+
 /// Whether the candidate window is shown at all. Off means no fetch and no
 /// window — the user types romanization and Space / Enter write it as typed
 /// (USER 2026-09-08: "for users who just want to type", S33). Desktop-only like
@@ -269,8 +275,9 @@ pub const CLEARED_COMPOSING_CHORD: &str = "";
 /// user), not the update bookkeeping, not the remembered pane. macOS keeps a
 /// Swift twin: `SettingsStore.swift` `resetGeneralSettings`. The input mode
 /// takes the romanization TPS returns to and the TPS key panel with it.
-pub const GENERAL_KEYS: [&str; 10] = [
+pub const GENERAL_KEYS: [&str; 11] = [
     INPUT_MODE.name,
+    KEYBOARD_LAYOUT.name,
     LAST_ROMANIZATION_MODE.name,
     TPS_KEYBOARD_SHOWN.name,
     TONE_INPUT_SCHEME.name,

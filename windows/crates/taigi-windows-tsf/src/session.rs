@@ -117,14 +117,23 @@ impl TextService_Impl {
         // A key in this activation: it is where the user types, whatever
         // focus events this host did or did not send (the TPS key panel).
         self.note_tps_keyboard_focus(true);
-        let Some(snapshot) = key_translation::snapshot(wparam, lparam) else {
+        // Modifiers and synthetic keys build no snapshot: they leave before
+        // the settings read the key's layout needs.
+        if !key_translation::builds_snapshot(key_translation::virtual_key(wparam)) {
             return BOOL::from(false);
-        };
+        }
         let Some((token, identity)) = self.token_for(context) else {
             return BOOL::from(false);
         };
         let runtime = Runtime::shared();
         let settings = runtime.settings.current();
+        // Read in the user's layout (Dvorak / Colemak over the US base the
+        // TIP runs on; QWERTY under TPS) before anything reads the key.
+        let Some(snapshot) =
+            key_translation::snapshot(wparam, lparam, settings.key_reading_layout())
+        else {
+            return BOOL::from(false);
+        };
         // A chord recorded in the settings window takes effect at the next
         // key, whichever way the file's change was noticed.
         self.sync_preserved_keys(&settings);

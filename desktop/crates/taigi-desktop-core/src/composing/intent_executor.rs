@@ -189,11 +189,14 @@ pub fn perform_intent(
             if swap_auto_space(swapping, settings, manager, surface) {
                 return true;
             }
-            // Punctuation this input method writes itself: the client cannot
-            // map a key it types.
-            if let Some(punctuation) = punctuation {
-                surface.insert_external(&punctuation);
-                manager.note_character_typed_outside_composition(&punctuation);
+            // Text this input method writes itself: punctuation the client
+            // cannot map a key to, and a remapped key's text, which the host
+            // would type as the QWERTY key's (mid-composition the classifier
+            // already makes printable text `CommitThenInsert`).
+            let written = punctuation.or_else(|| snapshot.is_remapped.then(|| typed.clone()));
+            if let Some(text) = written {
+                surface.insert_external(&text);
+                manager.note_character_typed_outside_composition(&text);
                 return true;
             }
             manager.note_character_typed_outside_composition(&typed);
@@ -287,7 +290,8 @@ pub fn insert_symbol(
 
 /// Whether a key the classifier passes through is one this input method
 /// consumes all the same: punctuation it writes itself (full width, the TPS
-/// punctuation chord included), or an attaching mark right after an
+/// punctuation chord included), the text of a remapped key
+/// (`KeyEventSnapshot::is_remapped`), or an attaching mark right after an
 /// auto space (`is_swap_armed`: the shell's best answer before the key
 /// runs — at least the arm; a shell that knows its document cannot take the
 /// swap folds that in too).
@@ -301,7 +305,7 @@ pub fn pass_through_may_consume(
     else {
         return false;
     };
-    if document_punctuation(settings, &typed).is_some() {
+    if snapshot.is_remapped || document_punctuation(settings, &typed).is_some() {
         return true;
     }
     is_swap_armed

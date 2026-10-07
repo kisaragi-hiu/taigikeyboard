@@ -75,6 +75,7 @@ pub(crate) fn snapshot(event: &KeyEvent) -> KeyEventSnapshot {
         is_named_special_key: event.special_key.is_some(),
         navigation_key: event.special_key.and_then(navigation_key),
         line_edge_key: event.special_key.and_then(line_edge_key),
+        is_remapped: false,
     }
 }
 

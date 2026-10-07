@@ -17,7 +17,7 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use super::choices::SettingChoice;
+use super::choices::{KeyboardLayout, SettingChoice};
 use super::engine_settings::{
     next_input_mode, CandidateDisplayMode, DictionarySourceToggles, EngineSettings, InputMode,
     InputModeRequest, KautianSubcollections, SyllableSeparator,
@@ -243,6 +243,16 @@ impl SettingsDocument {
         self.choice::<InputMode>(&keys::INPUT_MODE) == InputMode::Tps
     }
 
+    /// The layout keys are read in: the chosen one, except under TPS, whose
+    /// glyphs keep their QWERTY positions. macOS twin: the picker binding
+    /// and `TaigiInputController` keyboard override (QWERTY under TPS).
+    pub fn key_reading_layout(&self) -> KeyboardLayout {
+        if self.is_typing_tps() {
+            return KeyboardLayout::Qwerty;
+        }
+        self.choice(&keys::KEYBOARD_LAYOUT)
+    }
+
     /// Whether the on-screen TPS key panel should be up: the user asked for
     /// it and TPS is being typed (desktop TPS roadmap D6). macOS twin:
     /// `SettingsStore.isTpsKeyboardWanted`.
@@ -374,6 +384,24 @@ impl SettingsDocument {
 mod tests {
     use super::*;
     use crate::settings::{AppearanceMode, CandidateLayout, InputMode};
+
+    #[test]
+    fn keys_are_read_in_the_chosen_layout_except_under_tps() {
+        // trace: KEYBOARD_LAYOUT default = KeyboardLayout::DEFAULT = Qwerty;
+        // INPUT_MODE Tps → `is_typing_tps` → Qwerty whatever is stored;
+        // GENERAL_KEYS holds keyboardLayout, so the reset removes it.
+        let mut document = SettingsDocument::default();
+        assert_eq!(document.key_reading_layout(), KeyboardLayout::Qwerty);
+        document.set_choice(&keys::KEYBOARD_LAYOUT, KeyboardLayout::Dvorak);
+        assert_eq!(document.key_reading_layout(), KeyboardLayout::Dvorak);
+        document.set_choice(&keys::INPUT_MODE, InputMode::Tps);
+        assert_eq!(document.key_reading_layout(), KeyboardLayout::Qwerty);
+        document.reset_general();
+        assert_eq!(
+            document.choice(&keys::KEYBOARD_LAYOUT),
+            KeyboardLayout::Qwerty
+        );
+    }
 
     #[test]
     fn recent_symbols_round_trip_and_an_unchanged_list_moves_no_revision() {

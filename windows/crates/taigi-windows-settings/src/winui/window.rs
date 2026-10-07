@@ -309,7 +309,8 @@ impl SettingsWindow {
         // it. A refused send means the queue is full or the component is
         // going away — either way the key stays hidden from the form
         // rather than being typed into it.
-        self.recorder.hook = KeyboardHook::install(move |press| {
+        let layout = self.document().key_reading_layout();
+        self.recorder.hook = KeyboardHook::install(layout, move |press| {
             if sender.send(Message::RecordedPress(generation, press)) {
                 Delivery::Accepted
             } else {

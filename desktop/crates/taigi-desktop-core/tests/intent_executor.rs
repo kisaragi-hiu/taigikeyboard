@@ -331,6 +331,45 @@ fn a_pass_through_key_is_consumed_for_punctuation_or_an_armed_swap() {
     assert!(!pass_through_may_consume(&no_key(), &settings, true));
 }
 
+/// A key read in the user's Dvorak / Colemak layout (`is_remapped`): the
+/// host would type the QWERTY key's text, so the input method writes what
+/// the user's layout types — Dvorak's `,` sits on the US `W`.
+fn remapped(key: KeyEventSnapshot) -> KeyEventSnapshot {
+    KeyEventSnapshot {
+        is_remapped: true,
+        ..key
+    }
+}
+
+#[test]
+fn remapped_half_width_text_outside_a_composition_is_written_not_passed() {
+    let mut rig = new_rig(true);
+    rig.settings.set_bool(&keys::IS_HANJI_FIRST, false);
+    rig.surface.can_swap = false;
+    let dvorak_comma = remapped(comma());
+    assert!(pass_through_may_consume(
+        &dvorak_comma,
+        &rig.settings,
+        false
+    ));
+    assert!(rig.run(ComposingKeyIntent::PassThrough, &dvorak_comma));
+    // trace: Roman-first → no full-width map; the swap is asked first (as
+    // for the unremapped comma, `half_width_punctuation_outside_…`), then
+    // the remapped text is written.
+    assert_eq!(rig.calls(), ["swap \", \"", "insert \",\""]);
+}
+
+#[test]
+fn a_remapped_host_chord_stays_the_hosts() {
+    let mut rig = new_rig(true);
+    // trace: Ctrl held → `document_text` answers None (host chord), so
+    // neither the consume check nor the PassThrough arm writes anything.
+    let ctrl_comma = remapped(KeyEventSnapshot::chord(None, ",", KeyModifiers::CONTROL));
+    assert!(!pass_through_may_consume(&ctrl_comma, &rig.settings, false));
+    assert!(!rig.run(ComposingKeyIntent::PassThrough, &ctrl_comma));
+    assert!(rig.calls().is_empty(), "{:?}", rig.calls());
+}
+
 #[test]
 fn enter_commits_the_highlighted_cell_and_space_its_other_script() {
     // trace (read by running): cell 1 is 好 hó; Enter writes 好 (Hanji takes
