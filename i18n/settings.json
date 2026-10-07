@@ -14,7 +14,7 @@
     "keyboardLayout": {
       "comment": "macOS General picker: QWERTY (default), Dvorak, Colemak for TL/POJ input. TPS keeps its fixed QWERTY positions.",
       "scope": { "platforms": ["macos"], "surfaces": ["host"] },
-      "values": { "hanji": "齒盤排列", "tailo": "Khí-puânn pâi-lia̍t", "poj": "Khí-pôaⁿ pâi-lia̍t", "en": "Keyboard Layout", "ja": "キーボード配列" }
+      "values": { "hanji": "齒盤佈局", "tailo": "Khí-puânn pòo-kio̍k", "poj": "Khí-pôaⁿ pò͘-kio̍k", "en": "Keyboard Layout", "ja": "キーボード配列" }
     },
     "displayLanguage": {
       "comment": "Settings row + sub-screen title for selecting the app UI display language (orthogonal to the input mode). Most option labels are endonyms (own-script, not i18n keys); the Automatic option uses displayLanguageAutomatic.",
