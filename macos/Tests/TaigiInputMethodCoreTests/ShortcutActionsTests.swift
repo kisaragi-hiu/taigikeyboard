@@ -59,7 +59,7 @@ final class ShortcutActionsTests: XCTestCase {
                 "候補の表示を切り替え",
                 "記号メニューを開く",
                 "Telex の説明を開く",
-                "方音符号キーボードを開く",
+                "方音符号ミニキーボードを表示",
                 "設定メニューを開く",
             ],
         )
