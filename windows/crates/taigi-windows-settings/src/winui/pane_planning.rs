@@ -133,18 +133,16 @@ fn every_sidebar_switch_applies() {
                 continue;
             }
             let mut pump = planned(&directory, from, false).expect("the pane plans");
-            let destination = switch_pane(&mut pump, to);
+            let navigation = switch_pane(&mut pump, to);
+            let header_before = header_text(&pump, navigation);
             let events = pump.dispatch_events();
             let turns = pump.dispatch_components(16);
-            // A switch the window ignored would apply nothing and pass.
-            let is_selected = pump
-                .runtime()
-                .node(destination)
-                .and_then(|item| item.property(PropertyId::NavigationViewItemIsSelected))
-                == Some(&PropertyValue::Bool(true));
-            if events.is_err() || turns.is_err() || pump.poisoned() || !is_selected {
+            // A switch the window ignored would apply nothing and pass; the
+            // header title is what changes with the pane.
+            let is_switched = header_text(&pump, navigation) != header_before;
+            if events.is_err() || turns.is_err() || pump.poisoned() || !is_switched {
                 failures.push(format!(
-                    "{} -> {}: {events:?} {turns:?} selected={is_selected}",
+                    "{} -> {}: {events:?} {turns:?} switched={is_switched}",
                     from.raw(),
                     to.raw()
                 ));
@@ -158,8 +156,8 @@ fn every_sidebar_switch_applies() {
     );
 }
 
-/// Queues the sidebar selection a click on `to` delivers; returns `to`'s
-/// sidebar item.
+/// Queues the sidebar selection a click on `to` delivers; returns the
+/// NavigationView.
 fn switch_pane(pump: &mut Pump<RecordingRuntime>, to: SettingsPane) -> NodeId {
     let navigation = pump
         .runtime()
@@ -197,5 +195,17 @@ fn switch_pane(pump: &mut Pump<RecordingRuntime>, to: SettingsPane) -> NodeId {
             tag: Some(to.raw().into()),
         }),
     ));
-    items[position]
+    navigation
+}
+
+/// The title the NavigationView header shows.
+fn header_text(pump: &Pump<RecordingRuntime>, navigation: NodeId) -> Option<String> {
+    let runtime = pump.runtime();
+    let header = runtime
+        .node(navigation)?
+        .slot(SlotId::NavigationViewHeader)?;
+    match runtime.node(header)?.property(PropertyId::TextBlockText)? {
+        PropertyValue::Str(text) => Some(text.clone()),
+        _ => None,
+    }
 }
