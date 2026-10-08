@@ -147,7 +147,7 @@ Sites in `desktop/crates/taigi-desktop-core/src/` that assume a romanization and
 | Action | Windows / Linux | macOS | Does |
 |---|---|---|---|
 | `ToggleTps` (new) — Switch TPS | `Ctrl+Alt+P` | `⌃⌘P` | TPS ↔ the romanization last used |
-| `ShowTpsKeyboard` (new) — Open Phonetic Symbols Keyboard | `Ctrl+Alt+J` | `⌃⌘J` | Shows / hides the panel (D6); inert outside TPS |
+| `ShowTpsKeyboard` (new) — Show Phonetic Symbols Mini Keyboard | `Ctrl+Alt+J` | `⌃⌘J` | Shows / hides the panel (D6); inert outside TPS |
 | `ToggleRomanization` (existing) | `Ctrl+Alt+C` | `⌃⌘C` | Unchanged between TL and POJ. Under TPS it leaves TPS for the *other* romanization than the one last used — it never enters TPS |
 
 `Ctrl+Alt+T` is avoided (GNOME's terminal). Both chords pass `global_rejection` (`keys/shortcut_actions.rs:245-279`) and collide with nothing in the default roster; they are rebindable and go through the existing conflict rules. No list of system shortcuts reserves either, which is not a promise for every desktop environment or app. The panel's chord was first planned as ⌃⌘K; Apple Notes binds it (show / hide the shared-note activity list), so it moved to ⌃⌘J / Ctrl+Alt+J (maintainer, 2026-10-04). ⌃⌘P is confirmed on device in P4 (S90).

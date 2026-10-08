@@ -162,7 +162,7 @@
       }
     },
     "shortcutShowTpsKeyboard": {
-      "comment": "Shortcut-recorder row and input-method menu row: the hotkey that shows or hides the on-screen Phonetic Symbols (TPS) key panel — each key of the keyboard with the TPS glyph it types. Does nothing outside Phonetic Symbols mode. Worded like shortcutShowTelexGuide; 齒盤 is this project's word for keyboard. Authored whole, like its siblings.",
+      "comment": "Shortcut-recorder row and input-method menu row: the hotkey that shows or hides the on-screen Phonetic Symbols (TPS) key panel — each key of the keyboard with the TPS glyph it types. Does nothing outside Phonetic Symbols mode. 顯示…小齒盤 (show … mini keyboard) since 2026-10-08 (USER). 齒盤 is this project's word for keyboard. Authored whole, like its siblings.",
       "scope": {
         "platforms": [
           "macos",
@@ -174,11 +174,11 @@
         ]
       },
       "values": {
-        "hanji": "拍開方音符號齒盤",
-        "tailo": "Phah-khui Hong-im-hû-hō khí-puânn",
-        "poj": "Phah-khui Hong-im-hû-hō khí-pôaⁿ",
-        "en": "Open Phonetic Symbols Keyboard",
-        "ja": "方音符号キーボードを開く"
+        "hanji": "顯示方音符號小齒盤",
+        "tailo": "Hián-sī Hong-im-hû-hō sió khí-puânn",
+        "poj": "Hián-sī Hong-im-hû-hō sió khí-pôaⁿ",
+        "en": "Show Phonetic Symbols Mini Keyboard",
+        "ja": "方音符号ミニキーボードを表示"
       }
     },
     "shortcutShowSymbolPicker": {
