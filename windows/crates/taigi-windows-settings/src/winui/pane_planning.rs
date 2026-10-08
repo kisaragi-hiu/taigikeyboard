@@ -21,8 +21,8 @@ use taigi_desktop_core::settings::{keys, SettingChoice, SettingsPane};
 use taigi_desktop_storage::{LiveSettings, SettingsFileStore};
 use tempfile::TempDir;
 use windows_reactor::{
-    Command, EventId, EventPayload, MountedKind, NodeId, PropertyId, PropertyValue, Pump,
-    QueuedEvent, RecordingRuntime, SelectionChange, SlotId, View,
+    Command, EventId, EventPayload, NodeId, PropertyId, PropertyValue, Pump, QueuedEvent,
+    RecordingRuntime, SelectionChange, SlotId, View,
 };
 
 /// Far enough ahead that `update_schedule::is_due` says no: a writable
@@ -167,10 +167,11 @@ fn switch_pane(pump: &mut Pump<RecordingRuntime>, to: SettingsPane) -> NodeId {
         .iter()
         .flatten()
         .find_map(|command| match command {
-            Command::Create {
-                node,
-                kind: MountedKind::NavigationView,
-            } => Some(*node),
+            // `MountedKind` is private to reactor; its Debug name is the
+            // only handle on the kind a test has.
+            Command::Create { node, kind } if format!("{kind:?}") == "NavigationView" => {
+                Some(*node)
+            }
             _ => None,
         })
         .expect("the window mounts a NavigationView");
