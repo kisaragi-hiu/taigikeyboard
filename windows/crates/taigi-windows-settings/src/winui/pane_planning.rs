@@ -1,4 +1,5 @@
-//! Every pane's view must PLAN — the regression net for the whole window.
+//! Every pane's view must PLAN, and every sidebar switch must APPLY — the
+//! regression net for the whole window.
 //!
 //! The reactor refuses a tree whose shape it cannot realize and answers
 //! `PumpError::StructureUnsupported`; what that costs is written out once,
@@ -7,7 +8,8 @@
 //!
 //! `RecordingRuntime` is the reactor's headless host, so planning runs with
 //! no WinUI runtime and no desktop — exactly the layer both defects were
-//! in. **Scope: each pane in its LAUNCH state.** A subtree that only
+//! in. **Scope: each pane in its LAUNCH state, plus one switch between
+//! every two sidebar panes.** A subtree that only
 //! appears once the user has done something — the busy overlay, the entry
 //! dialog, a search result row — returns `View::empty()` here and is not
 //! covered; so is everything below planning (the Windows App SDK ABI, COM
@@ -19,8 +21,8 @@ use taigi_desktop_core::settings::{keys, SettingChoice, SettingsPane};
 use taigi_desktop_storage::{LiveSettings, SettingsFileStore};
 use tempfile::TempDir;
 use windows_reactor::{
-    Command, EventId, EventPayload, Pump, QueuedEvent, RecordingRuntime, SelectionChange, SlotId,
-    View,
+    Command, EventId, EventPayload, MountedKind, NodeId, PropertyId, PropertyValue, Pump,
+    QueuedEvent, RecordingRuntime, SelectionChange, SlotId, View,
 };
 
 /// Far enough ahead that `update_schedule::is_due` says no: a writable
@@ -131,12 +133,18 @@ fn every_sidebar_switch_applies() {
                 continue;
             }
             let mut pump = planned(&directory, from, false).expect("the pane plans");
-            switch_pane(&mut pump, to);
+            let destination = switch_pane(&mut pump, to);
             let events = pump.dispatch_events();
             let turns = pump.dispatch_components(16);
-            if events.is_err() || turns.is_err() || pump.poisoned() {
+            // A switch the window ignored would apply nothing and pass.
+            let is_selected = pump
+                .runtime()
+                .node(destination)
+                .and_then(|item| item.property(PropertyId::NavigationViewItemIsSelected))
+                == Some(&PropertyValue::Bool(true));
+            if events.is_err() || turns.is_err() || pump.poisoned() || !is_selected {
                 failures.push(format!(
-                    "{} -> {}: {events:?} {turns:?}",
+                    "{} -> {}: {events:?} {turns:?} selected={is_selected}",
                     from.raw(),
                     to.raw()
                 ));
@@ -150,17 +158,19 @@ fn every_sidebar_switch_applies() {
     );
 }
 
-/// Queues the sidebar selection a click on `to` delivers.
-fn switch_pane(pump: &mut Pump<RecordingRuntime>, to: SettingsPane) {
+/// Queues the sidebar selection a click on `to` delivers; returns `to`'s
+/// sidebar item.
+fn switch_pane(pump: &mut Pump<RecordingRuntime>, to: SettingsPane) -> NodeId {
     let navigation = pump
         .runtime()
         .commands()
         .iter()
         .flatten()
         .find_map(|command| match command {
-            Command::Create { node, kind } if format!("{kind:?}") == "NavigationView" => {
-                Some(*node)
-            }
+            Command::Create {
+                node,
+                kind: MountedKind::NavigationView,
+            } => Some(*node),
             _ => None,
         })
         .expect("the window mounts a NavigationView");
@@ -186,4 +196,5 @@ fn switch_pane(pump: &mut Pump<RecordingRuntime>, to: SettingsPane) {
             tag: Some(to.raw().into()),
         }),
     ));
+    items[position]
 }
