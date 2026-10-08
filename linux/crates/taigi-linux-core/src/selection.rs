@@ -33,11 +33,11 @@ impl LookupSelection {
         }
     }
 
-    /// The selection for a candidate list whose first cell may be the §34
-    /// literal, which takes no key.
-    pub fn with_unkeyed_lead(mut self, lead_cell_is_unkeyed: bool) -> Self {
+    /// Whether the list's first cell is the §34 literal, which takes no key —
+    /// set whenever the list is built or presented again
+    /// (`CandidateSource::leads_with_literal_roman`).
+    pub fn set_unkeyed_lead(&mut self, lead_cell_is_unkeyed: bool) {
         self.lead_cell_is_unkeyed = lead_cell_is_unkeyed;
-        self
     }
 
     /// The highlighted absolute index, `None` for an empty list.
@@ -203,7 +203,8 @@ mod tests {
         // trace: 20 cells, 9 per page, cell 0 = the §34 literal. Page 0:
         // keys 0..7 → cells 1..8, key 8 → none; page 1 starts at cell 9, so
         // nothing shifts there. A click still reaches the literal.
-        let mut selection = LookupSelection::new(20, 9).with_unkeyed_lead(true);
+        let mut selection = LookupSelection::new(20, 9);
+        selection.set_unkeyed_lead(true);
         assert_eq!(selection.key_slot_shift(), 1);
         assert_eq!(selection.candidate_index_for_key_slot(0), Some(1));
         assert_eq!(selection.candidate_index_for_key_slot(7), Some(8));
@@ -214,7 +215,8 @@ mod tests {
         assert_eq!(selection.candidate_index_for_key_slot(0), Some(9));
         assert_eq!(selection.candidate_index_for_key_slot(8), Some(17));
         // A literal-only list: no key picks anything.
-        let only = LookupSelection::new(1, 9).with_unkeyed_lead(true);
+        let mut only = LookupSelection::new(1, 9);
+        only.set_unkeyed_lead(true);
         assert_eq!(only.candidate_index_for_key_slot(0), None);
         assert_eq!(only.candidate_index_on_page(0), Some(0));
     }

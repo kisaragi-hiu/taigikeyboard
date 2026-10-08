@@ -349,6 +349,34 @@ fn a_refetching_switch_obeys_the_candidate_window_setting() {
     assert!(session.state.candidates.is_empty());
 }
 
+#[test]
+fn the_literal_stays_unkeyed_when_a_switch_presents_the_list_again() {
+    let _serial = serial();
+    // Ctrl+Alt+H re-fetches and re-presents the open list outside the key
+    // path that builds a list; the literal must still take no key there.
+    let mut session = Session::new(false, false);
+    session.type_word("ho");
+    let (_, emits) = session.press_with('h' as u32, state::CONTROL | state::MOD1);
+    let Some(Emit::LookupTable(table)) = emits.first() else {
+        panic!("the refetched list is shown, got {emits:?}");
+    };
+    assert_eq!(table.candidates[0], "ho");
+    assert_eq!(table.labels[..2], ["", "q"]);
+
+    // Show Typed Text First OFF: the list leads with a dictionary cell, which
+    // takes the first key.
+    let config = session._directory.path().join("config");
+    SettingsFileStore::new(&config)
+        .update(|document| document.set_bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED, false))
+        .expect("settings written");
+    let (_, emits) = session.press_with('h' as u32, state::CONTROL | state::MOD1);
+    let Some(Emit::LookupTable(table)) = emits.first() else {
+        panic!("the refetched list is shown, got {emits:?}");
+    };
+    assert_ne!(table.candidates[0], "ho");
+    assert_eq!(table.labels[0], "q");
+}
+
 const CTRL_ALT: u32 = state::CONTROL | state::MOD1;
 
 /// Desktop TPS P3: Ctrl+Alt+P enters TPS from TL; a second press returns to
