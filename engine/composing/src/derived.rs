@@ -2,16 +2,14 @@
 //!
 //! TPS inputs are already display-ready (return as-is). POJ/TL inputs go
 //! through the full `phonetics::api::normalize_tone` chain (POJ doubletap
-//! preprocessing → tone-mark application → nasal-marker case adjustment) per
-//! plan §3.2a.
+//! preprocessing → permissive tone-mark placement → nasal-marker case
+//! adjustment) per plan §3.2a.
 //!
 //! This is the rendering primitive behind [`crate::api::Phase::raw_input`] —
 //! see `docs/engine/continuous-commit-and-display.md` §10.2 / §10.3 clarification β
-//! for the `rawInput` contract. User-typed hyphens are preserved as conversion
-//! boundaries (the tone-mark chain splits on `-`); the engine does NOT validate
-//! whether each chunk is a real syllable, and does not insert hyphens on its
-//! own. Engine-side syllabifier-driven auto-hyphenation is out of scope for
-//! v3.5.8 Item 2 (see §10.2 amendment 2026-05-13).
+//! for the `rawInput` contract. Each tone digit closes a segment and marks it
+//! (`tai5gi2` → `tâigí`); user-typed hyphens and spaces are preserved, and the
+//! engine never inserts a separator of its own (behavioral-invariants §30).
 
 use protos::engine::AppConfig;
 
@@ -23,6 +21,17 @@ pub(crate) fn derived_display(raw: &str, config: &AppConfig) -> String {
         return strip_tps_separator_markers(raw);
     }
     phonetics::api::normalize_tone(raw, config)
+}
+
+/// The text a raw buffer is learned under — what [`derived_display`]
+/// returned before permissive rendering, so a hidden tone boundary
+/// (`tai5gi2` shows `tâigí`, `a1i1` shows `ai`) keeps its existing frequency
+/// and association key (behavioral-invariants §34).
+pub(crate) fn learning_text(raw: &str, config: &AppConfig) -> String {
+    if phonetics::api::contains_tps(raw) {
+        return strip_tps_separator_markers(raw);
+    }
+    phonetics::api::literal_learning_text(raw, config)
 }
 
 /// The mode `raw` composes under: TPS once the buffer carries a Bopomofo
@@ -274,16 +283,36 @@ mod tests {
         let (display, boundaries) = caret_map("ka2i", &config);
         assert_eq!(display, "kái");
         assert_eq!(boundaries, vec![0, 1, 2, 2, 3]);
-        let (display, boundaries) = caret_map("a22", &config);
-        assert_eq!(display, "á2");
-        assert_eq!(boundaries, vec![0, 1, 1, 2]);
+        // A hidden `2` and a visible `2`: the renderer's decision, not the
+        // digit's value, says which one has no display position.
+        let (display, boundaries) = caret_map("a2b2", &config);
+        assert_eq!(display, "áb2");
+        assert_eq!(boundaries, vec![0, 1, 1, 2, 3]);
         let (display, boundaries) = caret_map("2a2", &config);
         assert_eq!(display, "2á");
         assert_eq!(boundaries, vec![0, 1, 2, 2]);
         let poj = config_poj_doubletap();
-        let (display, boundaries) = caret_map("hoo22", &poj);
-        assert_eq!(display, "hó͘2");
-        assert_eq!(boundaries, vec![0, 1, 3, 3, 3, 4]);
+        let (display, boundaries) = caret_map("hoo2b2", &poj);
+        assert_eq!(display, "hó͘b2");
+        assert_eq!(boundaries, vec![0, 1, 3, 3, 3, 4, 5]);
+    }
+
+    #[test]
+    fn display_caret_digit_runs_are_one_to_one() {
+        // trace: a digit next to a digit is never a tone, so every digit of
+        // the run keeps its display position; `tai55gi2` still marks `gí`.
+        let config = config_tl();
+        for raw in ["a22", "a23", "a01b2", "a10b2"] {
+            let (display, boundaries) = caret_map(raw, &config);
+            assert_eq!(display, raw);
+            assert_eq!(boundaries, (0..=raw.len()).collect::<Vec<_>>(), "{raw}");
+        }
+        let (display, boundaries) = caret_map("tai55gi2", &config);
+        assert_eq!(display, "tai55gí");
+        assert_eq!(boundaries, vec![0, 1, 2, 3, 4, 5, 6, 7, 7]);
+        let (display, boundaries) = caret_map("hoo22", &config_poj_doubletap());
+        assert_eq!(display, "ho͘22");
+        assert_eq!(boundaries, vec![0, 1, 3, 3, 4, 5]);
     }
 
     #[test]
@@ -312,7 +341,12 @@ mod tests {
         use crate::api::{CaretDirection, Engine, Intent};
         let config = config_tl();
         let mut engine = Engine::new();
-        engine.apply(Intent::Start { text: "a22".into() }, &config);
+        engine.apply(
+            Intent::Start {
+                text: "a2b2".into(),
+            },
+            &config,
+        );
         let response = engine.apply(
             Intent::MoveCaret {
                 direction: Some(CaretDirection::Left),
@@ -320,12 +354,12 @@ mod tests {
             &config,
         );
         let preedit = response.preedit.unwrap();
-        assert_eq!(preedit.display_text, "á2");
-        assert_eq!(preedit.caret_utf16, 1);
+        assert_eq!(preedit.display_text, "áb2");
+        assert_eq!(preedit.caret_utf16, 2);
         let response = engine.apply(Intent::Append { ch: "t".into() }, &config);
         let preedit = response.preedit.unwrap();
-        assert_eq!(preedit.display_text, "át2");
-        assert_eq!(preedit.caret_utf16, 2);
+        assert_eq!(preedit.display_text, "ábt2");
+        assert_eq!(preedit.caret_utf16, 3);
     }
 
     #[test]

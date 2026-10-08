@@ -34,7 +34,8 @@ use crate::api::{
 use crate::commit_text::{commit_resolution, resolve_commit_text};
 use crate::conversion::{next_raw_span, PreviousTail};
 use crate::derived::{
-    buffer_input_mode, derived_display, display_caret_utf16, strip_tps_separator_markers,
+    buffer_input_mode, derived_display, display_caret_utf16, learning_text,
+    strip_tps_separator_markers,
 };
 use lexicon::LearnedEntry;
 use protos::engine::composing_response::Preedit;
@@ -779,8 +780,9 @@ fn commit_raw_continuous(
     // nailed segment before it rides along as `preceding` — the only place
     // NextWord learns a nailed segment (behavioral-invariants §40).
     let terminal_nextword = if !raw.is_empty() {
-        // §41 — both fields drop the separator marker. `text` goes through
-        // `derived_display`; `roman` is the raw tail, which for TPS still
+        // §41 — both fields drop the separator marker. `text` is the tail's
+        // learning text (§34: the literal candidate's key, not its permissive
+        // rendering); `roman` is the raw tail, which for TPS still
         // carries the marker, and that string becomes the association's
         // romanization key on both platforms. Learning `ㄍㄠ␣ㄉㄞ` where the
         // committed word is `ㄍㄠㄉㄞ` would key the row on a form no later
@@ -788,12 +790,12 @@ fn commit_raw_continuous(
         // NextWord learns `roman` as sent, so the tail is put in canonical
         // TL form here: POJ folds to TL, TL keeps its `eng` / `ek` finals,
         // TPS and English pass through.
-        let tail_display = derived_display(&raw, config);
+        let tail_text = learning_text(&raw, config);
         let tail_roman = phonetics::api::canonical_tl_form(
             &strip_tps_separator_markers(&raw),
             buffer_input_mode(&raw, config),
         );
-        next_word_terminal(tail_display, tail_roman, &nailed)
+        next_word_terminal(tail_text, tail_roman, &nailed)
     } else {
         // raw empty → all input is nailed; the last nailed segment is the
         // final word. `nailed` is non-empty here (combined non-empty with

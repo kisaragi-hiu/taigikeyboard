@@ -39,7 +39,7 @@ fn tl_final_to_poj(final_str: &str) -> String {
     result
 }
 
-fn place_poj_tone_mark(final_str: &str, mark: &str) -> String {
+pub(crate) fn place_poj_tone_mark(final_str: &str, mark: &str) -> String {
     if mark.is_empty() {
         return final_str.to_string();
     }

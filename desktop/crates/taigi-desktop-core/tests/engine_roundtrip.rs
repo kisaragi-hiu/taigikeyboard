@@ -355,6 +355,23 @@ fn permissive_tones_are_standard_on_every_desktop() {
 }
 
 #[test]
+fn telex_keys_mark_unseparated_syllables() {
+    // trace: the reported Telex keys `taidgiv` — `d` = tone 5, `v` = tone 2
+    // (engine/composing/src/telex.rs) — store `tai5gi2`, which renders
+    // `tâigí` (each tone digit closes its segment).
+    let _engine = engine();
+    let settings = EngineSettings::default();
+    let generation = fresh_generation();
+    compose("tai", &settings, generation);
+    engine::telex_key("d", &settings, PLATFORM, generation).expect("telex round trip");
+    compose("gi", &settings, generation);
+    let toned = engine::telex_key("v", &settings, PLATFORM, generation).expect("telex round trip");
+    assert_eq!(toned.raw_input, "tai5gi2");
+    assert_eq!(toned.display_text, "tâigí");
+    engine::reset(generation);
+}
+
+#[test]
 fn poj_mode_renders_poj_display_and_keeps_canonical_tl() {
     let _engine = engine();
     let generation = fresh_generation();

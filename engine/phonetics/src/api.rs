@@ -44,7 +44,7 @@ pub enum PhoneticsError {
     UnsupportedOp,
 }
 
-fn capitalize_first(text: &str) -> String {
+pub(crate) fn capitalize_first(text: &str) -> String {
     let mut chars = text.chars();
     match chars.next() {
         Some(c) => c.to_uppercase().collect::<String>() + chars.as_str(),
@@ -204,7 +204,7 @@ fn renders_roman_tones(config: &AppConfig, mode: InputMode) -> bool {
 
 /// Raw byte offsets of tone digits consumed by permissive normalization.
 /// Caret projection uses the renderer's decisions rather than matching a
-/// hidden tone digit to an identical digit that remains visible (`a22` → `á2`).
+/// hidden tone digit to an identical digit that remains visible (`a2b2` → `áb2`).
 pub fn consumed_tone_digit_offsets(input: &str, config: &AppConfig) -> Vec<usize> {
     let mode = composing_mode(config);
     if !renders_roman_tones(config, mode) {

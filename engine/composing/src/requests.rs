@@ -364,8 +364,9 @@ fn adopt_collapsed_dict_identity(literal: &mut RawCandidate, candidates: &[RawCa
 /// literal learning key (except the dictionary identity inherited under a
 /// single-script display — `adopt_collapsed_dict_identity`)
 /// — WYSIWYG with the underline (§30 literal-no-fold: tone marks only, no spelling fold). It
-/// mirrors the preedit EXACTLY. Tone digits apply to the preceding last
-/// vowel cluster without validating a whole syllable (`tai5gi2` → `tâigí`).
+/// mirrors the preedit EXACTLY. Each tone digit closes a segment: a valid
+/// syllable takes its usual mark, anything else marks its last vowel
+/// cluster (`tai5gi2` → `tâigí`, `taigi2` → `taigí`).
 /// Tones 1 and 4 consume their digits without a visible mark. It
 /// carries `canonical_tl` via `canonical_tl_form` of that stable learning
 /// text, preserving tone boundaries and existing `(text, TL)` records.
@@ -381,7 +382,7 @@ fn literal_roman_candidate(
     if literal.is_empty() {
         return None;
     }
-    let learning_text = phonetics::api::literal_learning_text(raw, config);
+    let learning_text = crate::derived::learning_text(raw, config);
     let canonical_tl = phonetics::api::canonical_tl_form(&learning_text, mode);
     Some(RawCandidate {
         consumed_span: (0, raw.len() as u32),

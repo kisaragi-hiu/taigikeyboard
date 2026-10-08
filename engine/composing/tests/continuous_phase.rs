@@ -763,6 +763,38 @@ fn commit_raw_under_continuous_commits_derived_display_and_fires_nextword() {
     assert_eq!(e.snapshot_state().phase, Phase::Idle);
 }
 
+// Enter commits the permissive rendering but learns the tail under the same
+// key a literal-candidate pick learns (behavioral-invariants §34), so a
+// hidden tone boundary does not fork the association record.
+#[test]
+fn commit_raw_learns_the_literal_key_not_the_permissive_rendering() {
+    // trace: tai5gi2 — render tâigí; learning text keeps `tai5gi2` (old
+    // to_tone_marks: one chunk, not a single syllable → verbatim).
+    //        tai1 — render tai; learning text `tai1` (tone 1 digit kept).
+    //        li2 — valid syllable, render == learning text == lí.
+    for (raw, committed, learned) in [
+        ("tai5gi2", "tâigí", "tai5gi2"),
+        ("tai1", "tai", "tai1"),
+        ("li2", "lí", "lí"),
+    ] {
+        let mut e = engine_in_continuous(raw);
+        let resp = e.apply(Intent::CommitRaw, &config_tl());
+        let Kind::CommitTextReplacingPreedit(commit) = resp.effect[0].kind.as_ref().unwrap() else {
+            unreachable!();
+        };
+        assert_eq!(commit.text, committed, "{raw}");
+        let nw = resp
+            .effect
+            .iter()
+            .find_map(|effect| match effect.kind.as_ref() {
+                Some(Kind::NextWordWordSelected(nw)) => Some(nw),
+                _ => None,
+            })
+            .expect("Enter learns the tail");
+        assert_eq!(nw.text, learned, "{raw}");
+    }
+}
+
 // The Enter tail is the one NextWord reading the engine itself derives from
 // typed text, so it is put in canonical TL form before NextWord learns it
 // verbatim: TL keeps its special finals `eng` / `ek` (§3.2.6), POJ folds to
