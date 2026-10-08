@@ -143,9 +143,10 @@ fn typing_shows_the_preedit_and_a_labelled_list_led_by_the_literal() {
     let mut session = Session::new(false, false);
     let table = session.type_word("ho");
     // trace: cell 0 is the literal roman; the first hanji cell is 好 hó; the
-    // Standard slot keys label the page, vertical, cursor on the literal.
+    // literal takes no key (§34, as on macOS / Windows), so the Standard slot
+    // keys label the page from cell 1; vertical, cursor on the literal.
     assert_eq!(&table.candidates[..2], ["ho", "好 hó"]);
-    assert_eq!(table.labels, ["q", "w", "d", "f", "z", "x", "v", "y", ";"]);
+    assert_eq!(table.labels, ["", "q", "w", "d", "f", "z", "x", "v", "y"]);
     assert_eq!((table.cursor, table.cursor_visible), (0, true));
     assert_eq!((table.page_size, table.vertical), (9, true));
 }
@@ -156,8 +157,9 @@ fn a_slot_key_commits_its_cell_and_closes_the_list() {
     for is_auto_space_enabled in [false, true] {
         let mut session = Session::new(is_auto_space_enabled, true);
         session.type_word("ho");
+        // The first slot key picks the first dictionary cell, not the literal.
         assert_eq!(
-            session.press('w' as u32),
+            session.press('q' as u32),
             [Emit::ClearPreedit, commit("好"), Emit::HideLookupTable],
             "auto_space={is_auto_space_enabled}: a Hanji commit takes no space"
         );
@@ -345,6 +347,34 @@ fn a_refetching_switch_obeys_the_candidate_window_setting() {
         [Emit::HideLookupTable, Emit::ModeChanged, Emit::AnnounceMode]
     );
     assert!(session.state.candidates.is_empty());
+}
+
+#[test]
+fn the_literal_stays_unkeyed_when_a_switch_presents_the_list_again() {
+    let _serial = serial();
+    // Ctrl+Alt+H re-fetches and re-presents the open list outside the key
+    // path that builds a list; the literal must still take no key there.
+    let mut session = Session::new(false, false);
+    session.type_word("ho");
+    let (_, emits) = session.press_with('h' as u32, state::CONTROL | state::MOD1);
+    let Some(Emit::LookupTable(table)) = emits.first() else {
+        panic!("the refetched list is shown, got {emits:?}");
+    };
+    assert_eq!(table.candidates[0], "ho");
+    assert_eq!(table.labels[..2], ["", "q"]);
+
+    // Show Typed Text First OFF: the list leads with a dictionary cell, which
+    // takes the first key.
+    let config = session._directory.path().join("config");
+    SettingsFileStore::new(&config)
+        .update(|document| document.set_bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED, false))
+        .expect("settings written");
+    let (_, emits) = session.press_with('h' as u32, state::CONTROL | state::MOD1);
+    let Some(Emit::LookupTable(table)) = emits.first() else {
+        panic!("the refetched list is shown, got {emits:?}");
+    };
+    assert_ne!(table.candidates[0], "ho");
+    assert_eq!(table.labels[0], "q");
 }
 
 const CTRL_ALT: u32 = state::CONTROL | state::MOD1;

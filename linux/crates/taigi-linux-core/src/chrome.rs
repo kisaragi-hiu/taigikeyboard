@@ -296,6 +296,11 @@ fn represent_open_list(
         // A refetched list starts over at its first cell.
         state.selection = LookupSelection::new(state.candidates.len(), PAGE_SIZE);
     }
+    // Presented again under new settings, the list may begin with the §34
+    // literal where it did not, or the other way round.
+    state
+        .selection
+        .set_unkeyed_lead(state.candidates.leads_with_literal_roman());
 }
 
 /// The Telex key table as a lookup table: the title row, then `key  meaning`

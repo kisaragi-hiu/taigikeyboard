@@ -165,6 +165,8 @@ impl IntentSurface for KeySurface<'_> {
 
     fn list_changed(&mut self, list: &mut CandidateSource) {
         *self.selection = LookupSelection::new(list.len(), PAGE_SIZE);
+        self.selection
+            .set_unkeyed_lead(list.leads_with_literal_roman());
     }
 
     fn list_closed(&mut self) {

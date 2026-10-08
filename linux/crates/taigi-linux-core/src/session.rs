@@ -596,12 +596,11 @@ pub(crate) fn present_table(
 }
 
 /// The cells as the panel draws them: the leading script, the other script
-/// (Combined) after a space; labels = the slot keys, one per page position.
-///
-/// NAMED DIVERGENCE: the §34 literal cell, which takes no key on macOS and
-/// Windows (`lead_cell_is_unkeyed`), takes the first slot key here — the
-/// panel labels every position of every page the same way, and a page
-/// with a keyless first cell cannot be expressed to it.
+/// (Combined) after a space; labels = the slot keys, one per position of the
+/// CURRENT page. The §34 literal takes no key, as on macOS and Windows: on
+/// the page it begins, its label is blank and the keys start at the next
+/// cell. The panel can show that because both pages its table through the
+/// core, and the table — labels included — is sent again with every reply.
 fn table_content(
     state: &EngineState,
     settings: &SettingsDocument,
@@ -616,8 +615,12 @@ fn table_content(
             None => cell.text,
         })
         .collect();
+    let shift = state.selection.key_slot_shift();
     let labels = (0..PAGE_SIZE)
-        .map(|slot| slot_key_set.label_for_slot(slot))
+        .map(|position| match position.checked_sub(shift) {
+            Some(slot) => slot_key_set.label_for_slot(slot),
+            None => String::new(),
+        })
         .collect();
     LookupTableContent {
         candidates,

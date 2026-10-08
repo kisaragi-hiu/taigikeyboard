@@ -286,9 +286,11 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
   `Candidate Display Mode` stays. The candidate window
   switch (`candidateWindowEnabled`) maps to "no lookup table" — identical semantics.
   (`Effect::DeleteBackwardFromDocument`, once a no-op here as on macOS / Windows, left
-  the wire in R12 2026-10-01.) Two more named divergences the panel forces: the §34 literal
-  cell, keyless on macOS / Windows (`lead_cell_is_unkeyed`), takes the first slot key —
-  the panel labels every position of every page the same way; and under the combined
+  the wire in R12 2026-10-01.) The §34 literal cell is keyless as on macOS / Windows
+  (2026-10-08; it once took the first slot key on a belief that the panel labels every
+  page alike — but both panels page through the core, which sends the labels with every
+  table, and IBus gets a space for the blank label so GNOME does not number it). One more
+  named divergence the panel forces: under the combined
   (mixed) display option a cell's other script (`CandidateCellContent::annotation`) is drawn after the text in the same cell,
   not as a second line. The auto-space swap (§23) needs the client's surrounding text
   (`IBUS_CAP_SURROUNDING_TEXT` → `DeleteSurroundingText`); a client without it gets
