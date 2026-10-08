@@ -201,6 +201,10 @@ pub(crate) struct ShadowLattice {
     /// The typed `-` runs among them, `(shadow offset, run length)` (§52 kind,
     /// §55 rendering).
     pub hyphen_runs: Vec<(usize, usize)>,
+    /// The typed-`-` stretches that are one syllable
+    /// ([`crate::syllabifier::one_syllable_segments`]), read by [`span_key`]
+    /// so a reading may not split one (§52).
+    pub one_syllable_segments: Vec<(usize, usize)>,
 }
 
 /// The raw buffer as every lookup reads it: ASCII letters lowercased and the
@@ -368,6 +372,9 @@ fn lattice_from_canonical_with_barriers(
     // emits POJ-shaped syllable boundaries (`chiah`, `goa`, …) rather than
     // collapsing onto the TL forms.
     let lattice = build_lattice_with_barriers(&shadow, inv, mode, MAX_SYLLABLES, &barriers);
+    // `shadow` is already lowercase (`lookup_form`).
+    let one_syllable_segments =
+        crate::syllabifier::one_syllable_segments(&shadow, inv, mode, &barriers);
     ShadowLattice {
         shadow,
         shadow_to_raw_end,
@@ -375,6 +382,7 @@ fn lattice_from_canonical_with_barriers(
         barriers,
         space_barriers,
         hyphen_runs,
+        one_syllable_segments,
     }
 }
 
@@ -419,6 +427,8 @@ pub(crate) struct ContinuousKeys {
     pub barriers: Vec<usize>,
     /// The typed `-` runs among them, `(shadow offset, run length)`.
     pub hyphen_runs: Vec<(usize, usize)>,
+    /// [`ShadowLattice::one_syllable_segments`].
+    pub one_syllable_segments: Vec<(usize, usize)>,
 }
 
 /// The three parallel per-key vectors [`left_anchored_keys_and_restrictions`]
@@ -435,27 +445,21 @@ pub(crate) fn build_continuous_keys(
     inv: &SyllableInventory,
     mode: InputMode,
 ) -> ContinuousKeys {
+    let shadow_lattice = build_shadow_lattice_with_barriers(raw, inv, mode);
+    let LeftAnchoredKeys {
+        keys,
+        final_only,
+        tone_pins,
+    } = left_anchored_keys_and_restrictions(&shadow_lattice, inv, mode);
     let ShadowLattice {
         shadow,
         shadow_to_raw_end,
         lattice,
         barriers,
         hyphen_runs,
+        one_syllable_segments,
         ..
-    } = build_shadow_lattice_with_barriers(raw, inv, mode);
-    let LeftAnchoredKeys {
-        keys,
-        final_only,
-        tone_pins,
-    } = left_anchored_keys_and_restrictions(
-        &shadow,
-        &shadow_to_raw_end,
-        &lattice,
-        inv,
-        mode,
-        &barriers,
-        &hyphen_runs,
-    );
+    } = shadow_lattice;
     ContinuousKeys {
         keys,
         final_only,
@@ -465,6 +469,7 @@ pub(crate) fn build_continuous_keys(
         lattice,
         barriers,
         hyphen_runs,
+        one_syllable_segments,
     }
 }
 
@@ -493,18 +498,23 @@ pub(crate) fn build_continuous_keys(
 /// Each key also carries its §35 barrier restriction — byte offsets
 /// (into the emitted key string, family prefix included) of glyphs
 /// immediately before a stripped separator / hyphen barrier — and its §41
-/// tone pin. `barriers` are shadow coordinates from
+/// tone pin. The barriers are shadow coordinates from
 /// [`build_shadow_lattice_with_barriers`]; for TL/POJ/English they are the
 /// typed hyphens (§52).
 pub(crate) fn left_anchored_keys_and_restrictions(
-    shadow: &str,
-    shadow_to_raw_end: &[usize],
-    lattice: &Lattice,
+    shadow_lattice: &ShadowLattice,
     inv: &SyllableInventory,
     mode: InputMode,
-    barriers: &[usize],
-    hyphen_runs: &[(usize, usize)],
 ) -> LeftAnchoredKeys {
+    let ShadowLattice {
+        shadow,
+        shadow_to_raw_end,
+        lattice,
+        barriers,
+        hyphen_runs,
+        one_syllable_segments,
+        ..
+    } = shadow_lattice;
     // v3.5.9 B-2 — `mode` selects the FST key family the emitted keys are
     // namespaced into ([`span_key`]). The lattice itself was already built
     // against the matching `SyllableInventory` family
@@ -591,7 +601,15 @@ pub(crate) fn left_anchored_keys_and_restrictions(
             key,
             final_only,
             tone_pin,
-        }) = span_key(shadow, 0, end, mode, barriers, hyphen_runs)
+        }) = span_key(
+            shadow,
+            0,
+            end,
+            mode,
+            barriers,
+            hyphen_runs,
+            one_syllable_segments,
+        )
         else {
             continue;
         };
@@ -670,6 +688,7 @@ pub(crate) fn span_key(
     mode: InputMode,
     barriers: &[usize],
     hyphen_runs: &[(usize, usize)],
+    one_syllable_segments: &[(usize, usize)],
 ) -> Option<SpanKey> {
     let span = &shadow[start..end];
     let body = fst_body_for_span(span, mode);
@@ -691,10 +710,25 @@ pub(crate) fn span_key(
             khinsiann: hyphen_runs.iter().any(|&(b, run)| b == at && run >= 2),
         })
         .collect();
+    // The one-syllable stretches inside the span, in span coordinates: a
+    // reading may not split one (`ai-` drops 阿姨 `a-î`).
+    let one_syllable_stretches: Vec<(usize, usize)> = one_syllable_segments
+        .iter()
+        .filter(|&&(segment_start, segment_end)| start <= segment_start && segment_end <= end)
+        .map(|&(segment_start, segment_end)| (segment_start - start, segment_end - start))
+        .collect();
     Some(SpanKey {
         key: format!("{prefix}{body}"),
         final_only,
-        tone_pin: span_tone_pin(span, &body, end, mode, barriers, boundaries),
+        tone_pin: span_tone_pin(
+            span,
+            &body,
+            end,
+            mode,
+            barriers,
+            boundaries,
+            one_syllable_stretches,
+        ),
     })
 }
 
@@ -731,7 +765,8 @@ fn span_local_barriers(barriers: &[usize], start: usize, end: usize) -> Vec<usiz
 ///   typed `-` boundary pins what it typed — [`TonePin::TypedTones`]
 ///   over the hyphenless span verbatim (`teng5sek`) plus `boundaries`
 ///   (§52: a reading must end a syllable on every one with the same
-///   separator kind, so `khi|ah` drops 隙 `khiah`). The lookup body is
+///   separator kind, so `khi|ah` drops 隙 `khiah`) and the one-syllable
+///   stretches no reading may split (`ai-` drops 阿姨). The lookup body is
 ///   toneless for a partial-tone span (there is no partial-tone FST
 ///   family, §17 case 3) and verbatim for a fully-toned one (§17 case
 ///   1); the pin re-applies the typed digits after the lookup either
@@ -748,6 +783,7 @@ pub(crate) fn span_tone_pin(
     mode: InputMode,
     barriers: &[usize],
     boundaries: Vec<TypedBoundary>,
+    one_syllable_stretches: Vec<(usize, usize)>,
 ) -> TonePin {
     match mode {
         InputMode::Tl | InputMode::Poj
@@ -757,6 +793,7 @@ pub(crate) fn span_tone_pin(
                 mode,
                 typed: span.to_owned(),
                 boundaries,
+                one_syllable_stretches,
             }
         }
         InputMode::Tps if span_end_pins_unmarked_tone(span, span_end, mode, barriers) => {
@@ -773,13 +810,19 @@ pub(crate) fn span_tone_pin(
 /// buffer, so the lookup layer aligns their readings against this pin
 /// instead. One projection of [`whole_buffer_span_key`], so it is
 /// exactly the pin a span-local key over the whole buffer would carry:
-/// a TL/POJ buffer with a typed digit anywhere → [`TonePin::TypedTones`];
-/// a TPS buffer whose TAIL syllable was closed by the keyboard's space
-/// (a trailing-space barrier at the shadow end, no mark of its own) →
-/// [`TonePin::TpsSpaceEnd`] over the fused toneless body (§41); English,
-/// toneless TL/POJ and an un-closed TPS tail → none.
-pub(crate) fn whole_buffer_tone_pin(raw: &str, mode: InputMode) -> TonePin {
-    whole_buffer_span_key(raw, mode)
+/// a TL/POJ buffer with a typed digit or a typed `-` anywhere →
+/// [`TonePin::TypedTones`]; a TPS buffer whose TAIL syllable was closed by
+/// the keyboard's space (a trailing-space barrier at the shadow end, no
+/// mark of its own) → [`TonePin::TpsSpaceEnd`] over the fused toneless
+/// body (§41); English, TL/POJ with neither and an un-closed TPS tail →
+/// none. `inv` reads which typed-`-` stretches are one syllable (§52);
+/// `None` marks none.
+pub(crate) fn whole_buffer_tone_pin(
+    raw: &str,
+    mode: InputMode,
+    inv: Option<&SyllableInventory>,
+) -> TonePin {
+    whole_buffer_span_key(raw, mode, inv)
         .map(|k| k.tone_pin)
         .unwrap_or_default()
 }
@@ -791,9 +834,24 @@ pub(crate) fn whole_buffer_tone_pin(raw: &str, mode: InputMode) -> TonePin {
 /// [`whole_buffer_tone_pin`] (takes the pin) so the two cannot drift.
 /// `None` when the tone-ruled body is empty (empty / digit-only /
 /// bare-tone-mark / space-only buffer).
-fn whole_buffer_span_key(raw: &str, mode: InputMode) -> Option<SpanKey> {
+fn whole_buffer_span_key(
+    raw: &str,
+    mode: InputMode,
+    inv: Option<&SyllableInventory>,
+) -> Option<SpanKey> {
     let (shadow, barriers, hyphen_runs) = fused_shadow_with_barriers(raw, mode);
-    span_key(&shadow, 0, shadow.len(), mode, &barriers, &hyphen_runs)
+    let one_syllable_segments = inv
+        .map(|inv| crate::syllabifier::one_syllable_segments(&shadow, inv, mode, &barriers))
+        .unwrap_or_default();
+    span_key(
+        &shadow,
+        0,
+        shadow.len(),
+        mode,
+        &barriers,
+        &hyphen_runs,
+        &one_syllable_segments,
+    )
 }
 
 /// A3 (§41) — true when the span ending at `span_end` (shadow
@@ -1548,8 +1606,9 @@ pub(crate) fn build_partial_prefix_key(
     // fallthrough and always takes the toneless branch (`is_tps_tone_mark`
     // strip), so a raw `ㄉㄧˊ` shadow still yields the `tps:ㄉㄧ` toneless
     // key. The §35 / §41 metadata of the key is discarded here — the
-    // whole buffer is one span; [`whole_buffer_tone_pin`] carries the pin.
-    let key = whole_buffer_span_key(raw, mode)?.key;
+    // whole buffer is one span; [`whole_buffer_tone_pin`] carries the pin,
+    // so no inventory is needed for it here.
+    let key = whole_buffer_span_key(raw, mode, None)?.key;
     Some(((0u32, raw.len() as u32), key))
 }
 
@@ -1608,7 +1667,7 @@ mod tests {
     // 4 + 3 = 7; end 18 is not a barrier → not pinned.
     #[test]
     fn span_key_shifts_barriers_into_span_coordinates() {
-        let k = span_key("ㄎㄛㆻㄫㄉㄞ", 6, 18, InputMode::Tps, &[12], &[]).expect("body");
+        let k = span_key("ㄎㄛㆻㄫㄉㄞ", 6, 18, InputMode::Tps, &[12], &[], &[]).expect("body");
         assert_eq!(k.key, "tps:ㆻㄫㄉㄞ");
         assert_eq!(k.final_only, vec![7]);
         assert_eq!(k.tone_pin, TonePin::None);
@@ -1620,13 +1679,14 @@ mod tests {
     // the span closes on it with no tone mark → pinned.
     #[test]
     fn span_key_excludes_barrier_at_start_and_pins_barrier_at_end() {
-        let k = span_key("ㄎㄛㆻㄫㄉㄞ", 12, 18, InputMode::Tps, &[12, 18], &[]).expect("body");
+        let k =
+            span_key("ㄎㄛㆻㄫㄉㄞ", 12, 18, InputMode::Tps, &[12, 18], &[], &[]).expect("body");
         assert_eq!(k.key, "tps:ㄉㄞ");
         assert_eq!(k.final_only, vec![7]);
         assert_eq!(k.tone_pin, TonePin::TpsSpaceEnd("ㄉㄞ".to_owned()));
 
         let opens_on_barrier =
-            span_key("ㄎㄛㆻㄫㄉㄞ", 12, 18, InputMode::Tps, &[12], &[]).expect("body");
+            span_key("ㄎㄛㆻㄫㄉㄞ", 12, 18, InputMode::Tps, &[12], &[], &[]).expect("body");
         assert!(opens_on_barrier.final_only.is_empty());
         assert_eq!(opens_on_barrier.tone_pin, TonePin::None);
     }
@@ -1638,12 +1698,13 @@ mod tests {
     // pinned (global `end` vs global barrier).
     #[test]
     fn span_key_cross_barrier_restricts_but_does_not_pin() {
-        let through = span_key("ㄎㄛㆻㄫㄉㄞ", 0, 18, InputMode::Tps, &[9], &[]).expect("body");
+        let through =
+            span_key("ㄎㄛㆻㄫㄉㄞ", 0, 18, InputMode::Tps, &[9], &[], &[]).expect("body");
         assert_eq!(through.key, "tps:ㄎㄛㆻㄫㄉㄞ");
         assert_eq!(through.final_only, vec![10]);
         assert_eq!(through.tone_pin, TonePin::None);
 
-        let stops = span_key("ㄎㄛㆻㄫㄉㄞ", 0, 9, InputMode::Tps, &[9], &[]).expect("body");
+        let stops = span_key("ㄎㄛㆻㄫㄉㄞ", 0, 9, InputMode::Tps, &[9], &[], &[]).expect("body");
         assert_eq!(stops.key, "tps:ㄎㄛㆻ");
         assert_eq!(stops.final_only, vec![10]);
         assert_eq!(stops.tone_pin, TonePin::TpsSpaceEnd("ㄎㄛㆻ".to_owned()));
@@ -1713,27 +1774,30 @@ mod tests {
     #[test]
     fn whole_buffer_pin_strips_the_trailing_space() {
         assert_eq!(
-            whole_buffer_tone_pin("ㄒㄧ ", InputMode::Tps),
+            whole_buffer_tone_pin("ㄒㄧ ", InputMode::Tps, None),
             TonePin::TpsSpaceEnd("ㄒㄧ".to_owned())
         );
         // Repeated trailing spaces are one pin, not several.
         assert_eq!(
-            whole_buffer_tone_pin("ㄒㄧ  ", InputMode::Tps),
+            whole_buffer_tone_pin("ㄒㄧ  ", InputMode::Tps, None),
             TonePin::TpsSpaceEnd("ㄒㄧ".to_owned())
         );
         // Interior spaces are boundaries; the body is the fused surface.
         assert_eq!(
-            whole_buffer_tone_pin("ㄍㄠ ㄉㄞ ", InputMode::Tps),
+            whole_buffer_tone_pin("ㄍㄠ ㄉㄞ ", InputMode::Tps, None),
             TonePin::TpsSpaceEnd("ㄍㄠㄉㄞ".to_owned())
         );
     }
 
     #[test]
     fn whole_buffer_pin_is_none_without_a_trailing_space() {
-        assert_eq!(whole_buffer_tone_pin("ㄒㄧ", InputMode::Tps), TonePin::None);
+        assert_eq!(
+            whole_buffer_tone_pin("ㄒㄧ", InputMode::Tps, None),
+            TonePin::None
+        );
         // An interior space alone is a boundary, not a pin.
         assert_eq!(
-            whole_buffer_tone_pin("ㄍㄠ ㄉㄞ", InputMode::Tps),
+            whole_buffer_tone_pin("ㄍㄠ ㄉㄞ", InputMode::Tps, None),
             TonePin::None
         );
     }
@@ -1741,7 +1805,7 @@ mod tests {
     #[test]
     fn whole_buffer_pin_is_none_for_a_marked_tail() {
         assert_eq!(
-            whole_buffer_tone_pin("ㄒㄧˋ ", InputMode::Tps),
+            whole_buffer_tone_pin("ㄒㄧˋ ", InputMode::Tps, None),
             TonePin::None
         );
     }
@@ -1749,12 +1813,12 @@ mod tests {
     #[test]
     fn whole_buffer_pin_is_none_for_toneless_or_english_buffers() {
         for mode in [InputMode::Tl, InputMode::Poj, InputMode::English] {
-            assert_eq!(whole_buffer_tone_pin("tai ", mode), TonePin::None);
-            assert_eq!(whole_buffer_tone_pin("taigi", mode), TonePin::None);
+            assert_eq!(whole_buffer_tone_pin("tai ", mode, None), TonePin::None);
+            assert_eq!(whole_buffer_tone_pin("taigi", mode, None), TonePin::None);
         }
         // English digits are not tones.
         assert_eq!(
-            whole_buffer_tone_pin("tai5", InputMode::English),
+            whole_buffer_tone_pin("tai5", InputMode::English, None),
             TonePin::None
         );
     }
@@ -1764,19 +1828,25 @@ mod tests {
         // A TPS buffer closed by `-` is not closed by the keyboard space:
         // the §41 pin stays off (Codex post-impl 2026-09-22 P2).
         assert_eq!(
-            whole_buffer_tone_pin("ㄒㄧ-", InputMode::Tps),
+            whole_buffer_tone_pin("ㄒㄧ-", InputMode::Tps, None),
             TonePin::None
         );
         assert_eq!(
-            whole_buffer_tone_pin("ㄒㄧ ", InputMode::Tps),
+            whole_buffer_tone_pin("ㄒㄧ ", InputMode::Tps, None),
             TonePin::TpsSpaceEnd("ㄒㄧ".to_owned())
         );
     }
 
     #[test]
     fn whole_buffer_pin_is_none_for_a_space_only_buffer() {
-        assert_eq!(whole_buffer_tone_pin(" ", InputMode::Tps), TonePin::None);
-        assert_eq!(whole_buffer_tone_pin("", InputMode::Tps), TonePin::None);
+        assert_eq!(
+            whole_buffer_tone_pin(" ", InputMode::Tps, None),
+            TonePin::None
+        );
+        assert_eq!(
+            whole_buffer_tone_pin("", InputMode::Tps, None),
+            TonePin::None
+        );
     }
 
     // §17 case 3 — a TL/POJ buffer with any typed digit pins the typed
@@ -1789,7 +1859,7 @@ mod tests {
         // §52: the typed `-` after `teng5` is a boundary too (offset 5,
         // past the digit) — exactly what Codex predicted would flip.
         assert_eq!(
-            whole_buffer_tone_pin("teng5-sek", InputMode::Poj),
+            whole_buffer_tone_pin("teng5-sek", InputMode::Poj, None),
             TonePin::TypedTones {
                 mode: InputMode::Poj,
                 typed: "teng5sek".to_owned(),
@@ -1797,14 +1867,18 @@ mod tests {
                     at: 5,
                     khinsiann: false,
                 }],
+                one_syllable_stretches: Vec::new(),
             }
         );
         assert_eq!(
-            whole_buffer_tone_pin("Teng5sek4", InputMode::Tl),
+            whole_buffer_tone_pin("Teng5sek4", InputMode::Tl, None),
             typed_tones(InputMode::Tl, "teng5sek4")
         );
         // Digit-only buffer has no body → no pin.
-        assert_eq!(whole_buffer_tone_pin("5", InputMode::Tl), TonePin::None);
+        assert_eq!(
+            whole_buffer_tone_pin("5", InputMode::Tl, None),
+            TonePin::None
+        );
     }
 
     fn typed_tones(mode: InputMode, typed: &str) -> TonePin {
@@ -1812,28 +1886,29 @@ mod tests {
             mode,
             typed: typed.to_owned(),
             boundaries: Vec::new(),
+            one_syllable_stretches: Vec::new(),
         }
     }
 
     #[test]
     fn span_key_pins_typed_tones_only_for_a_digit_bearing_tl_poj_span() {
         // Partial: toneless lookup body + typed-tone pin.
-        let k = span_key("teng5sek", 0, 8, InputMode::Poj, &[], &[]).expect("body");
+        let k = span_key("teng5sek", 0, 8, InputMode::Poj, &[], &[], &[]).expect("body");
         assert_eq!(k.key, "poj:tengsek");
         assert_eq!(k.tone_pin, typed_tones(InputMode::Poj, "teng5sek"));
         // Fully toned: verbatim toned key AND the pin.
-        let k = span_key("teng5sek4", 0, 9, InputMode::Tl, &[], &[]).expect("body");
+        let k = span_key("teng5sek4", 0, 9, InputMode::Tl, &[], &[], &[]).expect("body");
         assert_eq!(k.key, "tl:teng5sek4");
         assert_eq!(k.tone_pin, typed_tones(InputMode::Tl, "teng5sek4"));
         // Toneless: unpinned (the all-tones affordance).
-        let k = span_key("tengsek", 0, 7, InputMode::Poj, &[], &[]).expect("body");
+        let k = span_key("tengsek", 0, 7, InputMode::Poj, &[], &[], &[]).expect("body");
         assert_eq!(k.tone_pin, TonePin::None);
         // English: digits are not tones.
-        let k = span_key("teng5sek", 0, 8, InputMode::English, &[], &[]).expect("body");
+        let k = span_key("teng5sek", 0, 8, InputMode::English, &[], &[], &[]).expect("body");
         assert_eq!(k.key, "tl:tengsek");
         assert_eq!(k.tone_pin, TonePin::None);
         // Interior sub-span of a longer shadow pins its own slice only.
-        let k = span_key("teng5sek", 5, 8, InputMode::Poj, &[], &[]).expect("body");
+        let k = span_key("teng5sek", 5, 8, InputMode::Poj, &[], &[], &[]).expect("body");
         assert_eq!(k.key, "poj:sek");
         assert_eq!(k.tone_pin, TonePin::None);
     }
@@ -2937,6 +3012,43 @@ mod tests {
     }
 
     #[test]
+    fn typed_hyphen_closing_one_syllable_admits_no_cut_inside_it() {
+        use crate::syllabifier::valid_span_endings_lowered_with_barriers as endings;
+        // trace: shadow `siamtioh`, barrier 4 closes `siam` (one syllable).
+        // Unclosed, `sia`+`m` and `si`+`a` cut inside it at 2 and 3.
+        let inv = build_inventory(&["siam2", "sia2", "si5", "a1", "am1", "m7", "tioh8"]);
+        assert_eq!(
+            endings("siamtioh", 0, &inv, InputMode::Tl, 3, &[]),
+            vec![2, 3, 4, 8]
+        );
+        assert_eq!(
+            endings("siamtioh", 0, &inv, InputMode::Tl, 3, &[4]),
+            vec![4, 8]
+        );
+        // A link never starts inside the stretch either (`m` from 3).
+        assert!(endings("siamtioh", 3, &inv, InputMode::Tl, 3, &[4]).is_empty());
+        // A digit typed after the `-` (`siam-2` → shadow `siam2`) is no tone
+        // of `siam`: the stretch stays closed and one syllable.
+        assert_eq!(endings("siam2", 0, &inv, InputMode::Tl, 3, &[4]), vec![4]);
+        // The open tail after the last barrier is unconstrained (`tioh` then
+        // `si` 6, `sia` 7, `siam` 8), and a stretch that is no single
+        // syllable (`siamtioh` closed at 8) keeps its inner cuts.
+        assert_eq!(
+            endings("tiohsiam", 0, &inv, InputMode::Tl, 3, &[4]),
+            vec![4, 6, 7, 8]
+        );
+        assert_eq!(
+            endings("siamtioh", 0, &inv, InputMode::Tl, 3, &[8]),
+            vec![2, 3, 4, 8]
+        );
+        // English never closes one.
+        assert_eq!(
+            endings("siamtioh", 0, &inv, InputMode::English, 3, &[4]),
+            vec![2, 3, 4, 8]
+        );
+    }
+
+    #[test]
     fn oov_readings_split_on_a_typed_hyphen_in_tl_poj_only() {
         let inv = khiah_inventory();
         assert_eq!(
@@ -2977,47 +3089,69 @@ mod tests {
                 .into_iter()
                 .map(|(at, khinsiann)| TypedBoundary { at, khinsiann })
                 .collect(),
+            one_syllable_stretches: Vec::new(),
         };
         let boundary = |mode, typed: &str, at: Vec<usize>| {
             boundary_kinds(mode, typed, at.into_iter().map(|at| (at, false)).collect())
         };
+        // A one-syllable stretch rides on the pin in span coordinates; one
+        // the span does not contain is left out.
+        let k = span_key("siamtioh", 0, 8, InputMode::Tl, &[4], &[], &[(0, 4)]).expect("body");
+        assert_eq!(
+            k.tone_pin,
+            TonePin::TypedTones {
+                mode: InputMode::Tl,
+                typed: "siamtioh".to_owned(),
+                boundaries: vec![TypedBoundary {
+                    at: 4,
+                    khinsiann: false,
+                }],
+                one_syllable_stretches: vec![(0, 4)],
+            }
+        );
+        let k = span_key("siamtioh", 4, 8, InputMode::Tl, &[4], &[], &[(0, 4)]).expect("body");
+        assert!(matches!(
+            k.tone_pin,
+            TonePin::TypedTones { ref one_syllable_stretches, .. }
+                if one_syllable_stretches.is_empty()
+        ));
         // trace: shadow `khiah`, barrier at 3 → span (0,5) carries it.
-        let k = span_key("khiah", 0, 5, InputMode::Tl, &[3], &[]).expect("body");
+        let k = span_key("khiah", 0, 5, InputMode::Tl, &[3], &[], &[]).expect("body");
         assert_eq!(k.key, "tl:khiah");
         assert_eq!(k.tone_pin, boundary(InputMode::Tl, "khiah", vec![3]));
         // Digits and a boundary together: offsets count the typed digit.
-        let k = span_key("khi3ah", 0, 6, InputMode::Tl, &[4], &[]).expect("body");
+        let k = span_key("khi3ah", 0, 6, InputMode::Tl, &[4], &[], &[]).expect("body");
         assert_eq!(k.tone_pin, boundary(InputMode::Tl, "khi3ah", vec![4]));
         // POJ reads the same shape.
-        let k = span_key("khiah", 0, 5, InputMode::Poj, &[3], &[]).expect("body");
+        let k = span_key("khiah", 0, 5, InputMode::Poj, &[3], &[], &[]).expect("body");
         assert_eq!(k.tone_pin, boundary(InputMode::Poj, "khiah", vec![3]));
         // The barrier at a span's own start is carried as `at: 0` with its
         // kind — read only by a reading that opens with `--` itself.
-        let k = span_key("khiah", 3, 5, InputMode::Tl, &[3], &[(3, 2)]).expect("body");
+        let k = span_key("khiah", 3, 5, InputMode::Tl, &[3], &[(3, 2)], &[]).expect("body");
         assert_eq!(
             k.tone_pin,
             boundary_kinds(InputMode::Tl, "ah", vec![(0, true)])
         );
-        let k = span_key("khiah", 3, 5, InputMode::Tl, &[3], &[]).expect("body");
+        let k = span_key("khiah", 3, 5, InputMode::Tl, &[3], &[], &[]).expect("body");
         assert_eq!(
             k.tone_pin,
             boundary_kinds(InputMode::Tl, "ah", vec![(0, false)])
         );
         // …and the `--` subset marks an interior boundary's kind.
-        let k = span_key("khiah", 0, 5, InputMode::Tl, &[3], &[(3, 2)]).expect("body");
+        let k = span_key("khiah", 0, 5, InputMode::Tl, &[3], &[(3, 2)], &[]).expect("body");
         assert_eq!(
             k.tone_pin,
             boundary_kinds(InputMode::Tl, "khiah", vec![(3, true)])
         );
         // No barrier, no digit → unpinned as before; English never pins.
         assert_eq!(
-            span_key("khiah", 0, 5, InputMode::Tl, &[], &[])
+            span_key("khiah", 0, 5, InputMode::Tl, &[], &[], &[])
                 .unwrap()
                 .tone_pin,
             TonePin::None
         );
         assert_eq!(
-            span_key("khiah", 0, 5, InputMode::English, &[3], &[])
+            span_key("khiah", 0, 5, InputMode::English, &[3], &[], &[])
                 .unwrap()
                 .tone_pin,
             TonePin::None

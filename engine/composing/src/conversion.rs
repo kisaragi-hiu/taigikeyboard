@@ -326,7 +326,8 @@ pub(crate) fn convert(
                 prefix_index,
                 dict,
                 mode: InputMode::Tps,
-                tone_pin: whole_buffer_tone_pin(closed, InputMode::Tps),
+                // TPS has no one-syllable `-` stretches (§52 is TL / POJ).
+                tone_pin: whole_buffer_tone_pin(closed, InputMode::Tps, None),
             };
             // The user's counts for every word an edge could take: user
             // weight both picks an edge's word and prices its span.

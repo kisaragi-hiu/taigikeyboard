@@ -43,8 +43,10 @@ use phonetics::InputMode;
 /// The family-correct scanner for `mode`, with the stripped-separator
 /// barriers: no single-syllable link crosses one in either family. TPS (§35) also
 /// expands ambiguity families and marks the glyph before a barrier
-/// Final-only; TL / POJ (§52) only refuse the crossing — a typed `-` is
-/// the user's syllable boundary (`khi--ah` is never read `khiah`);
+/// Final-only; TL / POJ (§52) refuse the crossing — a typed `-` is
+/// the user's syllable boundary (`khi--ah` is never read `khiah`) — and
+/// any cut inside a closed stretch that is one syllable
+/// ([`one_syllable_segments`]: `siam-` is never `sia|m`);
 /// English ignores them. An empty slice leaves every scanner
 /// byte-identical to its barrier-free form.
 pub(crate) fn valid_span_endings_lowered_with_barriers(
@@ -75,6 +77,36 @@ pub(crate) fn valid_span_endings_lowered_with_barriers(
 /// still meet AT a barrier.
 pub(super) fn crosses_barrier(barriers: &[usize], cur: usize, end: usize) -> bool {
     barriers.iter().any(|&b| cur < b && b < end)
+}
+
+/// §52 — the closed stretches a typed `-` made one syllable, `(start, end)`
+/// in shadow bytes: from the buffer start or a barrier up to the next
+/// barrier, kept when the inventory reads the whole stretch as a single
+/// syllable. The user's `-` says where that syllable ends, so nothing
+/// inside it is a cut (`siam-` is never `sia|m`, `ai-` never `a|i`). A
+/// stretch that is no single syllable (`taigi-`) and the open tail after
+/// the last barrier constrain nothing. Empty outside TL / POJ.
+pub(crate) fn one_syllable_segments(
+    lowered: &str,
+    inv: &SyllableInventory,
+    mode: InputMode,
+    barriers: &[usize],
+) -> Vec<(usize, usize)> {
+    if !typed_hyphen_is_boundary(mode) {
+        return Vec::new();
+    }
+    std::iter::once(0)
+        .chain(barriers.iter().copied())
+        .zip(barriers.iter().copied())
+        .filter(|&(start, end)| {
+            start < end && tl::is_single_syllable(lowered, inv, mode, start, end, barriers)
+        })
+        .collect()
+}
+
+/// `at` falls strictly inside one of `segments`.
+pub(crate) fn is_inside_any(segments: &[(usize, usize)], at: usize) -> bool {
+    segments.iter().any(|&(start, end)| start < at && at < end)
 }
 
 /// §52 policy, authored once: TL / POJ read a typed `-` as a syllable

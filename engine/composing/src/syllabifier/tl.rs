@@ -90,7 +90,14 @@ pub(crate) fn valid_span_endings_lowered(
         return Vec::new();
     }
 
-    let bytes = lowered.as_bytes();
+    // §52 — no cut inside a typed-`-` segment that is one syllable: a link
+    // may neither start nor end strictly inside one (`siam-` is never
+    // `sia|m`).
+    let one_syllable = super::one_syllable_segments(lowered, inv, mode, barriers);
+    if super::is_inside_any(&one_syllable, pos) {
+        return Vec::new();
+    }
+
     let mut endings: BTreeSet<usize> = BTreeSet::new();
     let mut queue: VecDeque<(usize, usize)> = VecDeque::new();
     queue.push_back((pos, 0));
@@ -107,19 +114,35 @@ pub(crate) fn valid_span_endings_lowered(
             // §52 — a typed compound / neutral-tone hyphen is an explicit syllable
             // boundary: no single syllable crosses it (`khi|ah` is never
             // `khiah`). Chains still meet AT a barrier, as in TPS.
-            if super::crosses_barrier(barriers, cur, end) {
+            if super::crosses_barrier(barriers, cur, end)
+                || super::is_inside_any(&one_syllable, end)
+            {
                 continue;
             }
-            if inv.contains_in(mode, &lowered[cur..end])
-                && !is_false_toneless_boundary(bytes, end)
-                && endings.insert(end)
-            {
+            if is_single_syllable(lowered, inv, mode, cur, end, barriers) && endings.insert(end) {
                 queue.push_back((end, depth + 1));
             }
         }
     }
 
     endings.into_iter().collect()
+}
+
+/// `lowered[start..end]` is one syllable of the `mode` family, and not the
+/// toneless half of a syllable whose tone digit follows. A digit after a
+/// typed `-` (`tai-2`) is no tone of the syllable the `-` closed (§52).
+pub(super) fn is_single_syllable(
+    lowered: &str,
+    inv: &SyllableInventory,
+    mode: InputMode,
+    start: usize,
+    end: usize,
+    barriers: &[usize],
+) -> bool {
+    lowered
+        .get(start..end)
+        .is_some_and(|syllable| inv.contains_in(mode, syllable))
+        && (barriers.contains(&end) || !is_false_toneless_boundary(lowered.as_bytes(), end))
 }
 
 /// True when the FST hit at `..end` is a toneless syllable match that

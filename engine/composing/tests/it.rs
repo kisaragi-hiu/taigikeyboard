@@ -17,6 +17,7 @@ mod continuous_keys_tl_lattice;
 mod continuous_keys_tl_poj_diacritic;
 mod continuous_keys_tps;
 mod continuous_learned_phrase;
+mod continuous_one_syllable_segment;
 mod continuous_partial_tone;
 mod continuous_phase;
 mod continuous_slot0_dict_roman;

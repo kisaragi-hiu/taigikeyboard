@@ -47,10 +47,11 @@ use crate::syllabifier::valid_span_endings_lowered_with_barriers;
 /// Pure. `valid_span_endings_lowered` guarantees every returned `end`
 /// is `> start`, on a UTF-8 char boundary, and `<= shadow.len()`, so
 /// the edges are well-formed by construction.
-/// Build the segmentation lattice. `barriers` (§35) = stripped-separator
-/// offsets forwarded to the TPS scanner (mandatory syllable cut +
-/// Final-only last glyph at a barrier); the TL scanner never sees them
-/// and callers without separator context pass `&[]`.
+/// Build the segmentation lattice. `barriers` = stripped-separator /
+/// typed-hyphen offsets forwarded to the family scanner (TPS §35:
+/// mandatory syllable cut + Final-only last glyph at a barrier; TL / POJ
+/// §52: no crossing, no cut inside a one-syllable stretch); callers
+/// without separator context pass `&[]`.
 pub(crate) fn build_lattice_with_barriers(
     shadow: &str,
     inv: &SyllableInventory,

@@ -461,10 +461,15 @@ pub enum TonePin {
     /// into `typed` where the user typed a `-`: a reading must end a
     /// syllable on every one, so `khi|ah` keeps 去啊 `khì--ah` and drops
     /// 隙 `khiah`. A span with a boundary but no digit is pinned too.
+    /// `one_syllable_stretches` are the `(start, end)` ranges of `typed` a
+    /// typed `-` closed as one inventory syllable: a reading may end no
+    /// syllable strictly inside one, so `ai-` keeps 愛 `ài` and drops 阿姨
+    /// `a-î`, both under the key `ai`.
     TypedTones {
         mode: phonetics::InputMode,
         typed: String,
         boundaries: Vec<TypedBoundary>,
+        one_syllable_stretches: Vec<(usize, usize)>,
     },
 }
 
@@ -499,7 +504,14 @@ impl TonePin {
                 mode,
                 typed,
                 boundaries,
-            } => reading_passes_typed_tones(*mode, typed, boundaries, reading),
+                one_syllable_stretches,
+            } => reading_passes_typed_tones(
+                *mode,
+                typed,
+                boundaries,
+                one_syllable_stretches,
+                reading,
+            ),
         }
     }
 
@@ -524,10 +536,13 @@ impl TonePin {
 /// `--` constrains the NEXT word, not this one. A boundary at 0 is the
 /// run typed right before the span: only a reading that itself opens with
 /// `--` (a custom `--ah`) reads it, and then the run must be `--` too.
+/// No syllable of the reading may end strictly inside a one-syllable
+/// stretch.
 fn reading_passes_typed_tones(
     mode: phonetics::InputMode,
     typed: &str,
     boundaries: &[TypedBoundary],
+    one_syllable_stretches: &[(usize, usize)],
     reading: &str,
 ) -> bool {
     let Some(walk) =
@@ -551,6 +566,10 @@ fn reading_passes_typed_tones(
                     .get(index + 1)
                     .is_none_or(|&k| k == b.khinsiann)
         })
+    }) && !walk.ends.iter().any(|&at| {
+        one_syllable_stretches
+            .iter()
+            .any(|&(start, end)| start < at && at < end)
     })
 }
 
@@ -1616,7 +1635,7 @@ mod typed_tone_pin_tests {
     use phonetics::InputMode::{self, Poj, Tl};
 
     fn passes(mode: InputMode, typed: &str, reading: &str) -> bool {
-        reading_passes_typed_tones(mode, typed, &[], reading)
+        reading_passes_typed_tones(mode, typed, &[], &[], reading)
     }
 
     // §17 case 3 — the reported shape. Faces via `poj_num_syllable_ends_from_tl`:
@@ -1726,7 +1745,36 @@ mod typed_tone_pin_tests {
             .iter()
             .map(|&(at, khinsiann)| TypedBoundary { at, khinsiann })
             .collect();
-        reading_passes_typed_tones(mode, typed, &boundaries, reading)
+        reading_passes_typed_tones(mode, typed, &boundaries, &[], reading)
+    }
+
+    /// Plain `-` boundaries at the ends of `stretches`, each one syllable.
+    fn passes_stretches(typed: &str, stretches: &[(usize, usize)], reading: &str) -> bool {
+        let boundaries: Vec<TypedBoundary> = stretches
+            .iter()
+            .map(|&(_, at)| TypedBoundary {
+                at,
+                khinsiann: false,
+            })
+            .collect();
+        reading_passes_typed_tones(Tl, typed, &boundaries, stretches, reading)
+    }
+
+    // trace: typed `ai-` → stretch 0..2.
+    //   愛 ài → one syllable over `ai`, walk ends [2] ✓ nothing inside.
+    //   阿姨 a-î → `a` + `i`, walk ends [1, 2]; 1 lies inside 0..2 ✗.
+    //   `siamtioh`, stretch 0..4: 閃著 siám-tio̍h ends [4, 8] ✓;
+    //   si-am-tio̍h ends [2, 4, 8]; 2 lies inside 0..4 ✗.
+    #[test]
+    fn a_reading_may_not_split_a_one_syllable_stretch() {
+        assert!(passes_stretches("ai", &[(0, 2)], "ài"));
+        assert!(!passes_stretches("ai", &[(0, 2)], "a-î"));
+        assert!(passes_stretches("siamtioh", &[(0, 4)], "siám-tio̍h"));
+        assert!(!passes_stretches("siamtioh", &[(0, 4)], "si-am-tio̍h"));
+        assert!(passes_stretches("aiai", &[(0, 2), (2, 4)], "ài-ài"));
+        assert!(!passes_stretches("aiai", &[(0, 2), (2, 4)], "ài-a-î"));
+        // A boundary with no one-syllable stretch keeps the split (`taigi-`).
+        assert!(passes_boundaries(Tl, "ai", &[2], "a-î"));
     }
 
     // The kind of the typed run must match the reading's own separator at
@@ -1801,6 +1849,7 @@ mod typed_tone_pin_tests {
             mode: Poj,
             typed: "teng5sek".to_owned(),
             boundaries: Vec::new(),
+            one_syllable_stretches: Vec::new(),
         };
         assert!(typed.admits(Some("poj:tengsek"), "tîng-sik"));
         assert!(!typed.admits(Some("poj:tengsek"), "tíng-sik"));
