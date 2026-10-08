@@ -1,10 +1,12 @@
 //! Literal tone placement for unseparated input. Tone digits close a segment.
-//! A segment that is one valid syllable takes the same mark as
+//! A segment with a vowel that is one valid syllable takes the same mark as
 //! `convert_syllable` (`tl::place_tl_tone_mark` / `poj::place_poj_tone_mark`);
-//! any other segment hands its last vowel cluster through the segment end to
-//! those rules, matching Taigi Telex's last-cluster placement
-//! (`TelexRules.findTonePosition`). This is a preview affordance, never a
-//! dictionary spelling conversion.
+//! any other segment with a vowel hands its last vowel cluster through the
+//! segment end to those rules, matching Taigi Telex's last-cluster placement
+//! (`TelexRules.findTonePosition`). A vowel-less segment marks only a
+//! syllabic `m` / `ng` that ends it, as `taigi-converter` marks the final
+//! (`nng5` → `nn̂g`). This is a preview affordance, never a dictionary
+//! spelling conversion.
 
 use crate::api::InputMode;
 use crate::normalization::is_combining_tone_mark;
@@ -47,30 +49,33 @@ fn apply_recording_digits(input: &str, mode: InputMode, mut record: impl FnMut(b
                     .get(position + 1)
                     .is_some_and(char::is_ascii_digit);
             let chars: Vec<char> = segment.nfd().collect();
-            let target = if is_in_digit_run {
+            let placement = if is_in_digit_run {
                 None
             } else {
                 tone_position(&chars, mode)
             };
-            record(target.is_some());
-            if let Some(target) = target {
+            record(placement.is_some());
+            if let Some(placement) = placement {
                 let tone = ch.to_string();
                 let mark = if mode == InputMode::Poj {
                     poj_tone_mark(&tone)
                 } else {
                     tl_tone_mark(&tone)
                 };
-                let mut at_target = false;
+                let mut base_index = 0;
                 for (index, &letter) in chars.iter().enumerate() {
                     if canonical_combining_class(letter) == 0 {
-                        at_target = index == target;
-                    } else if at_target && is_combining_tone_mark(letter) {
-                        // A pasted diacritic plus a new tone digit replaces
-                        // that letter's old tone; marks on earlier clusters stay.
+                        base_index = index;
+                    } else if base_index >= placement.marks_cleared_from
+                        && is_combining_tone_mark(letter)
+                    {
+                        // A new tone digit replaces any pasted tone on the
+                        // letters it is placed among (`goá2` → `góa`, not
+                        // `góá`); marks on earlier clusters stay.
                         continue;
                     }
                     output.push(letter);
-                    if index == target {
+                    if index == placement.target {
                         output.push_str(mark);
                     }
                 }
@@ -93,8 +98,15 @@ fn apply_recording_digits(input: &str, mode: InputMode, mut record: impl FnMut(b
     output.nfc().collect()
 }
 
-/// Index into `chars` (the segment, NFD) of the letter that takes the tone.
-fn tone_position(chars: &[char], mode: InputMode) -> Option<usize> {
+/// Where a tone digit lands, as indices into the segment's NFD chars.
+struct TonePlacement {
+    /// The letter that takes the new mark.
+    target: usize,
+    /// Tone marks already on this letter or any later one are replaced.
+    marks_cleared_from: usize,
+}
+
+fn tone_position(chars: &[char], mode: InputMode) -> Option<TonePlacement> {
     // Tone marks already on the segment are ignored when choosing; the POJ
     // dot stays, as the placement rules read `o͘` as one vowel.
     let letters: Vec<(usize, char)> = chars
@@ -104,17 +116,21 @@ fn tone_position(chars: &[char], mode: InputMode) -> Option<usize> {
         .map(|(index, ch)| (index, ch.to_ascii_lowercase()))
         .collect();
     let spelling: String = letters.iter().map(|&(_, ch)| ch).collect();
-    let cluster_start = last_vowel_cluster_start(&letters, mode);
-    let start = if is_valid_syllable(&spelling) {
-        0
-    } else if let Some(start) = cluster_start {
-        start
-    } else {
-        return last_syllabic_consonant(&letters);
+    let is_one_syllable = is_valid_syllable(&spelling);
+    let Some(cluster_start) = last_vowel_cluster_start(&letters, mode) else {
+        // No vowel: the syllabic `m` / `ng` that ends the segment is the
+        // nucleus, as in `taigi-converter`, which marks the final only
+        // (`nng5` → `nn̂g`, `ngm2` → `ngḿ`).
+        let target = final_syllabic_nasal(&letters)?;
+        return Some(TonePlacement {
+            target,
+            marks_cleared_from: if is_one_syllable { 0 } else { target },
+        });
     };
+    let start = if is_one_syllable { 0 } else { cluster_start };
     let tail: String = spelling.chars().skip(start).collect();
     let probe = PLACEMENT_PROBE.to_string();
-    let is_tl_spelled_ua_ue = cluster_start.is_some_and(|start| starts_tl_ua_ue(&letters[start..]));
+    let is_tl_spelled_ua_ue = starts_tl_ua_ue(&letters[cluster_start..]);
     let placed = if mode == InputMode::Poj && !is_tl_spelled_ua_ue {
         place_poj_tone_mark(&tail, &probe)
     } else {
@@ -122,9 +138,13 @@ fn tone_position(chars: &[char], mode: InputMode) -> Option<usize> {
     };
     // The rules only insert the probe after the chosen letter.
     let letters_before_probe = placed.chars().position(|ch| ch == PLACEMENT_PROBE)?;
-    letters[start..]
-        .get(letters_before_probe.checked_sub(1)?)
-        .map(|&(index, _)| index)
+    let target = letters[start..]
+        .get(letters_before_probe.checked_sub(1)?)?
+        .0;
+    Some(TonePlacement {
+        target,
+        marks_cleared_from: letters[start].0,
+    })
 }
 
 /// Position in `letters` where the last run of vowels starts. In POJ the
@@ -148,21 +168,18 @@ fn last_vowel_cluster_start(letters: &[(usize, char)], mode: InputMode) -> Optio
     start
 }
 
-/// A vowel-less segment that is not one syllable: the last syllabic `m` or
-/// `ng` takes the tone (`hngm2` → `hngḿ`).
-fn last_syllabic_consonant(letters: &[(usize, char)]) -> Option<usize> {
-    letters
-        .iter()
-        .enumerate()
-        .rev()
-        .find_map(|(position, &(index, ch))| {
-            (ch == 'm'
-                || (ch == 'n'
-                    && letters
-                        .get(position + 1)
-                        .is_some_and(|&(_, next)| next == 'g')))
-            .then_some(index)
-        })
+/// A vowel-less segment takes the tone only on a syllabic `m` / `ng` that
+/// ends it, optionally before a stop `h` (`hngm2` → `hngḿ`). Anything else
+/// is not Taigi, so the digit stays (`mp3`, `html5`).
+fn final_syllabic_nasal(letters: &[(usize, char)]) -> Option<usize> {
+    let body = match letters {
+        [body @ .., (_, 'h')] => body,
+        _ => letters,
+    };
+    match body {
+        [.., (index, 'n'), (_, 'g')] | [.., (index, 'm')] => Some(*index),
+        _ => None,
+    }
 }
 
 /// A vowel cluster spelled TL-style `ua…` / `ue…`. Typed in POJ mode it keeps
@@ -190,6 +207,7 @@ mod tests {
             ("ng2", "ńg"),
             ("m2", "ḿ"),
             ("png2", "pńg"),
+            ("ngm2", "ngḿ"),
             ("hngm2", "hngḿ"),
         ] {
             for mode in [InputMode::Tl, InputMode::Poj] {
@@ -292,9 +310,6 @@ mod tests {
 
     #[test]
     fn valid_syllables_keep_the_canonical_mark() {
-        // `ngm` is one table syllable, so it takes `convert_syllable`'s mark
-        // (`ng` before `m`) rather than the last syllabic consonant.
-        assert_eq!(apply("ngm2", InputMode::Tl), "ńgm");
         // POJ oa / oe before a coda mark the second vowel, as
         // `taigi-converter` does (`uang2` → `oáng`, `uannh5` → `oâⁿh`).
         for (input, expected) in [
@@ -324,6 +339,47 @@ mod tests {
     }
 
     #[test]
+    fn vowel_less_segments_mark_only_a_final_syllabic_nasal() {
+        for (input, expected) in [
+            ("mp3", "mp3"),
+            ("html5", "html5"),
+            ("hngm2", "hngḿ"),
+            ("hngmh8", "hngm\u{30d}h"),
+            ("tngng3", "tngǹg"),
+        ] {
+            for mode in [InputMode::Tl, InputMode::Poj] {
+                assert_eq!(apply(input, mode), expected, "{mode:?}: {input}");
+            }
+        }
+        assert_eq!(consumed_digits("mp3", InputMode::Tl), vec![false]);
+    }
+
+    #[test]
+    fn a_new_tone_replaces_pasted_marks_in_its_syllable() {
+        for (input, mode, expected) in [
+            ("goá2", InputMode::Poj, "góa"),
+            ("góa3", InputMode::Poj, "gòa"),
+            ("guá3", InputMode::Tl, "guà"),
+            ("tâigi2", InputMode::Tl, "tâigí"),
+            ("tâigí3", InputMode::Tl, "tâigì"),
+        ] {
+            assert_eq!(apply(input, mode), expected, "{mode:?}: {input}");
+        }
+    }
+
+    #[test]
+    fn syllabic_nasal_after_a_nasal_initial_marks_the_nucleus() {
+        // trace: no vowel → final syllabic nasal only, as taigi-converter
+        // marks the final (`toPoj("n", "ng", "5")` → `nn̂g`, `ngng5` → `ngn̂g`,
+        // `mm2` → `mḿ`, NFC-composed).
+        for mode in [InputMode::Tl, InputMode::Poj] {
+            assert_eq!(apply("nng5", mode), "nn\u{302}g", "{mode:?}");
+            assert_eq!(apply("ngng5", mode), "ngn\u{302}g", "{mode:?}");
+            assert_eq!(apply("mm2", mode), "m\u{1e3f}", "{mode:?}");
+        }
+    }
+
+    #[test]
     fn digit_runs_stay_as_typed() {
         for (input, expected) in [
             ("covid19", "covid19"),
@@ -346,31 +402,43 @@ mod tests {
 
     /// Every table syllable, in each case form, renders exactly as the
     /// single-syllable `convert_syllable` path (`api::to_tone_marks`) does,
-    /// except a TL `ua` / `ue` spelling typed in POJ mode.
+    /// except a TL `ua` / `ue` spelling typed in POJ mode. A vowel-less
+    /// syllable instead matches the converter's final-only placement
+    /// (`to_tl` / `to_poj`): `convert_syllable` marks the initial of `nng`.
     #[test]
     fn every_valid_syllable_matches_convert_syllable() {
-        use crate::api::to_tone_marks;
+        use crate::api::{capitalize_first, to_tone_marks};
         use crate::tables::{TL_FINALS, TL_INITIALS};
         let mut compared = 0;
         for initial in TL_INITIALS.iter() {
             for final_str in TL_FINALS.iter() {
+                let is_vowel_less = !final_str.contains(['a', 'e', 'i', 'o', 'u']);
                 let tl = format!("{initial}{final_str}");
                 let poj = crate::poj::to_poj(initial, final_str, "1");
                 let mut cases = vec![(InputMode::Tl, tl.clone()), (InputMode::Poj, poj)];
                 // A TL `ua` / `ue` spelling in POJ mode takes TL placement on
                 // purpose (`poj_mode_marks_tl_spelled_ua_ue_like_tl`).
-                if !(final_str.starts_with("ua") || final_str.starts_with("ue")) {
+                if !(final_str.starts_with("ua") || final_str.starts_with("ue") || is_vowel_less) {
                     cases.push((InputMode::Poj, tl));
                 }
                 for (mode, spelling) in cases {
                     for tone in ["2", "3", "5", "6", "7", "8", "9"] {
-                        for typed in [
-                            spelling.clone(),
-                            spelling.to_uppercase(),
-                            crate::api::capitalize_first(&spelling),
+                        let converted = if mode == InputMode::Tl {
+                            crate::tl::to_tl(initial, final_str, tone)
+                        } else {
+                            crate::poj::to_poj(initial, final_str, tone)
+                        };
+                        for (typed, converted) in [
+                            (spelling.clone(), converted.clone()),
+                            (spelling.to_uppercase(), converted.to_uppercase()),
+                            (capitalize_first(&spelling), capitalize_first(&converted)),
                         ] {
                             let input = format!("{typed}{tone}");
-                            let expected = to_tone_marks(&input, mode);
+                            let expected = if is_vowel_less {
+                                converted
+                            } else {
+                                to_tone_marks(&input, mode)
+                            };
                             if expected == input {
                                 continue;
                             }
