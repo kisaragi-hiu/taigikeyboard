@@ -1,4 +1,5 @@
-//! Every pane's view must PLAN — the regression net for the whole window.
+//! Every pane's view must PLAN, and every sidebar switch must APPLY — the
+//! regression net for the whole window.
 //!
 //! The reactor refuses a tree whose shape it cannot realize and answers
 //! `PumpError::StructureUnsupported`; what that costs is written out once,
@@ -7,7 +8,8 @@
 //!
 //! `RecordingRuntime` is the reactor's headless host, so planning runs with
 //! no WinUI runtime and no desktop — exactly the layer both defects were
-//! in. **Scope: each pane in its LAUNCH state.** A subtree that only
+//! in. **Scope: each pane in its LAUNCH state, plus one switch between
+//! every two sidebar panes.** A subtree that only
 //! appears once the user has done something — the busy overlay, the entry
 //! dialog, a search result row — returns `View::empty()` here and is not
 //! covered; so is everything below planning (the Windows App SDK ABI, COM
@@ -18,7 +20,10 @@ use super::window::{SettingsWindow, SettingsWindowInput};
 use taigi_desktop_core::settings::{keys, SettingChoice, SettingsPane};
 use taigi_desktop_storage::{LiveSettings, SettingsFileStore};
 use tempfile::TempDir;
-use windows_reactor::{Pump, RecordingRuntime, View};
+use windows_reactor::{
+    Command, EventId, EventPayload, NodeId, PropertyId, PropertyValue, Pump, QueuedEvent,
+    RecordingRuntime, SelectionChange, SlotId, View,
+};
 
 /// Far enough ahead that `update_schedule::is_due` says no: a writable
 /// launch runs the overdue update check in `create`, and a test must not
@@ -109,5 +114,98 @@ fn every_pane_plans_writable_and_read_only() {
                 pane.raw()
             );
         }
+    }
+}
+
+/// Every sidebar switch must APPLY, not just plan: the launch tests above
+/// mount one pane, and a defect that lives in the diff between two panes
+/// never shows there. Shortcuts ⇄ Dictionary Sources aborted the window on
+/// a real `InsertChild` E_BOUNDS (2026-10-08) because the page slot was
+/// unkeyed — `RecordingRuntime` bounds-checks child inserts the way XAML
+/// does, so the same switch fails here.
+#[test]
+fn every_sidebar_switch_applies() {
+    let directory = stamped_directory();
+    let mut failures = Vec::new();
+    for from in SettingsPane::SIDEBAR {
+        for to in SettingsPane::SIDEBAR {
+            if from == to {
+                continue;
+            }
+            let mut pump = planned(&directory, from, false).expect("the pane plans");
+            let navigation = switch_pane(&mut pump, to);
+            let header_before = header_text(&pump, navigation);
+            let events = pump.dispatch_events();
+            let turns = pump.dispatch_components(16);
+            // A switch the window ignored would apply nothing and pass; the
+            // header title is what changes with the pane.
+            let is_switched = header_text(&pump, navigation) != header_before;
+            if events.is_err() || turns.is_err() || pump.poisoned() || !is_switched {
+                failures.push(format!(
+                    "{} -> {}: {events:?} {turns:?} switched={is_switched}",
+                    from.raw(),
+                    to.raw()
+                ));
+            }
+        }
+    }
+    assert!(
+        failures.is_empty(),
+        "pane switches that fail:\n{}",
+        failures.join("\n")
+    );
+}
+
+/// Queues the sidebar selection a click on `to` delivers; returns the
+/// NavigationView.
+fn switch_pane(pump: &mut Pump<RecordingRuntime>, to: SettingsPane) -> NodeId {
+    let navigation = pump
+        .runtime()
+        .commands()
+        .iter()
+        .flatten()
+        .find_map(|command| match command {
+            // `MountedKind` is private to reactor; its Debug name is the
+            // only handle on the kind a test has.
+            Command::Create { node, kind } if format!("{kind:?}") == "NavigationView" => {
+                Some(*node)
+            }
+            _ => None,
+        })
+        .expect("the window mounts a NavigationView");
+    let revision = pump
+        .event_revision(navigation, EventId::NavigationViewSelectionChanged)
+        .expect("the sidebar listens for selection");
+    let items = pump
+        .runtime()
+        .node(navigation)
+        .expect("the NavigationView node")
+        .slot_children(SlotId::NavigationViewMenuItems)
+        .to_vec();
+    let position = SettingsPane::SIDEBAR
+        .iter()
+        .position(|pane| *pane == to)
+        .expect("a sidebar pane");
+    pump.queue_event(QueuedEvent::new(
+        navigation,
+        EventId::NavigationViewSelectionChanged,
+        revision,
+        EventPayload::SelectionChange(SelectionChange {
+            item: Some(items[position]),
+            tag: Some(to.raw().into()),
+        }),
+    ));
+    navigation
+}
+
+/// The title the NavigationView header shows.
+fn header_text(pump: &Pump<RecordingRuntime>, navigation: NodeId) -> Option<String> {
+    let runtime = pump.runtime();
+    let header = runtime
+        .node(navigation)?
+        .slot(SlotId::NavigationViewHeader)?;
+    match runtime.node(header)?.property(PropertyId::TextBlockText)? {
+        PropertyValue::Str(text) => Some(text.clone()),
+        _ => None,
     }
 }

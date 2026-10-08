@@ -728,6 +728,12 @@ impl Component for SettingsWindow {
         });
 
         let page = page_view(self.pane).unwrap_or(pages::general::view);
+        // Keyed by pane so a pane switch unmounts the old page and mounts the
+        // new one whole. Unkeyed, the two pages' fragments are diffed slot by
+        // slot, and a slot that changes type is inserted at an index the
+        // native StackPanel does not reach until the deferred child sync runs
+        // — `InsertChild` E_BOUNDS, which reactor turns into an abort
+        // (Shortcuts ⇄ Dictionary Sources, 2026-10-08).
         let content = ScrollViewer::new()
             .vertical_scroll_bar_visibility(ScrollBarVisibility::Auto)
             .content(
@@ -736,7 +742,7 @@ impl Component for SettingsWindow {
                     .margin(Thickness::uniform(FORM_INSET))
                     .children((
                         self.banners(&strings),
-                        page(self, &strings, context),
+                        View::keyed_fragment([(self.pane.raw(), page(self, &strings, context))]),
                         self.dialogs(&strings, context),
                     )),
             );
