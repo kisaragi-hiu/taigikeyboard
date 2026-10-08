@@ -10,6 +10,7 @@
 //! `Down` step a cell, `Left` / `Right` a page. A step past either end is
 //! refused (the highlight stays), as on the Mac.
 
+use taigi_desktop_core::candidates::CandidateIndexLabel;
 use taigi_desktop_core::keys::CandidateNavigation;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -17,6 +18,9 @@ pub struct LookupSelection {
     count: usize,
     page_size: usize,
     selected: usize,
+    /// The list begins with the §34 literal, which takes no key — as on
+    /// macOS and Windows (`CandidateIndexLabel`).
+    lead_cell_is_unkeyed: bool,
 }
 
 impl LookupSelection {
@@ -25,7 +29,15 @@ impl LookupSelection {
             count,
             page_size: page_size.max(1),
             selected: 0,
+            lead_cell_is_unkeyed: false,
         }
+    }
+
+    /// The selection for a candidate list whose first cell may be the §34
+    /// literal, which takes no key.
+    pub fn with_unkeyed_lead(mut self, lead_cell_is_unkeyed: bool) -> Self {
+        self.lead_cell_is_unkeyed = lead_cell_is_unkeyed;
+        self
     }
 
     /// The highlighted absolute index, `None` for an empty list.
@@ -43,19 +55,33 @@ impl LookupSelection {
 
     /// The absolute index the `slot`-th key on the current page addresses,
     /// `None` past the end of a short last page (the key is consumed all the
-    /// same — `SelectCandidateSlot`).
+    /// same — `SelectCandidateSlot`). On a page that begins with the unkeyed
+    /// literal the keys start at its second cell, and the last key has no
+    /// cell.
     pub fn candidate_index_for_key_slot(&self, slot: usize) -> Option<usize> {
-        if slot >= self.page_size {
-            return None;
-        }
-        let index = self.current_page() * self.page_size + slot;
-        (index < self.count).then_some(index)
+        CandidateIndexLabel::candidate_index_for_key_slot(
+            slot,
+            self.lead_cell_is_unkeyed,
+            |position| self.candidate_index_on_page(position),
+        )
+    }
+
+    /// How many cells at the start of the current page take no key: 1 on the
+    /// page that begins with the unkeyed literal, else 0.
+    pub fn key_slot_shift(&self) -> usize {
+        CandidateIndexLabel::key_slot_shift(self.lead_cell_is_unkeyed, |position| {
+            self.candidate_index_on_page(position)
+        })
     }
 
     /// The absolute index of the `position`-th cell on the current page —
     /// what the panel reports for a click.
     pub fn candidate_index_on_page(&self, position: usize) -> Option<usize> {
-        self.candidate_index_for_key_slot(position)
+        if position >= self.page_size {
+            return None;
+        }
+        let index = self.current_page() * self.page_size + position;
+        (index < self.count).then_some(index)
     }
 
     pub fn select(&mut self, index: usize) {
@@ -170,6 +196,27 @@ mod tests {
         assert_eq!(selection.candidate_index_for_key_slot(1), Some(10));
         assert_eq!(selection.candidate_index_for_key_slot(2), None);
         assert_eq!(selection.candidate_index_for_key_slot(9), None);
+    }
+
+    #[test]
+    fn an_unkeyed_lead_moves_the_keys_on_its_page_only() {
+        // trace: 20 cells, 9 per page, cell 0 = the §34 literal. Page 0:
+        // keys 0..7 → cells 1..8, key 8 → none; page 1 starts at cell 9, so
+        // nothing shifts there. A click still reaches the literal.
+        let mut selection = LookupSelection::new(20, 9).with_unkeyed_lead(true);
+        assert_eq!(selection.key_slot_shift(), 1);
+        assert_eq!(selection.candidate_index_for_key_slot(0), Some(1));
+        assert_eq!(selection.candidate_index_for_key_slot(7), Some(8));
+        assert_eq!(selection.candidate_index_for_key_slot(8), None);
+        assert_eq!(selection.candidate_index_on_page(0), Some(0));
+        selection.select(9);
+        assert_eq!(selection.key_slot_shift(), 0);
+        assert_eq!(selection.candidate_index_for_key_slot(0), Some(9));
+        assert_eq!(selection.candidate_index_for_key_slot(8), Some(17));
+        // A literal-only list: no key picks anything.
+        let only = LookupSelection::new(1, 9).with_unkeyed_lead(true);
+        assert_eq!(only.candidate_index_for_key_slot(0), None);
+        assert_eq!(only.candidate_index_on_page(0), Some(0));
     }
 
     #[test]

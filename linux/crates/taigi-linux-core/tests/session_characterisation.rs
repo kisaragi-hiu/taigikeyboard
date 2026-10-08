@@ -143,9 +143,10 @@ fn typing_shows_the_preedit_and_a_labelled_list_led_by_the_literal() {
     let mut session = Session::new(false, false);
     let table = session.type_word("ho");
     // trace: cell 0 is the literal roman; the first hanji cell is 好 hó; the
-    // Standard slot keys label the page, vertical, cursor on the literal.
+    // literal takes no key (§34, as on macOS / Windows), so the Standard slot
+    // keys label the page from cell 1; vertical, cursor on the literal.
     assert_eq!(&table.candidates[..2], ["ho", "好 hó"]);
-    assert_eq!(table.labels, ["q", "w", "d", "f", "z", "x", "v", "y", ";"]);
+    assert_eq!(table.labels, ["", "q", "w", "d", "f", "z", "x", "v", "y"]);
     assert_eq!((table.cursor, table.cursor_visible), (0, true));
     assert_eq!((table.page_size, table.vertical), (9, true));
 }
@@ -156,8 +157,9 @@ fn a_slot_key_commits_its_cell_and_closes_the_list() {
     for is_auto_space_enabled in [false, true] {
         let mut session = Session::new(is_auto_space_enabled, true);
         session.type_word("ho");
+        // The first slot key picks the first dictionary cell, not the literal.
         assert_eq!(
-            session.press('w' as u32),
+            session.press('q' as u32),
             [Emit::ClearPreedit, commit("好"), Emit::HideLookupTable],
             "auto_space={is_auto_space_enabled}: a Hanji commit takes no space"
         );

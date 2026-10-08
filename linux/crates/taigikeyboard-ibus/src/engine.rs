@@ -156,17 +156,7 @@ impl Engine {
 }
 
 fn table_value(content: &LookupTableContent) -> Value<'static> {
-    // A table with no labels (the Telex guide): the panel fills an empty
-    // label list — and empty strings — with its own `1…9, 0` (GNOME 46
-    // `ibusCandidatePopup.js` `setCandidates`), so a label-less table
-    // sends one space per page position instead.
-    let blank_labels: Vec<String>;
-    let labels = if content.labels.is_empty() {
-        blank_labels = vec![" ".to_owned(); content.page_size as usize];
-        &blank_labels
-    } else {
-        &content.labels
-    };
+    let labels = panel_labels(content);
     LookupTable {
         page_size: content.page_size,
         cursor_pos: content.cursor,
@@ -178,7 +168,7 @@ fn table_value(content: &LookupTableContent) -> Value<'static> {
             Orientation::Horizontal
         },
         candidates: &content.candidates,
-        labels,
+        labels: &labels,
     }
     .to_value()
 }
@@ -237,6 +227,22 @@ fn menu_values(runtime: &Runtime) -> MenuValues {
     }
     .to_value();
     MenuValues { root, rows }
+}
+
+/// The labels as the panel must receive them. It fills an empty label list —
+/// and each empty string — with its own `1…9, 0` (GNOME 46
+/// `ibusCandidatePopup.js` `setCandidates`), so a label-less table (the
+/// Telex guide) sends one space per page position, and a blank label (the
+/// unkeyed §34 literal) a space.
+fn panel_labels(content: &LookupTableContent) -> Vec<String> {
+    if content.labels.is_empty() {
+        return vec![" ".to_owned(); content.page_size as usize];
+    }
+    content
+        .labels
+        .iter()
+        .map(|label| if label.is_empty() { " " } else { label }.to_owned())
+        .collect()
 }
 
 fn empty_table_value() -> Value<'static> {
@@ -510,5 +516,30 @@ impl Service {
                 })
             })
             .ok();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn table(labels: &[&str]) -> LookupTableContent {
+        LookupTableContent {
+            candidates: Vec::new(),
+            labels: labels.iter().map(|label| (*label).to_owned()).collect(),
+            cursor: 0,
+            cursor_visible: true,
+            page_size: 3,
+            vertical: false,
+        }
+    }
+
+    #[test]
+    fn a_blank_label_reaches_the_panel_as_a_space() {
+        // The unkeyed §34 literal: GNOME would number an empty string.
+        assert_eq!(panel_labels(&table(&["", "q", "w"])), [" ", "q", "w"]);
+        // The Telex guide: no labels at all, one space per page position.
+        assert_eq!(panel_labels(&table(&[])), [" ", " ", " "]);
+        assert_eq!(panel_labels(&table(&["q", "w", "d"])), ["q", "w", "d"]);
     }
 }
