@@ -47,7 +47,7 @@ final class ShortcutActionsTests: XCTestCase {
             labels(),
             [
                 "切換台羅/白話字", "切換方音符號", "切換漢字/羅馬字", "切換候選詞顯示", "拍開符號選單", "拍開 Telex 說明",
-                "拍開方音符號齒盤", "拍開設定選單",
+                "顯示方音符號小齒盤", "拍開設定選單",
             ],
         )
         XCTAssertEqual(
@@ -59,7 +59,7 @@ final class ShortcutActionsTests: XCTestCase {
                 "候補の表示を切り替え",
                 "記号メニューを開く",
                 "Telex の説明を開く",
-                "方音符号キーボードを開く",
+                "方音符号ミニキーボードを表示",
                 "設定メニューを開く",
             ],
         )

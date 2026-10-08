@@ -136,7 +136,7 @@ mod tests {
                 row("切換台羅/白話字", Some("Ctrl+Alt+C")),
                 row("切換方音符號", Some("Ctrl+Alt+P")),
                 row("切換候選詞顯示", Some("Ctrl+Alt+H")),
-                row("拍開方音符號齒盤", Some("Ctrl+Alt+J")),
+                row("顯示方音符號小齒盤", Some("Ctrl+Alt+J")),
                 None,
                 row("台語齒盤設定", Some("Ctrl+Alt+S")),
                 None,

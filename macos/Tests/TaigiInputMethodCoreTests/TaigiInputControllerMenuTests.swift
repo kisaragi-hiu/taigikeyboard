@@ -82,7 +82,7 @@ final class TaigiInputControllerMenuTests: XCTestCase {
         // The literal oracle for this surface: the copy is the authored Hanji.
         XCTAssertEqual(
             items.map(\.title),
-            ["切換台羅/白話字", "切換方音符號", "切換候選詞顯示", "拍開方音符號齒盤", "", "台語齒盤設定", "", "檢查更新", "關於齒盤"],
+            ["切換台羅/白話字", "切換方音符號", "切換候選詞顯示", "顯示方音符號小齒盤", "", "台語齒盤設定", "", "檢查更新", "關於齒盤"],
         )
         XCTAssertEqual(items.filter(\.isSeparatorItem).count, 2)
         XCTAssertFalse(try XCTUnwrap(items.first).isSeparatorItem)

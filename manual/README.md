@@ -173,7 +173,7 @@ macOS 的符號：`⌃` control、`⌥` option、`⌘` command、`⇧` shift。
 |---|---|---|
 | 切換台羅／白話字 | `⌃` `⌘` `C` | `Ctrl` `Alt` `C` |
 | 切換方音符號 | `⌃` `⌘` `P` | `Ctrl` `Alt` `P` |
-| 拍開方音符號齒盤 | `⌃` `⌘` `J` | `Ctrl` `Alt` `J` |
+| 顯示方音符號小齒盤 | `⌃` `⌘` `J` | `Ctrl` `Alt` `J` |
 
 ![白話字：拍 peh8oe7ji7](shots/mode-poj.png)
 
@@ -207,7 +207,7 @@ macOS 的符號：`⌃` control、`⌥` option、`⌘` command、`⇧` shift。
 | 切換方音符號 | `⌃` `⌘` `P` | `Ctrl` `Alt` `P` |
 | 拍開符號選單 | `⌃` `⌘` `,` | `Ctrl` `Alt` `,` |
 | 拍開 Telex 說明 | `⌃` `⌘` `/` | `Ctrl` `Alt` `/` |
-| 拍開方音符號齒盤 | `⌃` `⌘` `J` | `Ctrl` `Alt` `J` |
+| 顯示方音符號小齒盤 | `⌃` `⌘` `J` | `Ctrl` `Alt` `J` |
 | 拍開設定選單 | `⌃` `⌘` `S` | `Ctrl` `Alt` `S` |
 
 ### 改做家己的齒
