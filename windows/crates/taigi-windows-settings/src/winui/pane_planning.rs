@@ -18,7 +18,10 @@ use super::window::{SettingsWindow, SettingsWindowInput};
 use taigi_desktop_core::settings::{keys, SettingChoice, SettingsPane};
 use taigi_desktop_storage::{LiveSettings, SettingsFileStore};
 use tempfile::TempDir;
-use windows_reactor::{Pump, RecordingRuntime, View};
+use windows_reactor::{
+    Command, EventId, EventPayload, Pump, QueuedEvent, RecordingRuntime, SelectionChange, SlotId,
+    View,
+};
 
 /// Far enough ahead that `update_schedule::is_due` says no: a writable
 /// launch runs the overdue update check in `create`, and a test must not
@@ -110,4 +113,77 @@ fn every_pane_plans_writable_and_read_only() {
             );
         }
     }
+}
+
+/// Every sidebar switch must APPLY, not just plan: the launch tests above
+/// mount one pane, and a defect that lives in the diff between two panes
+/// never shows there. Shortcuts ⇄ Dictionary Sources aborted the window on
+/// a real `InsertChild` E_BOUNDS (2026-10-08) because the page slot was
+/// unkeyed — `RecordingRuntime` bounds-checks child inserts the way XAML
+/// does, so the same switch fails here.
+#[test]
+fn every_sidebar_switch_applies() {
+    let directory = stamped_directory();
+    let mut failures = Vec::new();
+    for from in SettingsPane::SIDEBAR {
+        for to in SettingsPane::SIDEBAR {
+            if from == to {
+                continue;
+            }
+            let mut pump = planned(&directory, from, false).expect("the pane plans");
+            switch_pane(&mut pump, to);
+            let events = pump.dispatch_events();
+            let turns = pump.dispatch_components(16);
+            if events.is_err() || turns.is_err() || pump.poisoned() {
+                failures.push(format!(
+                    "{} -> {}: {events:?} {turns:?}",
+                    from.raw(),
+                    to.raw()
+                ));
+            }
+        }
+    }
+    assert!(
+        failures.is_empty(),
+        "pane switches that fail:\n{}",
+        failures.join("\n")
+    );
+}
+
+/// Queues the sidebar selection a click on `to` delivers.
+fn switch_pane(pump: &mut Pump<RecordingRuntime>, to: SettingsPane) {
+    let navigation = pump
+        .runtime()
+        .commands()
+        .iter()
+        .flatten()
+        .find_map(|command| match command {
+            Command::Create { node, kind } if format!("{kind:?}") == "NavigationView" => {
+                Some(*node)
+            }
+            _ => None,
+        })
+        .expect("the window mounts a NavigationView");
+    let revision = pump
+        .event_revision(navigation, EventId::NavigationViewSelectionChanged)
+        .expect("the sidebar listens for selection");
+    let items = pump
+        .runtime()
+        .node(navigation)
+        .expect("the NavigationView node")
+        .slot_children(SlotId::NavigationViewMenuItems)
+        .to_vec();
+    let position = SettingsPane::SIDEBAR
+        .iter()
+        .position(|pane| *pane == to)
+        .expect("a sidebar pane");
+    pump.queue_event(QueuedEvent::new(
+        navigation,
+        EventId::NavigationViewSelectionChanged,
+        revision,
+        EventPayload::SelectionChange(SelectionChange {
+            item: Some(items[position]),
+            tag: Some(to.raw().into()),
+        }),
+    ));
 }
