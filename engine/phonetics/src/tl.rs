@@ -27,7 +27,7 @@ pub fn apply_tl_tone_literal(syllable: &str, tone: &str) -> String {
 
 /// Vowel priority for TL: `a > oo > ere > e > o > ui→i > iu→u > iri > i > u > ng > m`.
 /// Mirrors `placeTlToneMark` in `tl.js`.
-fn place_tl_tone_mark(final_str: &str, mark: &str) -> String {
+pub(crate) fn place_tl_tone_mark(final_str: &str, mark: &str) -> String {
     if mark.is_empty() {
         return final_str.to_string();
     }
