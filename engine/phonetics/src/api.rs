@@ -168,17 +168,57 @@ fn convert_nasal_double_n(input: &str) -> String {
 }
 
 /// Full normalize-tone chain: parse mode → POJ doubletap preprocessing →
-/// tone-mark application → nasal-marker case adjustment. `composing::derived`
+/// permissive tone-mark application → nasal-marker case adjustment. `composing::derived`
 /// calls this directly. Plan §3.2a.
 ///
-/// The last step is [`apply_nasal_marker_case`] — a rewrite, not a skip:
-/// `to_tone_marks` → `convert_syllable` → `match_case` already writes `ᴺ`
-/// after a capital.
+/// The last step is [`apply_nasal_marker_case`], which adjusts the nasal
+/// marker after preserving the user's typed case during tone placement.
 pub fn normalize_tone(input: &str, config: &AppConfig) -> String {
+    let mode = composing_mode(config);
+    let preprocessed = preprocess_for_normalize_tone(input, mode, config);
+    let tone_marked = if renders_roman_tones(config, mode) {
+        crate::permissive_tone::apply(&preprocessed, mode)
+    } else {
+        to_tone_marks(&preprocessed, mode)
+    };
+    apply_nasal_marker_case(&tone_marked, config.force_lowercase_nasal_marker).into_owned()
+}
+
+/// Stable text component of a literal candidate's learning identity.
+///
+/// Keep the pre-permissive normalization contract for stored keys: in
+/// particular, internal tone digits and explicit tones 1/4 remain present.
+/// Rendering can hide those boundaries (`a1i1` and `ai1` both show `ai`),
+/// but frequency and association learning must still distinguish them and
+/// reuse existing records. This is an identity transform, not display text.
+pub fn literal_learning_text(input: &str, config: &AppConfig) -> String {
     let mode = composing_mode(config);
     let preprocessed = preprocess_for_normalize_tone(input, mode, config);
     let tone_marked = to_tone_marks(&preprocessed, mode);
     apply_nasal_marker_case(&tone_marked, config.force_lowercase_nasal_marker).into_owned()
+}
+
+fn renders_roman_tones(config: &AppConfig, mode: InputMode) -> bool {
+    !config.is_tps_layout() && matches!(mode, InputMode::Tl | InputMode::Poj)
+}
+
+/// Raw byte offsets of tone digits consumed by permissive normalization.
+/// Caret projection uses the renderer's decisions rather than matching a
+/// hidden tone digit to an identical digit that remains visible (`a22` → `á2`).
+pub fn consumed_tone_digit_offsets(input: &str, config: &AppConfig) -> Vec<usize> {
+    let mode = composing_mode(config);
+    if !renders_roman_tones(config, mode) {
+        return Vec::new();
+    }
+    let preprocessed = preprocess_for_normalize_tone(input, mode, config);
+    // POJ preprocessing folds letters only: digit order is preserved, while
+    // their byte offsets can change. Project each decision back to raw input.
+    input
+        .char_indices()
+        .filter(|&(_, ch)| matches!(ch, '1'..='9'))
+        .zip(crate::permissive_tone::consumed_digits(&preprocessed, mode))
+        .filter_map(|((offset, _), consumed)| consumed.then_some(offset))
+        .collect()
 }
 
 /// `true` if the text contains TPS (Taiwanese Phonetic Symbols / Zhuyin)

@@ -407,7 +407,8 @@ fn phase_preedit(phase: &Phase, config: &AppConfig) -> Preedit {
     };
     let (display, tail_start) = join_nailed_prefix_and_tail(nailed, &tail, config);
     let (prefix, tail) = display.split_at(tail_start);
-    let caret_in_tail = converted_caret.unwrap_or_else(|| display_caret_utf16(raw, tail, *caret));
+    let caret_in_tail =
+        converted_caret.unwrap_or_else(|| display_caret_utf16(raw, tail, *caret, config));
     let caret_utf16 = prefix.encode_utf16().count() + caret_in_tail;
     Preedit {
         raw_input: raw.clone(),

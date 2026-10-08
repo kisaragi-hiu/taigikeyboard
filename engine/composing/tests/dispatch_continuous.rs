@@ -25,6 +25,80 @@ use protos::engine::{CommitContinuous, FetchAtPos};
 
 use crate::common::{config_tl, req};
 
+#[test]
+fn permissive_tones_keep_preview_candidate_and_all_commits_identical() {
+    use protos::engine::{effect::Kind, AppConfig, Start};
+    for mode in ["tl", "poj"] {
+        for (raw, expected) in [
+            ("tai5gi2", "tâigí"),
+            ("tai1", "tai"),
+            ("bak4", "bak"),
+            ("tai1bak4", "taibak"),
+        ] {
+            let config = AppConfig {
+                input_mode: mode.into(),
+                ..config_tl()
+            };
+            for method in [
+                Method::CommitAsTyped(protos::engine::CommitAsTyped {}),
+                Method::CommitAsShown(protos::engine::CommitAsShown {}),
+            ] {
+                let mut engine = Engine::new();
+                let preview = requests::handle(
+                    &req(Method::Start(Start { text: raw.into() })),
+                    &mut engine,
+                    &config,
+                )
+                .unwrap();
+                assert_eq!(preview.preedit.unwrap().display_text, expected);
+                let fetched = requests::handle(
+                    &req(Method::FetchAtPos(FetchAtPos::default())),
+                    &mut engine,
+                    &config,
+                )
+                .unwrap();
+                let candidate = &fetched.continuous.unwrap().candidates[0];
+                assert_eq!(candidate.roman, expected);
+                let commit = requests::handle(&req(method), &mut engine, &config).unwrap();
+                assert!(commit.effect.iter().any(|effect| matches!(
+                    &effect.kind,
+                    Some(Kind::CommitTextReplacingPreedit(text)) if text.text == expected
+                )));
+            }
+            let mut engine = Engine::new();
+            requests::handle(
+                &req(Method::Start(Start { text: raw.into() })),
+                &mut engine,
+                &config,
+            )
+            .unwrap();
+            let fetched = requests::handle(
+                &req(Method::FetchAtPos(FetchAtPos::default())),
+                &mut engine,
+                &config,
+            )
+            .unwrap();
+            let candidate = &fetched.continuous.unwrap().candidates[0];
+            let commit = requests::handle(
+                &req(Method::CommitContinuous(CommitContinuous {
+                    canonical_text: candidate.display_text.clone(),
+                    association_tl: candidate.canonical_tl.clone(),
+                    consumed_bytes: raw.len() as u32,
+                    syllable_count: candidate.syllable_count,
+                    script: CommitScript::Roman as i32,
+                    roman: candidate.roman.clone(),
+                    ..Default::default()
+                })),
+                &mut engine,
+                &config,
+            )
+            .unwrap();
+            assert_eq!(commit.commit.unwrap().document_text, expected);
+            assert!(!commit.is_composing);
+        }
+    }
+}
+
 // ---- Decode tests --------------------------------------------------------
 
 #[test]
