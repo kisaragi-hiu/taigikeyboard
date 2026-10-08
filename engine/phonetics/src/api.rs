@@ -242,6 +242,69 @@ pub fn to_tone_marks(input: &str, mode: InputMode) -> String {
         .join("-")
 }
 
+/// A custom-dictionary roman as it is stored: each hyphen- or space-separated
+/// token that is ONE syllable closed by a tone digit takes the tone mark the
+/// digit names — `tsui2-ong5-tshut` → `tsuí-ông-tshut`, `tshut4` → `tshut`
+/// (tones 1 / 4 carry no mark). The letters, their case and the nasal / `o͘`
+/// encodings stay as written; only the digit becomes a mark, placed by the
+/// token's own spelling (POJ placement when the token is POJ-spelled, TL
+/// otherwise — an ambiguous `kui2` is TL `kuí`). Everything else is kept
+/// verbatim: a token already marked, a fused run (`tsui2ong5tshut` — splitting
+/// it would invent syllable boundaries the user did not write), a non-syllable,
+/// and a TPS roman. Output is NFC.
+pub fn tone_digits_to_marks(roman: &str) -> String {
+    let roman: String = roman.nfc().collect();
+    if is_zhuyin(&roman) || !roman.bytes().any(|byte| matches!(byte, b'1'..=b'9')) {
+        return roman;
+    }
+    let mut out = String::with_capacity(roman.len());
+    let mut token = String::new();
+    for ch in roman.chars() {
+        if ch == '-' || ch == ' ' {
+            out.push_str(&token_with_tone_mark(&token));
+            out.push(ch);
+            token.clear();
+        } else {
+            token.push(ch);
+        }
+    }
+    out.push_str(&token_with_tone_mark(&token));
+    out
+}
+
+fn token_with_tone_mark(token: &str) -> String {
+    let Some(base) = token.strip_suffix(|ch: char| matches!(ch, '1'..='9')) else {
+        return token.to_string();
+    };
+    let is_one_unmarked_syllable = !base.chars().any(|ch| ch.is_ascii_digit())
+        && !base.nfd().any(crate::normalization::is_combining_tone_mark)
+        && crate::syllable::is_valid_syllable(base);
+    if !is_one_unmarked_syllable {
+        return token.to_string();
+    }
+    let mode = if is_poj_spelled(base) {
+        InputMode::Poj
+    } else {
+        InputMode::Tl
+    };
+    crate::permissive_tone::apply(token, mode)
+}
+
+/// Spelling only POJ writes (`docs/phonetics/taigi-phonetics-reference.md`
+/// § TL vs POJ): the `ch` initials, the `oa` / `oe` vowel pairs (TL `ua` /
+/// `ue`), the `ek` final (TL `ik`), and the `o͘` / `ⁿ` encodings. `eng` is not
+/// evidence — TL writes it as a special final.
+fn is_poj_spelled(syllable: &str) -> bool {
+    let lowered = syllable.to_lowercase();
+    lowered.starts_with("ch")
+        || lowered.contains("oa")
+        || lowered.contains("oe")
+        || lowered.ends_with("ek")
+        || lowered.contains('\u{0358}')
+        || lowered.contains('\u{207F}')
+        || lowered.contains('\u{1D3A}')
+}
+
 fn convert_syllable(syllable: &str, mode: InputMode) -> String {
     if syllable.is_empty() {
         return String::new();
@@ -927,6 +990,70 @@ mod tests {
             toneless_reading_key("oo")
         );
         assert_eq!(toneless_reading_key("kiaⁿ"), toneless_reading_key("kiann"));
+    }
+
+    #[test]
+    fn tone_digits_to_marks_marks_each_syllable_closed_by_a_digit() {
+        // trace: each token = one valid syllable + one digit → the TL rules
+        // (`place_tl_tone_mark`) unless the token is POJ-spelled; tones 1/4
+        // carry no mark, so their digit just goes.
+        let cases = [
+            ("tsui2-ong5-tshut", "tsuí-ông-tshut"),
+            ("tsui1-tshut4", "tsui-tshut"),
+            ("ia7 si7", "iā sī"),
+            ("tai5-gi2", "tâi-gí"),
+            ("teng2", "téng"),
+            // `ui` is spelled the same in TL and POJ: TL placement.
+            ("kui2", "kuí"),
+            // POJ-spelled → POJ placement: `ch` initial, open `oa`, `oa` + coda.
+            ("chui2", "chúi"),
+            ("goa2", "góa"),
+            ("hoat8", "hoa\u{30d}t"),
+            ("sin1-o\u{358}2", "sin-ó\u{358}"),
+            ("si\u{207f}2", "sí\u{207f}"),
+            ("Chhoa7", "Chhōa"),
+            // Tone 9 is the one mark the systems spell apart: TL double
+            // acute, POJ breve (`pek` is POJ-spelled, TL `pik`).
+            ("tsa9", "tsa\u{30b}"),
+            ("pek9", "p\u{115}k"),
+            // TL letters stay TL: `oo`, `nn`, the dialectal `iri`, syllabic
+            // nasals.
+            ("oo2", "óo"),
+            ("ann2", "ánn"),
+            ("iri5", "irî"),
+            ("ng7", "n\u{304}g"),
+            ("m7", "m\u{304}"),
+            ("hm7", "hm\u{304}"),
+            // The letters' case stays.
+            ("Tai5-gi2", "Tâi-gí"),
+            ("TAI5", "T\u{c2}I"),
+        ];
+        for (roman, stored) in cases {
+            assert_eq!(tone_digits_to_marks(roman), stored, "{roman}");
+            assert_eq!(tone_digits_to_marks(stored), stored, "{stored} is stable");
+        }
+    }
+
+    #[test]
+    fn tone_digits_to_marks_keeps_what_is_not_one_digit_closed_syllable() {
+        for roman in [
+            // Fused run: no boundary the user wrote.
+            "tsui2ong5tshut",
+            // Already marked: the digit is not a second tone.
+            "tsuí2",
+            // Not a syllable / a number.
+            "xyz2",
+            "covid19",
+            "win10",
+            "mp3",
+            // No digit, TPS.
+            "tâi-gí",
+            "ㄊㄞˊ",
+        ] {
+            assert_eq!(tone_digits_to_marks(roman), roman, "{roman}");
+        }
+        // NFC whatever else happens.
+        assert_eq!(tone_digits_to_marks("li\u{301}"), "l\u{ed}");
     }
 }
 

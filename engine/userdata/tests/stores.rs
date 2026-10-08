@@ -1086,9 +1086,9 @@ fn two_processes_repairing_one_file_leave_it_normalised_once() {
 
 #[test]
 fn the_search_keys_of_a_roman_do_not_depend_on_its_unicode_form() {
-    // Why the launch repair rewrites only `roman`: the keys an NFD row was
-    // stored under are the keys of its NFC form. If this ever fails, the
-    // repair has to re-derive them.
+    // The keys an NFD row was stored under are the keys of its NFC form, so
+    // a row written by a build before the NFC boundary stays findable until
+    // the launch repair re-derives them.
     use unicode_normalization::UnicodeNormalization;
     for roman in [
         "lí",
@@ -1116,6 +1116,105 @@ fn the_search_keys_of_a_roman_do_not_depend_on_its_unicode_form() {
         assert!(keys(&nfc).is_some(), "{roman} derives keys");
         assert_eq!(keys(&nfd), keys(&nfc), "{roman}");
     }
+}
+
+// A roman saved with tone digits (`tsui2-ong5-tshut`) is stored with the
+// marks the digits name: the candidate window shows the stored roman
+// (2026-10-08 Linux sim: the digits reached the screen while the learning
+// record held `tsuí-ông-tshut`).
+
+#[test]
+fn every_write_path_stores_tone_digits_as_marks() {
+    // trace: tone_digits_to_marks — `tsui`+2 → TL `ui` marks `i` (`tsuí`),
+    // `ong`+5 → `ông`, `tshut` has no digit; `goa`+2 is POJ-spelled (`oa`),
+    // open syllable → mark on `o` (`góa`).
+    let directory = scratch();
+    let store = custom_store(
+        &directory,
+        Arc::new(derive_custom_search_keys),
+        CustomDictionaryStore::MAX_ENTRIES,
+    );
+    let upserted = CustomDictionaryRow::new("tsui2-ong5-tshut", "水旺出");
+    store.upsert(&upserted).unwrap();
+    assert_eq!(stored_row(&store, &upserted.id).roman, "tsuí-ông-tshut");
+
+    let added = CustomDictionaryRow::new("goa2", "我");
+    store.add_unless_stored(&added).unwrap();
+    assert_eq!(stored_row(&store, &added.id).roman, "góa");
+
+    // In one file, the digit and the marked spelling of one word are one row.
+    let result = store
+        .batch_import(&[
+            CustomDictionaryRow::new("tai5-gi2", "台語"),
+            CustomDictionaryRow::new("tâi-gí", "台語"),
+        ])
+        .unwrap();
+    assert_eq!((result.imported, result.skipped), (1, 1));
+    assert_eq!(store.count().unwrap(), 3);
+}
+
+#[test]
+fn the_list_filter_finds_a_marked_word_typed_with_digits() {
+    let directory = scratch();
+    let store = custom_store(
+        &directory,
+        stub_deriver(""),
+        CustomDictionaryStore::MAX_ENTRIES,
+    );
+    store
+        .upsert(&CustomDictionaryRow::new("tsuí-ông-tshut", "水旺出"))
+        .unwrap();
+    for filter in ["tsui2", "tsuí", "ong5-tshut"] {
+        assert_eq!(store.count_matching(filter).unwrap(), 1, "{filter:?}");
+    }
+}
+
+#[test]
+fn a_launch_rewrites_stored_tone_digit_romans_and_rederives_their_keys() {
+    let directory = scratch();
+    let stores = UserDataStores::new(directory.path().to_path_buf());
+    stores.custom_dictionary.open_blocking();
+    drop(stores);
+    insert_raw_row(&directory, "A", "tsui2-ong5-tshut", "水旺出");
+    // A fused digit run is kept as written: splitting it would invent
+    // syllable boundaries.
+    insert_raw_row(&directory, "B", "tsui2ong5tshut", "水旺出");
+    let store = custom_store(
+        &directory,
+        Arc::new(derive_custom_search_keys),
+        CustomDictionaryStore::MAX_ENTRIES,
+    );
+    store.finish_takeover();
+
+    let a = stored_row(&store, "A");
+    assert_eq!(a.roman, "tsuí-ông-tshut");
+    assert_eq!(
+        (a.created_at.as_str(), a.updated_at.as_str()),
+        ("2026-08-26 07:28:12", "2026-08-26 07:28:12"),
+        "a repair is not an edit"
+    );
+    assert_eq!(stored_row(&store, "B").roman, "tsui2ong5tshut");
+    // A's keys are the marked roman's, as a fresh save would store them.
+    let connection =
+        rusqlite::Connection::open(directory.path().join("custom_dictionary.db")).unwrap();
+    let mut statement = connection
+        .prepare(
+            "SELECT family, form, key FROM custom_search_key WHERE entry_id = 'A' ORDER BY family, form, key;",
+        )
+        .unwrap();
+    let stored_keys: Vec<(String, String, String)> = statement
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))
+        .unwrap()
+        .collect::<rusqlite::Result<_>>()
+        .unwrap();
+    let mut fresh_keys: Vec<(String, String, String)> = derive_custom_search_keys("tsuí-ông-tshut")
+        .expect("keys")
+        .into_iter()
+        .map(|key| (key.family.to_string(), key.form.to_string(), key.key))
+        .collect();
+    fresh_keys.sort();
+    fresh_keys.dedup();
+    assert_eq!(stored_keys, fresh_keys);
 }
 
 #[test]
