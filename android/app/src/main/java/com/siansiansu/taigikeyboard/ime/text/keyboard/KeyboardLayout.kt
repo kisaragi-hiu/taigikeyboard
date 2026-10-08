@@ -1,6 +1,6 @@
-// Main keyboard body Composable. A custom Layout block reproduces the legacy FlexboxLayout
-// behavior (width multipliers, flex-shrink, SPACE flex-grow); touch dispatch goes through
-// pointerInteropFilter -> KeyTouchCoordinator to match legacy KeyboardView.onTouchEvent 1:1.
+// Main keyboard body Composable. A custom Layout block places keys row by row (solver widths,
+// flex-shrink, flex-grow); touch dispatch goes through pointerInteropFilter ->
+// KeyTouchCoordinator to match legacy KeyboardView.onTouchEvent 1:1.
 
 package com.siansiansu.taigikeyboard.ime.text.keyboard
 
@@ -21,9 +21,7 @@ import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.unit.dp
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.popup.PopupHost
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
@@ -36,9 +34,9 @@ import com.siansiansu.taigikeyboard.ime.theme.getColorFromAttr
 /**
  * Top-level keyboard body Composable. Consumes [KeyboardLayoutData] (P2) +
  * [KeyDimensions] (P2 solver output) and lays out one [KeyContent] per key
- * via a custom [Layout] block that mirrors the legacy FlexboxLayout behavior:
- * per-mode width multipliers, flex-shrink (fit overflowing rows), flex-grow
- * (SPACE absorbs slack).
+ * via a custom [Layout] block: per-key widths from [KeyboardLayoutSolver.keyWidth],
+ * flex-shrink (fit overflowing rows), flex-grow (SPACE / number-pad keys absorb slack).
+ * Rows have no side padding: like iOS, the outermost keys keep only their own margin.
  *
  * Touch dispatch is wired through `Modifier.pointerInteropFilter` into a
  * caller-supplied [KeyTouchCoordinator] so multi-pointer + popup hand-off
@@ -57,11 +55,6 @@ fun KeyboardLayout(
     modifier: Modifier = Modifier,
     isPreview: Boolean = false,
 ) {
-    val density = LocalDensity.current
-    val keyMarginH = with(density) { 2.dp.roundToPx() }
-    val keyMarginV = with(density) { 5.dp.roundToPx() }
-    val rowMarginH = keyMarginH
-
     var pressedKeyId by remember { mutableStateOf<Long?>(null) }
     if (!isPreview) {
         LaunchedEffect(coordinator) {
@@ -136,9 +129,8 @@ fun KeyboardLayout(
         },
     ) { measurables, constraints ->
         val containerWidth = constraints.maxWidth
-        val available = (containerWidth - 2 * rowMarginH).coerceAtLeast(0)
         val rowHeight = keyDimensions.desiredKeyHeight
-        val cellSlotHeight = rowHeight + 2 * keyMarginV
+        val cellSlotHeight = rowHeight + 2 * keyDimensions.keyMarginV
         val totalHeight = cellSlotHeight * visibleRows.size
 
         // Walk measurables in row-major order, slicing per row.
@@ -153,12 +145,7 @@ fun KeyboardLayout(
                 row = rowKeys,
                 rowIndex = rowIndex,
                 rowMeasurables = rowMeasurables,
-                desiredKeyWidth = keyDimensions.desiredKeyWidth,
-                desiredKeyHeight = rowHeight,
-                keyMarginH = keyMarginH,
-                keyMarginV = keyMarginV,
-                rowMarginH = rowMarginH,
-                available = available,
+                keyDimensions = keyDimensions,
                 rowTop = rowIndex * cellSlotHeight,
                 keyboardLayoutType = appearance.keyboardLayoutType,
                 mode = layoutData.mode,
@@ -196,25 +183,20 @@ private data class RowLayoutResult(
 )
 
 /**
- * Per-row flex algorithm — port of FlexboxLayout's behavior under the legacy
- * `flexShrink` / `flexGrow` rules (see `KeyView.init { layoutParams.apply { ... } }`):
+ * Per-row flex algorithm (FlexboxLayout-style):
  *
- * - sum desired widths
+ * - sum solver widths ([KeyboardLayoutSolver.keyWidth]) plus margins
  * - if overflow: shrink keys with `flexShrink == 1` proportionally
  * - if underflow: distribute slack evenly across keys with `flexGrow == 1`
- *   (in CHARACTERS mode, only SPACE has flexGrow=1)
+ *   (SPACE in letter / symbol modes, every key on a number pad); with nothing to
+ *   grow, the row is centred
  */
 @Suppress("LongParameterList")
 private fun androidx.compose.ui.layout.MeasureScope.layoutRow(
     row: List<KeyData>,
     rowIndex: Int,
     rowMeasurables: List<Measurable>,
-    desiredKeyWidth: Int,
-    desiredKeyHeight: Int,
-    keyMarginH: Int,
-    keyMarginV: Int,
-    rowMarginH: Int,
-    available: Int,
+    keyDimensions: KeyDimensions,
     rowTop: Int,
     keyboardLayoutType: String,
     mode: KeyboardMode,
@@ -223,24 +205,25 @@ private fun androidx.compose.ui.layout.MeasureScope.layoutRow(
     val n = row.size
     if (n == 0) return RowLayoutResult(emptyList(), emptyList())
 
-    val rawWidths = IntArray(n)
-    for (i in 0 until n) {
-        rawWidths[i] = desiredWidthFor(row[i], mode, desiredKeyWidth, keyboardLayoutType)
+    val keyMarginH = keyDimensions.keyMarginH
+    val keyMarginV = keyDimensions.keyMarginV
+    val rawWidths = IntArray(n) {
+        KeyboardLayoutSolver.keyWidth(row[it].code, mode, keyboardLayoutType, keyDimensions)
     }
     val cellWidthsWithMargins = IntArray(n) { rawWidths[it] + 2 * keyMarginH }
     var totalWidth = cellWidthsWithMargins.sum()
 
-    if (totalWidth > available) {
+    if (totalWidth > rootWidth) {
         val shrinkable = ArrayList<Int>(n)
         var shrinkableSum = 0
         for (i in 0 until n) {
-            if (flexShrinkFor(row[i], mode) == 1f) {
+            if (flexShrinkFor(row[i], mode, keyboardLayoutType, keyDimensions.isLandscape) == 1f) {
                 shrinkable.add(i)
                 shrinkableSum += rawWidths[i]
             }
         }
         if (shrinkable.isNotEmpty() && shrinkableSum > 0) {
-            val overflow = totalWidth - available
+            val overflow = totalWidth - rootWidth
             val ratio = overflow.toFloat() / shrinkableSum
             for (i in shrinkable) {
                 val shrink = (rawWidths[i] * ratio).toInt()
@@ -249,13 +232,13 @@ private fun androidx.compose.ui.layout.MeasureScope.layoutRow(
             }
             totalWidth = cellWidthsWithMargins.sum()
         }
-    } else if (totalWidth < available) {
+    } else if (totalWidth < rootWidth) {
         val growable = ArrayList<Int>(n)
         for (i in 0 until n) {
             if (flexGrowFor(row[i], mode) == 1f) growable.add(i)
         }
         if (growable.isNotEmpty()) {
-            val slack = available - totalWidth
+            val slack = rootWidth - totalWidth
             val perKey = slack / growable.size
             val remainder = slack - perKey * growable.size
             for ((idx, i) in growable.withIndex()) {
@@ -269,10 +252,10 @@ private fun androidx.compose.ui.layout.MeasureScope.layoutRow(
 
     val placements = ArrayList<Placement>(n)
     val bounds = ArrayList<KeyBounds>(n)
-    var xCursor = rowMarginH + (available - totalWidth).coerceAtLeast(0) / 2
+    var xCursor = (rootWidth - totalWidth).coerceAtLeast(0) / 2
     for (i in 0 until n) {
         val width = rawWidths[i]
-        val height = desiredKeyHeight
+        val height = keyDimensions.desiredKeyHeight
         val placeable = rowMeasurables[i].measure(
             Constraints.fixed(width, height),
         )
@@ -306,59 +289,17 @@ private fun androidx.compose.ui.layout.MeasureScope.layoutRow(
     return RowLayoutResult(placements, bounds)
 }
 
-/**
- * Per-key desired width — direct port of `KeyView.onMeasure` per-mode +
- * per-key width logic. Returns the key cell width in pixels (margin not
- * included).
- */
-private fun desiredWidthFor(
-    key: KeyData,
-    mode: KeyboardMode,
-    desiredKeyWidth: Int,
-    keyboardLayoutType: String,
-): Int =
-    when (mode) {
-        KeyboardMode.NUMERIC, KeyboardMode.PHONE, KeyboardMode.PHONE2 ->
-            (desiredKeyWidth * 2.68f).toInt()
-        KeyboardMode.NUMERIC_ADVANCED -> when (key.code) {
-            44, 46 -> desiredKeyWidth
-            KeyCode.VIEW_SYMBOLS, 61 -> (desiredKeyWidth * 1.34f).toInt()
-            else -> (desiredKeyWidth * 1.56f).toInt()
-        }
-        else -> when (key.code) {
-            KeyCode.SHIFT, KeyCode.VIEW_CHARACTERS, KeyCode.VIEW_SYMBOLS,
-            KeyCode.VIEW_SYMBOLS2, KeyCode.DELETE, KeyCode.ENTER,
-            ->
-                (desiredKeyWidth * 1.56f).toInt()
-            KeyCode.TRANSLATE -> {
-                val scale = when (keyboardLayoutType) {
-                    "phahTaigi", "moe1" -> 2.0f
-                    else -> 1.5f
-                }
-                (desiredKeyWidth * scale).toInt()
-            }
-            KeyCode.SPACE -> when (mode) {
-                KeyboardMode.SYMBOLS -> (desiredKeyWidth * 0.56f).toInt()
-                else -> desiredKeyWidth
-            }
-            else -> desiredKeyWidth
-        }
-    }
-
 private fun flexShrinkFor(
     key: KeyData,
     mode: KeyboardMode,
+    keyboardLayoutType: String,
+    isLandscape: Boolean,
 ): Float =
     when (mode) {
         KeyboardMode.NUMERIC, KeyboardMode.NUMERIC_ADVANCED,
         KeyboardMode.PHONE, KeyboardMode.PHONE2,
         -> 1f
-        else -> when (key.code) {
-            KeyCode.SHIFT, KeyCode.VIEW_CHARACTERS, KeyCode.VIEW_SYMBOLS,
-            KeyCode.VIEW_SYMBOLS2, KeyCode.DELETE, KeyCode.ENTER, KeyCode.TRANSLATE,
-            -> 0f
-            else -> 1f
-        }
+        else -> if (KeyboardLayoutSolver.isFixedWidth(key.code, keyboardLayoutType, isLandscape)) 0f else 1f
     }
 
 private fun flexGrowFor(
@@ -366,7 +307,8 @@ private fun flexGrowFor(
     mode: KeyboardMode,
 ): Float =
     when (mode) {
-        KeyboardMode.NUMERIC, KeyboardMode.PHONE, KeyboardMode.PHONE2 -> 0f
+        // Number pads have no SPACE: every key grows so each row still spans the full width.
+        KeyboardMode.NUMERIC, KeyboardMode.PHONE, KeyboardMode.PHONE2 -> 1f
         KeyboardMode.NUMERIC_ADVANCED -> when (key.type) {
             KeyType.NUMERIC -> 1f
             else -> 0f

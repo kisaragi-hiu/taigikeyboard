@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <dimen name="key_width">33dp</dimen>
-    <dimen name="key_height">42dp</dimen>
+    <!-- CROSS-PLATFORM INVARIANT: iOS key = KeyboardKit row 54pt x 0.87 - 9pt vertical gap = 38pt. -->
+    <dimen name="key_height">38dp</dimen>
 
-    <dimen name="key_marginH">2dp</dimen>
+    <!-- CROSS-PLATFORM INVARIANT: iOS KeyboardKit button insets (6pt / 9pt gaps between keys). -->
+    <dimen name="key_marginH">3dp</dimen>
+    <dimen name="key_marginV">4.5dp</dimen>
 
     <dimen name="key_borderRadius">6dp</dimen>
 

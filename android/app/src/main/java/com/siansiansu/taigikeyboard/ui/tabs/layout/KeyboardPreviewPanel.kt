@@ -138,18 +138,15 @@ fun KeyboardPreviewPanel(
         // a non-null `keyDimensions` argument. `BoxWithConstraints` would
         // also work but the explicit solve keeps the preview composable
         // identical in shape to its production-side counterpart.
-        val density = androidx.compose.ui.platform.LocalDensity.current
         androidx.compose.foundation.layout.BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
             val containerWidthPx = constraints.maxWidth
             if (containerWidthPx == 0) return@BoxWithConstraints
-            val keyMarginH = with(density) {
-                resources.getDimension(R.dimen.key_marginH).toInt()
-            }
             val baseKeyHeight = resources.getDimension(R.dimen.key_height)
             val keyDimensions = KeyboardLayoutSolver.solveKeyDimensions(
                 KeyDimensionsInput(
                     containerWidth = containerWidthPx,
-                    keyMarginH = keyMarginH,
+                    keyMarginH = resources.getDimensionPixelSize(R.dimen.key_marginH),
+                    keyMarginV = resources.getDimensionPixelSize(R.dimen.key_marginV),
                     baseKeyHeight = baseKeyHeight,
                     isLandscape = isLandscape(),
                     keyHeightScale = keyHeightScale,

@@ -118,18 +118,17 @@ private fun KeyboardSurface(
     modifier: Modifier = Modifier,
 ) {
     val resources = LocalResources.current
-    val density = LocalDensity.current
     val isLandscape = isLandscape()
     val baseKeyHeight = remember(resources) { resources.getDimension(R.dimen.key_height) }
-    val keyMarginH = remember(density, resources) {
-        with(density) { resources.getDimension(R.dimen.key_marginH).toInt() }
-    }
+    val keyMarginH = remember(resources) { resources.getDimensionPixelSize(R.dimen.key_marginH) }
+    val keyMarginV = remember(resources) { resources.getDimensionPixelSize(R.dimen.key_marginV) }
 
     BoxWithConstraints(modifier = modifier) {
         val containerWidth = constraints.maxWidth
         val keyDimensions = remember(
             containerWidth,
             keyMarginH,
+            keyMarginV,
             baseKeyHeight,
             isLandscape,
             appearance.keyHeightScale,
@@ -138,6 +137,7 @@ private fun KeyboardSurface(
                 KeyDimensionsInput(
                     containerWidth = containerWidth,
                     keyMarginH = keyMarginH,
+                    keyMarginV = keyMarginV,
                     baseKeyHeight = baseKeyHeight,
                     isLandscape = isLandscape,
                     keyHeightScale = appearance.keyHeightScale,

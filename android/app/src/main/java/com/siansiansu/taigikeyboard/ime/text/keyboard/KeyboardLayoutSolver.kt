@@ -1,12 +1,17 @@
 package com.siansiansu.taigikeyboard.ime.text.keyboard
 
+import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
+import kotlin.math.roundToInt
+
 /**
  * Pure layout-math solver for keyboard geometry. All inputs are scalar value
  * types so the math is JVM-testable without Android instrumentation.
  *
- * Three decoupled responsibilities, mirroring the legacy in-View math:
- * - [solveKeyDimensions] — per-key width and height, plus the live
+ * Decoupled responsibilities:
+ * - [solveKeyDimensions] — letter-key width and height, margins, plus the live
  *   `keyHeightFactor` smartbar consumes
+ * - [keyWidth] / [isFixedWidth] — per-key width: iOS slot fractions for letter and
+ *   symbol keyboards, legacy multipliers for the advanced number pad
  * - [solvePopupDimensions] — preview-popup dimensions and offset
  * - [solveExtendedPopupGeometry] — extended-popup anchor side, row split,
  *   anchor offset, and final placement under screen-edge constraints
@@ -16,14 +21,82 @@ object KeyboardLayoutSolver {
         val orientationFactor = if (input.isLandscape) 0.85f else 1.0f
         val keyHeightFactor = orientationFactor * input.keyHeightScale
         val keyMarginH = input.keyMarginH
-        val desiredKeyWidth = (input.containerWidth / 10) - (2 * keyMarginH)
+        val desiredKeyWidth = (input.containerWidth / LETTER_SLOTS_PER_ROW) - (2 * keyMarginH)
         val desiredKeyHeight = (input.baseKeyHeight * keyHeightFactor).toInt()
         return KeyDimensions(
             desiredKeyWidth = desiredKeyWidth,
             desiredKeyHeight = desiredKeyHeight,
             keyHeightFactor = keyHeightFactor,
+            containerWidth = input.containerWidth,
+            keyMarginH = keyMarginH,
+            keyMarginV = input.keyMarginV,
+            isLandscape = input.isLandscape,
         )
     }
+
+    /** Visible width in px (margins excluded) of the key [keyCode] in [mode]. */
+    fun keyWidth(
+        keyCode: Int,
+        mode: KeyboardMode,
+        keyboardLayoutType: String,
+        dimensions: KeyDimensions,
+    ): Int {
+        val desiredKeyWidth = dimensions.desiredKeyWidth
+        when (mode) {
+            // Every number-pad key grows to an equal share of the row (see flexGrowFor).
+            KeyboardMode.NUMERIC, KeyboardMode.PHONE, KeyboardMode.PHONE2 -> return desiredKeyWidth
+            KeyboardMode.NUMERIC_ADVANCED -> return when (keyCode) {
+                44, 46 -> desiredKeyWidth
+                KeyCode.VIEW_SYMBOLS, 61 -> (desiredKeyWidth * 1.34f).toInt()
+                else -> (desiredKeyWidth * 1.56f).toInt()
+            }
+            else -> Unit
+        }
+        val fraction = slotFraction(keyCode, keyboardLayoutType, dimensions.isLandscape)
+        return when {
+            fraction != null -> (dimensions.containerWidth * fraction).roundToInt() - 2 * dimensions.keyMarginH
+            keyCode == KeyCode.SPACE && mode == KeyboardMode.SYMBOLS -> (desiredKeyWidth * 0.56f).toInt()
+            else -> desiredKeyWidth
+        }
+    }
+
+    /** True when [keyCode] takes a fixed slot of the row width and never flex-shrinks. */
+    fun isFixedWidth(
+        keyCode: Int,
+        keyboardLayoutType: String,
+        isLandscape: Boolean,
+    ): Boolean = slotFraction(keyCode, keyboardLayoutType, isLandscape) != null
+
+    /**
+     * Key slot (visible key + both `keyMarginH` bands) as a fraction of the keyboard width,
+     * or null for a letter-sized key. CROSS-PLATFORM INVARIANT — mirrors iOS
+     * `Layout/LayoutConstants.swift` + `LayoutConverter.widthFor`.
+     */
+    private fun slotFraction(
+        keyCode: Int,
+        keyboardLayoutType: String,
+        isLandscape: Boolean,
+    ): Float? =
+        when (keyCode) {
+            KeyCode.SHIFT, KeyCode.DELETE -> SHIFT_DELETE_SLOT
+            KeyCode.VIEW_CHARACTERS, KeyCode.VIEW_SYMBOLS, KeyCode.VIEW_SYMBOLS2,
+            KeyCode.SWITCH_TO_MEDIA_CONTEXT, KeyCode.LANGUAGE_SWITCH,
+            -> if (isLandscape) SYSTEM_SLOT_LANDSCAPE else SYSTEM_SLOT_PORTRAIT
+            KeyCode.ENTER -> if (isLandscape) ENTER_SLOT_LANDSCAPE else ENTER_SLOT_PORTRAIT
+            KeyCode.TRANSLATE -> when (keyboardLayoutType) {
+                "phahTaigi", "moe1" -> 2.0f / LETTER_SLOTS_PER_ROW
+                else -> 1.5f / LETTER_SLOTS_PER_ROW
+            }
+            else -> null
+        }
+
+    /** A letter slot is 1/10 of the keyboard width on both platforms. */
+    private const val LETTER_SLOTS_PER_ROW = 10
+    private const val SHIFT_DELETE_SLOT = 0.13f
+    private const val SYSTEM_SLOT_PORTRAIT = 0.13f
+    private const val SYSTEM_SLOT_LANDSCAPE = 0.10f
+    private const val ENTER_SLOT_PORTRAIT = 0.15f
+    private const val ENTER_SLOT_LANDSCAPE = 0.095f
 
     fun solvePopupDimensions(input: PopupDimensionsInput): PopupDimensions {
         val popupWidth: Int
@@ -117,6 +190,7 @@ enum class AnchorSide { LEFT, RIGHT }
 data class KeyDimensionsInput(
     val containerWidth: Int,
     val keyMarginH: Int,
+    val keyMarginV: Int,
     /** Pixel value from `resources.getDimension(R.dimen.key_height)`. Kept as
      *  `Float` so the multiplier chain truncates to `Int` only once at the end,
      *  matching the legacy in-View arithmetic. */
@@ -125,10 +199,16 @@ data class KeyDimensionsInput(
     val keyHeightScale: Float,
 )
 
+/** Solved key geometry; also echoes the inputs the per-key layout needs, so the layout
+ *  reads margins and orientation from the same values the solver used. */
 data class KeyDimensions(
     val desiredKeyWidth: Int,
     val desiredKeyHeight: Int,
     val keyHeightFactor: Float,
+    val containerWidth: Int,
+    val keyMarginH: Int,
+    val keyMarginV: Int,
+    val isLandscape: Boolean,
 )
 
 data class PopupDimensionsInput(
