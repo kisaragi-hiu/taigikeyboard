@@ -563,6 +563,7 @@ fn edge_lookup(
         shadow_to_raw_end,
         barriers,
         hyphen_runs,
+        one_syllable_segments,
         ..
     } = continuous_keys;
     // Edges come from the syllabifier-built lattice so they are
@@ -595,7 +596,15 @@ fn edge_lookup(
     // wrong-tone word reappear at slot 0). The §35 Final-only
     // restriction and the §17 / §41 tone pin come from the same
     // [`crate::shadow::span_key`] derivation the span-local keys use.
-    let span_key = crate::shadow::span_key(shadow, start, end, mode, barriers, hyphen_runs)?;
+    let span_key = crate::shadow::span_key(
+        shadow,
+        start,
+        end,
+        mode,
+        barriers,
+        hyphen_runs,
+        one_syllable_segments,
+    )?;
     Some(EdgeLookup {
         toneless,
         raw_span,
@@ -1164,14 +1173,14 @@ pub(crate) fn assemble_candidates(
     shape: ListShape,
 ) -> Vec<RawCandidate> {
     let raw_len = raw.len() as u32;
-    // Whole-buffer tone pin (§17 typed digits / §41 space-closed TPS
-    // tail), computed once per seam invocation for the sources that carry
-    // no span key of their own.
-    let tone_pin = crate::shadow::whole_buffer_tone_pin(raw, mode);
     LexiconHandle::with_state(|state| {
         let inv = state.syllable_inventory.as_ref();
         let prefix = state.prefix_index.as_ref();
         let dict = state.dictionary.as_ref();
+        // Whole-buffer tone pin (§17 typed digits / §41 space-closed TPS
+        // tail / §52 typed boundaries), computed once per seam invocation
+        // for the sources that carry no span key of their own.
+        let tone_pin = crate::shadow::whole_buffer_tone_pin(raw, mode, inv);
 
         // v3.5.9 D7 — build the shared lexicon-fetch context once per
         // seam invocation. `Some` only when BOTH `prefix_index` and
